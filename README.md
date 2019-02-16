@@ -108,6 +108,7 @@ TranQL is brand new and strictly alpha.
 ```
 git clone <repository>
 cd tranql
+pip install -r tranql/requirements.txt
 ```
 ### Test
 ```
