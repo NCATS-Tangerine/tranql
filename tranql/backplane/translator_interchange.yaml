@@ -1,0 +1,275 @@
+openapi: "3.0.1"
+info:
+  version: 0.1.0
+  title: TranQL Backplane
+  description: "Common data service interconnect."
+  contact:
+      name: "Steve Cox"
+      email: "scox@renci.org"
+definitions:
+  Message:
+    description: "Message passed from one module to the next"
+    type: object
+    required:
+      - question_graph
+      - knowledge_graph
+      - knowledge_maps
+    properties:
+      question_graph:
+        $ref: '#/definitions/QGraph'
+      knowledge_graph:
+        oneOf:
+          - $ref: '#/definitions/KGraph'
+          - $ref: '#/definitions/RemoteKGraph'
+      knowledge_maps:
+        type: array
+        items:
+          $ref: '#/definitions/KMap'
+      options:
+        $ref: '#/definitions/Options'
+    example:
+      question_graph:
+        nodes:
+          - id: "n00"
+            type: "disease"
+            curie: "MONDO:0005737"
+          - id: "n01"
+            type: "gene"
+          - id: "n02"
+            type: genetic_condition
+        edges:
+          - id: "e00"
+            source_id: "n00"
+            target_id: "n01"
+          - id: "e01"
+            source_id: "n01"
+            target_id: "n02"
+      knowledge_graph:
+        nodes:
+          - id: "MONDO:0005148"
+          - id: "OMIM:607623"
+          - id: "MONDO:0011871"
+        edges:
+          - id: "01234"
+            source_id: "MONDO:0005148"
+            target_id: "OMIM:607623"
+            type: "not particularly related to"
+          - id: "56789"
+            source_id: "OMIM:607623"
+            target_id: "MONDO:0011871"
+            type: "couldn't be less associated with"
+      knowledge_maps:
+        - n00: "MONDO:0005737"
+          n01: "OMIM:607623"
+          n02: "MONDO:0011871"
+          e00: "http://myverylogicalreasoner.org:7475/01234"
+          e01: "http://myverylogicalreasoner.org:7475/56789"
+  QGraph:
+    description: "Graph representing the minimal question specification"
+    type: object
+    required:
+      - nodes
+      - edges
+    properties:
+      nodes:
+        type: array
+        items:
+          $ref: "#/definitions/QNode"
+      edges:
+        type: array
+        items:
+          $ref: "#/definitions/QEdge"
+  QNode:
+    description: "Minimal node specification"
+    type: object
+    required:
+      - id
+    properties:
+      id:
+        type: string
+        description: "Internal ID of this node"
+      type:
+        type: string
+        description: "Optional biolink-model type of this node"
+      curie:
+        type: string
+        description: "Optional curie of this node"
+  QEdge:
+    description: "Minimal edge specification"
+    type: object
+    required:
+      - id
+      - source_id
+      - target_id
+    properties:
+      id:
+        type: string
+        description: "Internal ID of this edge"
+      type:
+        type: string
+        description: "Optional relationship type of this edge"
+      source_id:
+        type: string
+        description: "Internal ID of source node of this edge"
+      target_id:
+        type: string
+        description: "Internal ID of target node of this edge"
+  KMap:
+    description: "Map from question node and edge IDs to knowledge-graph entity identifiers and relationship references"
+    type: object
+    additionalProperties:
+      type: string
+  Options:
+    description: "Operation-/module-specific options"
+    type: object
+    additionalProperties: true
+  RemoteKGraph:
+    description: "Pointer to remote knowledge graph"
+    type: object
+    required:
+      - url
+    properties:
+      url:
+        type: string
+      credentials:
+        $ref: '#/definitions/Credentials'
+  Credentials:
+    description: "Credentials"
+    type: object
+    required:
+      - username
+      - password
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+  KGraph:
+    description: "Graph representing knowledge relevant to a specific question"
+    type: object
+    required:
+      - nodes
+      - edges
+    properties:
+      nodes:
+        type: array
+        items:
+          $ref: "#/definitions/KNode"
+      edges:
+        type: array
+        items:
+          $ref: "#/definitions/KEdge"
+    additionalProperties: true
+  KNode:
+    type: object
+    description: "Node in the knowledge graph"
+    required:
+      - id
+    properties:
+      id:
+        description: "CURIE identifier for this node"
+        type: string
+      uri:
+        description: "URI identifier for this node"
+        type: string
+      name:
+        description: "Formal name of the entity"
+        type: string
+      type:
+        description: "Entity type of this node (e.g., protein, disease, etc.)"
+        type: string
+      description:
+        description: "One to three sentences of description/definition of this entity"
+        type: string
+      symbol:
+        description: "Short abbreviation or symbol for this entity"
+        type: string
+      node_attributes:
+        description: "A list of arbitrary attributes for the node"
+        type: array
+        items:
+          $ref: "#/definitions/KNode_attribute"
+    additionalProperties: true
+  KNode_attribute:
+    description: "Generic attribute for a node"
+    type: object
+    properties:
+      type:
+        description: "Entity type of this attribute"
+        type: string
+      name:
+        description: "Formal name of the attribute"
+        type: string
+      value:
+        description: "Value of the attribute"
+        type: string
+      url:
+        description: "A URL corresponding to this attribute"
+        type: string
+    additionalProperties: true
+  KEdge:
+    description: "Edge in the knowledge graph"
+    type: object
+    required:
+      - source_id
+      - target_id
+      - type
+    properties:
+      type:
+        description: "Higher-level relationship type of this edge"
+        type: string
+      relation:
+        description: "Lower-level relationship type of this edge"
+        type: string
+      source_id:
+        description: "Corresponds to the @id of source node of this edge"
+        type: string
+      target_id:
+        description: "Corresponds to the @id of target node of this edge"
+        type: string
+      is_defined_by:
+        description: "A CURIE/URI for the translator group that made the KG"
+        type: string
+      provided_by:
+        description: "A CURIE/URI for the knowledge source that defined this edge"
+        type: string
+      confidence:
+        description: "Confidence metric for this edge, a value 0.0 (no confidence) and 1.0 (highest confidence)"
+        type: number
+        format: float
+        example: 0.99
+      publications:
+        description: "A CURIE/URI for publications associated with this edge"
+        type: string
+      evidence_type:
+        description: "A CURIE/URI for class of evidence supporting the statement made in an edge - typically a class from the ECO ontology"
+        type: string
+      qualifiers:
+        description: "Terms representing qualifiers that modify or qualify the meaning of the statement made in an edge"
+        type: string
+      negated:
+        description: "Boolean that if set to true, indicates the edge statement is negated i.e. is not true"
+        type: boolean
+      attribute_list:
+        description: "A list of additional attributes for this edge"
+        type: array
+        items:
+          $ref: "#/definitions/KEdge_attribute"
+    additionalProperties: true
+  KEdge_attribute:
+      description: "Generic attribute for an edge"
+      type: object
+      properties:
+        type:
+          description: "Entity type of this attribute"
+          type: string
+        name:
+          description: "Formal name of the attribute"
+          type: string
+        value:
+          description: "Value of the attribute. While all attributes should have a name, many will not have a value"
+          type: string
+        url:
+          description: "A URL corresponding to this attribute"
+          type: string
+      additionalProperties: true

@@ -1,0 +1,4467 @@
+{
+  "return value": [
+    {
+      "rows": [
+        {
+          "frequency": 2013,
+          "percentage": 0.08716927207378859
+        },
+        {
+          "frequency": 3759,
+          "percentage": 0.16277659896938465
+        },
+        {
+          "frequency": 3542,
+          "percentage": 0.1533798120642619
+        },
+        {
+          "frequency": 4910,
+          "percentage": 0.21261854241545056
+        },
+        {
+          "frequency": 6416,
+          "percentage": 0.27783310960031177
+        },
+        {
+          "frequency": 2453,
+          "percentage": 0.1062226648768025
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "AgeStudyStart",
+        "feature_qualifiers": [
+          {
+            "value": "0-2",
+            "operator": "="
+          },
+          {
+            "value": "3-17",
+            "operator": "="
+          },
+          {
+            "value": "18-34",
+            "operator": "="
+          },
+          {
+            "value": "35-50",
+            "operator": "="
+          },
+          {
+            "value": "51-69",
+            "operator": "="
+          },
+          {
+            "value": "70+",
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.0985983566940551,
+            "total_percentage": 0.026501537262373878,
+            "frequency": 612,
+            "row_percentage": 0.30402384500745155
+          },
+          {
+            "column_percentage": 0.0829681392869833,
+            "total_percentage": 0.060667734811414714,
+            "frequency": 1401,
+            "row_percentage": 0.6959761549925484
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.19010794264540035,
+            "total_percentage": 0.05109773524444637,
+            "frequency": 1180,
+            "row_percentage": 0.31391327480712955
+          },
+          {
+            "column_percentage": 0.15273007224920052,
+            "total_percentage": 0.1116788637249383,
+            "frequency": 2579,
+            "row_percentage": 0.6860867251928704
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.15289189624617366,
+            "total_percentage": 0.041094704022864074,
+            "frequency": 949,
+            "row_percentage": 0.26792772444946356
+          },
+          {
+            "column_percentage": 0.1535591614355087,
+            "total_percentage": 0.11228510804139782,
+            "frequency": 2593,
+            "row_percentage": 0.7320722755505364
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2067021105203802,
+            "total_percentage": 0.055557961286970076,
+            "frequency": 1283,
+            "row_percentage": 0.26130346232179225
+          },
+          {
+            "column_percentage": 0.2147933199099846,
+            "total_percentage": 0.15706058112848048,
+            "frequency": 3627,
+            "row_percentage": 0.7386965376782078
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.26341227646205895,
+            "total_percentage": 0.0708006755293812,
+            "frequency": 1635,
+            "row_percentage": 0.25483167082294267
+          },
+          {
+            "column_percentage": 0.28313395712424494,
+            "total_percentage": 0.20703243407093058,
+            "frequency": 4781,
+            "row_percentage": 0.7451683291770573
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.08828741743193169,
+            "total_percentage": 0.023730134672844586,
+            "frequency": 548,
+            "row_percentage": 0.22339991846718305
+          },
+          {
+            "column_percentage": 0.11281534999407794,
+            "total_percentage": 0.08249253020395791,
+            "frequency": 1905,
+            "row_percentage": 0.776600081532817
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 85.1457766588554,
+      "p_value": 1.480182497274359e-13,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 6379,
+          "percentage": 0.2762308924782402
+        },
+        {
+          "frequency": 266,
+          "percentage": 0.011518642012731131
+        },
+        {
+          "frequency": 13176,
+          "percentage": 0.5705625081193435
+        },
+        {
+          "frequency": 5,
+          "percentage": 0.00021651582730697615
+        },
+        {
+          "frequency": 182,
+          "percentage": 0.007881176113973931
+        },
+        {
+          "frequency": 2508,
+          "percentage": 0.10860433897717924
+        },
+        {
+          "frequency": 577,
+          "percentage": 0.024985926471225047
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Race",
+        "feature_qualifiers": [
+          {
+            "value": "African American",
+            "operator": "="
+          },
+          {
+            "value": "Asian",
+            "operator": "="
+          },
+          {
+            "value": "Caucasian",
+            "operator": "="
+          },
+          {
+            "value": "Hawaiian / Other Pac",
+            "operator": "="
+          },
+          {
+            "value": "Native American",
+            "operator": "="
+          },
+          {
+            "value": "Other",
+            "operator": "="
+          },
+          {
+            "value": "Unknown",
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.27114548090865154,
+            "total_percentage": 0.07287922747152817,
+            "frequency": 1683,
+            "row_percentage": 0.26383445681141243
+          },
+          {
+            "column_percentage": 0.27810020135023095,
+            "total_percentage": 0.20335166500671198,
+            "frequency": 4696,
+            "row_percentage": 0.7361655431885875
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.01772192685677461,
+            "total_percentage": 0.004763348200753475,
+            "frequency": 110,
+            "row_percentage": 0.41353383458646614
+          },
+          {
+            "column_percentage": 0.009238422361719768,
+            "total_percentage": 0.006755293811977655,
+            "frequency": 156,
+            "row_percentage": 0.5864661654135338
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.5627517319155791,
+            "total_percentage": 0.15125795695665353,
+            "frequency": 3493,
+            "row_percentage": 0.2651032179720704
+          },
+          {
+            "column_percentage": 0.5734336136444392,
+            "total_percentage": 0.41930455116269,
+            "frequency": 9683,
+            "row_percentage": 0.7348967820279295
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00016110842597067828,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 0.2
+          },
+          {
+            "column_percentage": 0.00023688262465948123,
+            "total_percentage": 0.00017321266184558093,
+            "frequency": 4,
+            "row_percentage": 0.8
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.005638794908973739,
+            "total_percentage": 0.001515610791148833,
+            "frequency": 35,
+            "row_percentage": 0.19230769230769232
+          },
+          {
+            "column_percentage": 0.008705436456235935,
+            "total_percentage": 0.006365565322825098,
+            "frequency": 147,
+            "row_percentage": 0.8076923076923077
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.11680360882874175,
+            "total_percentage": 0.03139479495951154,
+            "frequency": 725,
+            "row_percentage": 0.2890749601275917
+          },
+          {
+            "column_percentage": 0.10559042994196376,
+            "total_percentage": 0.07720954401766769,
+            "frequency": 1783,
+            "row_percentage": 0.7109250398724083
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.02577734815530852,
+            "total_percentage": 0.006928506473823237,
+            "frequency": 160,
+            "row_percentage": 0.2772963604852686
+          },
+          {
+            "column_percentage": 0.024695013620750918,
+            "total_percentage": 0.01805741999740181,
+            "frequency": 417,
+            "row_percentage": 0.7227036395147314
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 41.064044241574656,
+      "p_value": 9.303265212087946e-05,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 1826,
+          "percentage": 0.07907158013250769
+        },
+        {
+          "frequency": 14727,
+          "percentage": 0.6377257177499676
+        },
+        {
+          "frequency": 2149,
+          "percentage": 0.09305850257653835
+        },
+        {
+          "frequency": 4391,
+          "percentage": 0.19014419954098644
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Ethnicity",
+        "feature_qualifiers": [
+          {
+            "value": "H",
+            "operator": "="
+          },
+          {
+            "value": "N",
+            "operator": "="
+          },
+          {
+            "value": "U",
+            "operator": "="
+          },
+          {
+            "value": null,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.07990977928145641,
+            "total_percentage": 0.021478370068852032,
+            "frequency": 496,
+            "row_percentage": 0.27163198247535597
+          },
+          {
+            "column_percentage": 0.07876347269927751,
+            "total_percentage": 0.057593210063655656,
+            "frequency": 1330,
+            "row_percentage": 0.7283680175246441
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.6336394393426776,
+            "total_percentage": 0.17031134975966744,
+            "frequency": 3933,
+            "row_percentage": 0.2670605011203911
+          },
+          {
+            "column_percentage": 0.6392277626436101,
+            "total_percentage": 0.4674143679903001,
+            "frequency": 10794,
+            "row_percentage": 0.7329394988796089
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.10262606734332205,
+            "total_percentage": 0.02758411639890876,
+            "frequency": 637,
+            "row_percentage": 0.2964169381107492
+          },
+          {
+            "column_percentage": 0.08954163212128391,
+            "total_percentage": 0.06547438617762959,
+            "frequency": 1512,
+            "row_percentage": 0.7035830618892508
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1838247140325439,
+            "total_percentage": 0.04940891179145195,
+            "frequency": 1141,
+            "row_percentage": 0.2598496925529492
+          },
+          {
+            "column_percentage": 0.1924671325358285,
+            "total_percentage": 0.1407352877495345,
+            "frequency": 3250,
+            "row_percentage": 0.7401503074470508
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 10.430450935677133,
+      "p_value": 0.1654638698563655,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 22713,
+          "percentage": 0.9835447971246698
+        },
+        {
+          "frequency": 380,
+          "percentage": 0.016455202875330185
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "CroupDx",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9808280973094893,
+            "total_percentage": 0.26362967132897414,
+            "frequency": 6088,
+            "row_percentage": 0.26804032932681726
+          },
+          {
+            "column_percentage": 0.9845434087409688,
+            "total_percentage": 0.7199151257956957,
+            "frequency": 16625,
+            "row_percentage": 0.7319596706731828
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.019171902690510712,
+            "total_percentage": 0.005153076689906032,
+            "frequency": 119,
+            "row_percentage": 0.3131578947368421
+          },
+          {
+            "column_percentage": 0.01545659125903115,
+            "total_percentage": 0.011302126185424154,
+            "frequency": 261,
+            "row_percentage": 0.6868421052631579
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 3.870982750160162,
+      "p_value": 0.27573690440097426,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 21174,
+          "percentage": 0.9169012254795825
+        },
+        {
+          "frequency": 1919,
+          "percentage": 0.08309877452041745
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "ObesityICD",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9266956661833414,
+            "total_percentage": 0.24907980773394536,
+            "frequency": 5752,
+            "row_percentage": 0.2716539151789931
+          },
+          {
+            "column_percentage": 0.9133009593746299,
+            "total_percentage": 0.6678214177456372,
+            "frequency": 15422,
+            "row_percentage": 0.7283460848210069
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.07330433381665862,
+            "total_percentage": 0.019702940284934828,
+            "frequency": 455,
+            "row_percentage": 0.23710265763418448
+          },
+          {
+            "column_percentage": 0.08669904062537014,
+            "total_percentage": 0.06339583423548262,
+            "frequency": 1464,
+            "row_percentage": 0.7628973423658155
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 10.687531956470538,
+      "p_value": 0.013541258660658364,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 173,
+          "percentage": 0.007491447624821374
+        },
+        {
+          "frequency": 1428,
+          "percentage": 0.06183692027887239
+        },
+        {
+          "frequency": 18084,
+          "percentage": 0.7830944442038713
+        },
+        {
+          "frequency": 3380,
+          "percentage": 0.14636469925951587
+        },
+        {
+          "frequency": 28,
+          "percentage": 0.0012124886329190664
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "AvgDailyPM2.5Exposure",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.010245173516522562,
+            "total_percentage": 0.007491447624821374,
+            "frequency": 173,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.052843563718382475,
+            "total_percentage": 0.014203438271337635,
+            "frequency": 328,
+            "row_percentage": 0.22969187675070027
+          },
+          {
+            "column_percentage": 0.06514272178135734,
+            "total_percentage": 0.04763348200753475,
+            "frequency": 1100,
+            "row_percentage": 0.7703081232492998
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.8318028032866119,
+            "total_percentage": 0.22357424327718356,
+            "frequency": 5163,
+            "row_percentage": 0.28550099535500995
+          },
+          {
+            "column_percentage": 0.7651900983062893,
+            "total_percentage": 0.5595202009266877,
+            "frequency": 12921,
+            "row_percentage": 0.71449900464499
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.11535363299500564,
+            "total_percentage": 0.031005066470358982,
+            "frequency": 716,
+            "row_percentage": 0.2118343195266272
+          },
+          {
+            "column_percentage": 0.1577638280232145,
+            "total_percentage": 0.11535963278915688,
+            "frequency": 2664,
+            "row_percentage": 0.7881656804733728
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0016581783726163685,
+            "total_percentage": 0.0012124886329190664,
+            "frequency": 28,
+            "row_percentage": 1.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 166.47840857888852,
+      "p_value": 3.338869229958081e-31,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 754,
+          "percentage": 0.032650586757892
+        },
+        {
+          "frequency": 17389,
+          "percentage": 0.7529987442082016
+        },
+        {
+          "frequency": 4875,
+          "percentage": 0.21110293162430174
+        },
+        {
+          "frequency": 64,
+          "percentage": 0.002771402589529295
+        },
+        {
+          "frequency": 11,
+          "percentage": 0.0004763348200753475
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "MaxDailyPM2.5Exposure",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.028355082970839374,
+            "total_percentage": 0.00762135712120556,
+            "frequency": 176,
+            "row_percentage": 0.23342175066312998
+          },
+          {
+            "column_percentage": 0.034229539263295035,
+            "total_percentage": 0.025029229636686443,
+            "frequency": 578,
+            "row_percentage": 0.76657824933687
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.8150475269856613,
+            "total_percentage": 0.21907071406919845,
+            "frequency": 5059,
+            "row_percentage": 0.2909310483639082
+          },
+          {
+            "column_percentage": 0.7301906905128509,
+            "total_percentage": 0.5339280301390031,
+            "frequency": 12330,
+            "row_percentage": 0.7090689516360917
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.15659739004349926,
+            "total_percentage": 0.04209067682847616,
+            "frequency": 972,
+            "row_percentage": 0.19938461538461538
+          },
+          {
+            "column_percentage": 0.23113822101148881,
+            "total_percentage": 0.16901225479582557,
+            "frequency": 3903,
+            "row_percentage": 0.8006153846153846
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0037901219945516997,
+            "total_percentage": 0.002771402589529295,
+            "frequency": 64,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0006514272178135734,
+            "total_percentage": 0.0004763348200753475,
+            "frequency": 11,
+            "row_percentage": 1.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 195.22747403847242,
+      "p_value": 3.3130400973843413e-37,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 20,
+          "percentage": 0.0008660633092279046
+        },
+        {
+          "frequency": 5195,
+          "percentage": 0.2249599445719482
+        },
+        {
+          "frequency": 16217,
+          "percentage": 0.7022474342874464
+        },
+        {
+          "frequency": 234,
+          "percentage": 0.010132940717966483
+        },
+        {
+          "frequency": 1427,
+          "percentage": 0.06179361711341099
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "AvgDailyOzoneExposure",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0011844131232974062,
+            "total_percentage": 0.0008660633092279046,
+            "frequency": 20,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.16352505236023845,
+            "total_percentage": 0.04395271294331616,
+            "frequency": 1015,
+            "row_percentage": 0.19538017324350337
+          },
+          {
+            "column_percentage": 0.24754234276915787,
+            "total_percentage": 0.18100723162863205,
+            "frequency": 4180,
+            "row_percentage": 0.8046198267564967
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.7787981311422587,
+            "total_percentage": 0.20932750184038454,
+            "frequency": 4834,
+            "row_percentage": 0.2980822593574644
+          },
+          {
+            "column_percentage": 0.6741087291247188,
+            "total_percentage": 0.4929199324470619,
+            "frequency": 11383,
+            "row_percentage": 0.7019177406425356
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.004833252779120348,
+            "total_percentage": 0.0012990949638418568,
+            "frequency": 30,
+            "row_percentage": 0.1282051282051282
+          },
+          {
+            "column_percentage": 0.012081013857633542,
+            "total_percentage": 0.008833845754124627,
+            "frequency": 204,
+            "row_percentage": 0.8717948717948718
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.052843563718382475,
+            "total_percentage": 0.014203438271337635,
+            "frequency": 328,
+            "row_percentage": 0.22985283812193413
+          },
+          {
+            "column_percentage": 0.06508350112519247,
+            "total_percentage": 0.04759017884207335,
+            "frequency": 1099,
+            "row_percentage": 0.7701471618780659
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 255.13507202641375,
+      "p_value": 8.213991317409844e-50,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 20458,
+          "percentage": 0.8858961590092236
+        },
+        {
+          "frequency": 2228,
+          "percentage": 0.09647945264798857
+        },
+        {
+          "frequency": 396,
+          "percentage": 0.01714805352271251
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 10,
+          "percentage": 0.0004330316546139523
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "MaxDailyOzoneExposure",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9025294022877397,
+            "total_percentage": 0.24258433291473608,
+            "frequency": 5602,
+            "row_percentage": 0.2738293088278424
+          },
+          {
+            "column_percentage": 0.8797820679853133,
+            "total_percentage": 0.6433118260944876,
+            "frequency": 14856,
+            "row_percentage": 0.7261706911721576
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.08715965845013694,
+            "total_percentage": 0.02342701251461482,
+            "frequency": 541,
+            "row_percentage": 0.24281867145421904
+          },
+          {
+            "column_percentage": 0.09990524695013621,
+            "total_percentage": 0.07305244013337375,
+            "frequency": 1687,
+            "row_percentage": 0.757181328545781
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.01031093926212341,
+            "total_percentage": 0.002771402589529295,
+            "frequency": 64,
+            "row_percentage": 0.16161616161616163
+          },
+          {
+            "column_percentage": 0.019661257846736942,
+            "total_percentage": 0.014376650933183216,
+            "frequency": 332,
+            "row_percentage": 0.8383838383838383
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0005922065616487031,
+            "total_percentage": 0.0004330316546139523,
+            "frequency": 10,
+            "row_percentage": 1.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 37.47664510001161,
+      "p_value": 2.1631780669914804e-05,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 4967,
+          "percentage": 0.2150868228467501
+        },
+        {
+          "frequency": 8811,
+          "percentage": 0.38154419088035335
+        },
+        {
+          "frequency": 158,
+          "percentage": 0.006841900142900446
+        },
+        {
+          "frequency": 4695,
+          "percentage": 0.2033083618412506
+        },
+        {
+          "frequency": 4462,
+          "percentage": 0.1932187242887455
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "AvgDailyPM2.5Exposure_qcut",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.27017883035282747,
+            "total_percentage": 0.07261940847875979,
+            "frequency": 1677,
+            "row_percentage": 0.33762834709079925
+          },
+          {
+            "column_percentage": 0.1948359587824233,
+            "total_percentage": 0.1424674143679903,
+            "frequency": 3290,
+            "row_percentage": 0.6623716529092007
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.36104398260028997,
+            "total_percentage": 0.0970423937989867,
+            "frequency": 2241,
+            "row_percentage": 0.254341164453524
+          },
+          {
+            "column_percentage": 0.38907971100319794,
+            "total_percentage": 0.28450179708136664,
+            "frequency": 6570,
+            "row_percentage": 0.745658835546476
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.002416626389560174,
+            "total_percentage": 0.0006495474819209284,
+            "frequency": 15,
+            "row_percentage": 0.0949367088607595
+          },
+          {
+            "column_percentage": 0.008468553831576454,
+            "total_percentage": 0.006192352660979518,
+            "frequency": 143,
+            "row_percentage": 0.9050632911392406
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.23022394071209926,
+            "total_percentage": 0.06188022344433378,
+            "frequency": 1429,
+            "row_percentage": 0.3043663471778488
+          },
+          {
+            "column_percentage": 0.19341466303446642,
+            "total_percentage": 0.1414281383969168,
+            "frequency": 3266,
+            "row_percentage": 0.6956336528221512
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.13613661994522314,
+            "total_percentage": 0.03659117481487897,
+            "frequency": 845,
+            "row_percentage": 0.18937696100403406
+          },
+          {
+            "column_percentage": 0.2142011133483359,
+            "total_percentage": 0.15662754947386653,
+            "frequency": 3617,
+            "row_percentage": 0.8106230389959659
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 326.82571878249286,
+      "p_value": 5.258944565527501e-65,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 6058,
+          "percentage": 0.2623305763651323
+        },
+        {
+          "frequency": 5462,
+          "percentage": 0.23652188975014074
+        },
+        {
+          "frequency": 5854,
+          "percentage": 0.2534967306110077
+        },
+        {
+          "frequency": 1102,
+          "percentage": 0.04772008833845754
+        },
+        {
+          "frequency": 4617,
+          "percentage": 0.19993071493526177
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "MaxDailyPM2.5Exposure_qcut",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.36813275334299983,
+            "total_percentage": 0.0989477330792881,
+            "frequency": 2285,
+            "row_percentage": 0.3771871904919115
+          },
+          {
+            "column_percentage": 0.22343953571005568,
+            "total_percentage": 0.16338284328584418,
+            "frequency": 3773,
+            "row_percentage": 0.6228128095080885
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.24520702432737232,
+            "total_percentage": 0.06590741783224353,
+            "frequency": 1522,
+            "row_percentage": 0.2786525082387404
+          },
+          {
+            "column_percentage": 0.23332938528958902,
+            "total_percentage": 0.1706144719178972,
+            "frequency": 3940,
+            "row_percentage": 0.7213474917612596
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2105687127436765,
+            "total_percentage": 0.05659723725804356,
+            "frequency": 1307,
+            "row_percentage": 0.22326614280833618
+          },
+          {
+            "column_percentage": 0.2692763235816653,
+            "total_percentage": 0.1968994933529641,
+            "frequency": 4547,
+            "row_percentage": 0.7767338571916638
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0259384565812792,
+            "total_percentage": 0.006971809639284632,
+            "frequency": 161,
+            "row_percentage": 0.14609800362976408
+          },
+          {
+            "column_percentage": 0.05572663745114296,
+            "total_percentage": 0.04074827869917291,
+            "frequency": 941,
+            "row_percentage": 0.8539019963702359
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.15015305300467213,
+            "total_percentage": 0.040358550210020355,
+            "frequency": 932,
+            "row_percentage": 0.20186268139484514
+          },
+          {
+            "column_percentage": 0.21822811796754707,
+            "total_percentage": 0.1595721647252414,
+            "frequency": 3685,
+            "row_percentage": 0.7981373186051549
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 616.2351212904514,
+      "p_value": 6.85570626077056e-127,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5146,
+          "percentage": 0.22283808946433983
+        },
+        {
+          "frequency": 5797,
+          "percentage": 0.25102845017970815
+        },
+        {
+          "frequency": 2943,
+          "percentage": 0.12744121595288616
+        },
+        {
+          "frequency": 4628,
+          "percentage": 0.2004070497553371
+        },
+        {
+          "frequency": 4579,
+          "percentage": 0.19828519464772876
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "AvgDailyOzoneExposure_qcut",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.16352505236023845,
+            "total_percentage": 0.04395271294331616,
+            "frequency": 1015,
+            "row_percentage": 0.19724057520404198
+          },
+          {
+            "column_percentage": 0.24464053061707924,
+            "total_percentage": 0.17888537652102368,
+            "frequency": 4131,
+            "row_percentage": 0.8027594247959581
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2104076043177058,
+            "total_percentage": 0.056553934092582164,
+            "frequency": 1306,
+            "row_percentage": 0.22528894255649473
+          },
+          {
+            "column_percentage": 0.2659599668364325,
+            "total_percentage": 0.19447451608712596,
+            "frequency": 4491,
+            "row_percentage": 0.7747110574435052
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.18124697921701305,
+            "total_percentage": 0.04871606114406963,
+            "frequency": 1125,
+            "row_percentage": 0.382262996941896
+          },
+          {
+            "column_percentage": 0.10766315290773422,
+            "total_percentage": 0.07872515480881652,
+            "frequency": 1818,
+            "row_percentage": 0.617737003058104
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2727565651683583,
+            "total_percentage": 0.07331225912614212,
+            "frequency": 1693,
+            "row_percentage": 0.36581676750216074
+          },
+          {
+            "column_percentage": 0.17381262584389434,
+            "total_percentage": 0.127094790629195,
+            "frequency": 2935,
+            "row_percentage": 0.6341832324978393
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1720637989366844,
+            "total_percentage": 0.0462477807127701,
+            "frequency": 1068,
+            "row_percentage": 0.23323869840576544
+          },
+          {
+            "column_percentage": 0.20792372379485966,
+            "total_percentage": 0.15203741393495865,
+            "frequency": 3511,
+            "row_percentage": 0.7667613015942345
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 633.7921703892756,
+      "p_value": 1.1645324635657424e-130,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 6089,
+          "percentage": 0.26367297449443555
+        },
+        {
+          "frequency": 4038,
+          "percentage": 0.17485818213311394
+        },
+        {
+          "frequency": 3785,
+          "percentage": 0.16390248127138093
+        },
+        {
+          "frequency": 4585,
+          "percentage": 0.19854501364049712
+        },
+        {
+          "frequency": 4596,
+          "percentage": 0.19902134846057246
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "MaxDailyOzoneExposure_qcut",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.2150797486708555,
+            "total_percentage": 0.05780972589096263,
+            "frequency": 1335,
+            "row_percentage": 0.21924782394481854
+          },
+          {
+            "column_percentage": 0.2815349994077934,
+            "total_percentage": 0.2058632486034729,
+            "frequency": 4754,
+            "row_percentage": 0.7807521760551814
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2537457709038183,
+            "total_percentage": 0.06820248560169749,
+            "frequency": 1575,
+            "row_percentage": 0.3900445765230312
+          },
+          {
+            "column_percentage": 0.14586047613407557,
+            "total_percentage": 0.10665569653141645,
+            "frequency": 2463,
+            "row_percentage": 0.6099554234769688
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2134686644111487,
+            "total_percentage": 0.057376694236348676,
+            "frequency": 1325,
+            "row_percentage": 0.35006605019815057
+          },
+          {
+            "column_percentage": 0.14568281416558096,
+            "total_percentage": 0.10652578703503227,
+            "frequency": 2460,
+            "row_percentage": 0.6499339498018494
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1533752215240857,
+            "total_percentage": 0.041224613519248256,
+            "frequency": 952,
+            "row_percentage": 0.20763358778625954
+          },
+          {
+            "column_percentage": 0.21514864384697382,
+            "total_percentage": 0.15732040012124887,
+            "frequency": 3633,
+            "row_percentage": 0.7923664122137405
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.16433059449009182,
+            "total_percentage": 0.04416922877062313,
+            "frequency": 1020,
+            "row_percentage": 0.22193211488250653
+          },
+          {
+            "column_percentage": 0.21177306644557622,
+            "total_percentage": 0.15485211968994933,
+            "frequency": 3576,
+            "row_percentage": 0.7780678851174935
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 643.9294705677348,
+      "p_value": 7.742995060924866e-133,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        },
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 1.0,
+            "total_percentage": 0.7312172519811199,
+            "frequency": 16886,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 1.0,
+            "total_percentage": 0.2687827480188802,
+            "frequency": 6207,
+            "row_percentage": 1.0
+          },
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 23093.0,
+      "p_value": 0.0,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 4657,
+          "percentage": 0.20166284155371758
+        },
+        {
+          "frequency": 4584,
+          "percentage": 0.19850171047503573
+        },
+        {
+          "frequency": 4869,
+          "percentage": 0.21084311263153335
+        },
+        {
+          "frequency": 4619,
+          "percentage": 0.20001732126618454
+        },
+        {
+          "frequency": 4364,
+          "percentage": 0.18897501407352876
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstResidentialDesnity25Plus",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.006605445464797809,
+            "total_percentage": 0.0017754297839172044,
+            "frequency": 41,
+            "row_percentage": 0.008803951041442989
+          },
+          {
+            "column_percentage": 0.2733625488570413,
+            "total_percentage": 0.19988741176980038,
+            "frequency": 4616,
+            "row_percentage": 0.9911960489585571
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.014660866763331722,
+            "total_percentage": 0.003940588056986966,
+            "frequency": 91,
+            "row_percentage": 0.019851657940663178
+          },
+          {
+            "column_percentage": 0.26607840814876227,
+            "total_percentage": 0.19456112241804877,
+            "frequency": 4493,
+            "row_percentage": 0.9801483420593369
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.044143708715965846,
+            "total_percentage": 0.011865067336422293,
+            "frequency": 274,
+            "row_percentage": 0.05627438899157938
+          },
+          {
+            "column_percentage": 0.27211891507757907,
+            "total_percentage": 0.19897804529511107,
+            "frequency": 4595,
+            "row_percentage": 0.9437256110084207
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2717899146125342,
+            "total_percentage": 0.07305244013337375,
+            "frequency": 1687,
+            "row_percentage": 0.3652305693873133
+          },
+          {
+            "column_percentage": 0.17363496387539973,
+            "total_percentage": 0.12696488113281082,
+            "frequency": 2932,
+            "row_percentage": 0.6347694306126868
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.6628000644433704,
+            "total_percentage": 0.17814922270817996,
+            "frequency": 4114,
+            "row_percentage": 0.9427131072410633
+          },
+          {
+            "column_percentage": 0.014805164041217577,
+            "total_percentage": 0.010825791365348806,
+            "frequency": 250,
+            "row_percentage": 0.05728689275893675
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 14469.005463021847,
+      "p_value": 0.0,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5778,
+          "percentage": 0.2502056900359416
+        },
+        {
+          "frequency": 5759,
+          "percentage": 0.24938292989217511
+        },
+        {
+          "frequency": 5867,
+          "percentage": 0.2540596717620058
+        },
+        {
+          "frequency": 5670,
+          "percentage": 0.24552894816611096
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityNonHispWhite",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.2949895279523119,
+            "total_percentage": 0.07928809595981466,
+            "frequency": 1831,
+            "row_percentage": 0.31689165801315333
+          },
+          {
+            "column_percentage": 0.2337439298827431,
+            "total_percentage": 0.17091759407612697,
+            "frequency": 3947,
+            "row_percentage": 0.6831083419868467
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.33027227323989045,
+            "total_percentage": 0.08877148919586021,
+            "frequency": 2050,
+            "row_percentage": 0.3559645771835388
+          },
+          {
+            "column_percentage": 0.21964941371550398,
+            "total_percentage": 0.1606114406963149,
+            "frequency": 3709,
+            "row_percentage": 0.6440354228164612
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.18865796681166425,
+            "total_percentage": 0.050708006755293814,
+            "frequency": 1171,
+            "row_percentage": 0.19959093233339015
+          },
+          {
+            "column_percentage": 0.27810020135023095,
+            "total_percentage": 0.20335166500671198,
+            "frequency": 4696,
+            "row_percentage": 0.8004090676666098
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1860802319961334,
+            "total_percentage": 0.05001515610791149,
+            "frequency": 1155,
+            "row_percentage": 0.2037037037037037
+          },
+          {
+            "column_percentage": 0.26738126258438943,
+            "total_percentage": 0.19551379205819946,
+            "frequency": 4515,
+            "row_percentage": 0.7962962962962963
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 555.8583518913345,
+      "p_value": 7.745717557317087e-116,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5758,
+          "percentage": 0.24933962672671373
+        },
+        {
+          "frequency": 5766,
+          "percentage": 0.2496860520504049
+        },
+        {
+          "frequency": 6017,
+          "percentage": 0.2605551465812151
+        },
+        {
+          "frequency": 5486,
+          "percentage": 0.23756116572121422
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityHouseholdNonHispWhite",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.2780731432253907,
+            "total_percentage": 0.07474126358636816,
+            "frequency": 1726,
+            "row_percentage": 0.29975686002084057
+          },
+          {
+            "column_percentage": 0.23877768565675708,
+            "total_percentage": 0.17459836314034555,
+            "frequency": 4032,
+            "row_percentage": 0.7002431399791594
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.30207829869502173,
+            "total_percentage": 0.08119343524011605,
+            "frequency": 1875,
+            "row_percentage": 0.3251821019771072
+          },
+          {
+            "column_percentage": 0.23042757313751036,
+            "total_percentage": 0.16849261681028882,
+            "frequency": 3891,
+            "row_percentage": 0.6748178980228928
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.22297406154341873,
+            "total_percentage": 0.059931580998570995,
+            "frequency": 1384,
+            "row_percentage": 0.23001495762007645
+          },
+          {
+            "column_percentage": 0.2743693000118441,
+            "total_percentage": 0.2006235655826441,
+            "frequency": 4633,
+            "row_percentage": 0.7699850423799236
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.19687449653616884,
+            "total_percentage": 0.05291646819382497,
+            "frequency": 1222,
+            "row_percentage": 0.22274881516587677
+          },
+          {
+            "column_percentage": 0.252516877887007,
+            "total_percentage": 0.18464469752738924,
+            "frequency": 4264,
+            "row_percentage": 0.7772511848341233
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 226.59114895548805,
+      "p_value": 2.629765476258448e-45,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 6239,
+          "percentage": 0.2701684493136448
+        },
+        {
+          "frequency": 5272,
+          "percentage": 0.22829428831247564
+        },
+        {
+          "frequency": 5772,
+          "percentage": 0.24994587104317326
+        },
+        {
+          "frequency": 5737,
+          "percentage": 0.24843026025202442
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityHighSchoolMaxEducation",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.30932817786370226,
+            "total_percentage": 0.08314207768587883,
+            "frequency": 1920,
+            "row_percentage": 0.3077416252604584
+          },
+          {
+            "column_percentage": 0.25577401397607485,
+            "total_percentage": 0.187026371627766,
+            "frequency": 4319,
+            "row_percentage": 0.6922583747395415
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.3726437892701788,
+            "total_percentage": 0.10016022171220716,
+            "frequency": 2313,
+            "row_percentage": 0.4387329286798179
+          },
+          {
+            "column_percentage": 0.17523392159185125,
+            "total_percentage": 0.1281340666002685,
+            "frequency": 2959,
+            "row_percentage": 0.561267071320182
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.23682938617689706,
+            "total_percentage": 0.06365565322825098,
+            "frequency": 1470,
+            "row_percentage": 0.25467775467775466
+          },
+          {
+            "column_percentage": 0.25476726282127204,
+            "total_percentage": 0.18629021781492228,
+            "frequency": 4302,
+            "row_percentage": 0.7453222453222453
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.08119864668922185,
+            "total_percentage": 0.021824795392543193,
+            "frequency": 504,
+            "row_percentage": 0.08785079309743768
+          },
+          {
+            "column_percentage": 0.3099016937107663,
+            "total_percentage": 0.22660546485948121,
+            "frequency": 5233,
+            "row_percentage": 0.9121492069025623
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 1784.3719962334799,
+      "p_value": 0.0,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5762,
+          "percentage": 0.2495128393885593
+        },
+        {
+          "frequency": 5754,
+          "percentage": 0.24916641406486814
+        },
+        {
+          "frequency": 5745,
+          "percentage": 0.24877668557571558
+        },
+        {
+          "frequency": 5745,
+          "percentage": 0.24877668557571558
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityNoAuto",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.3119059126792331,
+            "total_percentage": 0.08383492833326116,
+            "frequency": 1936,
+            "row_percentage": 0.33599444637278725
+          },
+          {
+            "column_percentage": 0.2265782304867938,
+            "total_percentage": 0.16567791105529814,
+            "frequency": 3826,
+            "row_percentage": 0.6640055536272128
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.36442725954567423,
+            "total_percentage": 0.09795176027367601,
+            "frequency": 2262,
+            "row_percentage": 0.3931178310740355
+          },
+          {
+            "column_percentage": 0.2067985313277271,
+            "total_percentage": 0.15121465379119214,
+            "frequency": 3492,
+            "row_percentage": 0.6068821689259646
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.20879652005799904,
+            "total_percentage": 0.05612090243796822,
+            "frequency": 1296,
+            "row_percentage": 0.2255874673629243
+          },
+          {
+            "column_percentage": 0.263472699277508,
+            "total_percentage": 0.19265578313774737,
+            "frequency": 4449,
+            "row_percentage": 0.7744125326370758
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1148703077170936,
+            "total_percentage": 0.030875156973974797,
+            "frequency": 713,
+            "row_percentage": 0.12410791993037423
+          },
+          {
+            "column_percentage": 0.2979983418216274,
+            "total_percentage": 0.21790152860174078,
+            "frequency": 5032,
+            "row_percentage": 0.8758920800696257
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 1251.3997217770316,
+      "p_value": 5.408513900548987e-266,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5776,
+          "percentage": 0.25011908370501884
+        },
+        {
+          "frequency": 5761,
+          "percentage": 0.24946953622309792
+        },
+        {
+          "frequency": 5774,
+          "percentage": 0.25003247737409606
+        },
+        {
+          "frequency": 5763,
+          "percentage": 0.2495561425540207
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityNoHealthIns",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.32125020138553245,
+            "total_percentage": 0.08634651193002209,
+            "frequency": 1994,
+            "row_percentage": 0.34522160664819945
+          },
+          {
+            "column_percentage": 0.2239725216155395,
+            "total_percentage": 0.16377257177499674,
+            "frequency": 3782,
+            "row_percentage": 0.6547783933518005
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.22490736265506686,
+            "total_percentage": 0.06045121898410774,
+            "frequency": 1396,
+            "row_percentage": 0.24231904183301511
+          },
+          {
+            "column_percentage": 0.25849816415965887,
+            "total_percentage": 0.18901831723899018,
+            "frequency": 4365,
+            "row_percentage": 0.7576809581669849
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.24279039793781215,
+            "total_percentage": 0.06525787035032261,
+            "frequency": 1507,
+            "row_percentage": 0.26099757533772083
+          },
+          {
+            "column_percentage": 0.2526945398555016,
+            "total_percentage": 0.18477460702377344,
+            "frequency": 4267,
+            "row_percentage": 0.7390024246622792
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.21105203802158853,
+            "total_percentage": 0.05672714675442775,
+            "frequency": 1310,
+            "row_percentage": 0.22731216380357452
+          },
+          {
+            "column_percentage": 0.2637095819021675,
+            "total_percentage": 0.19282899579959295,
+            "frequency": 4453,
+            "row_percentage": 0.7726878361964254
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 244.45271757067232,
+      "p_value": 4.197623037476527e-49,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 5773,
+          "percentage": 0.24998917420863465
+        },
+        {
+          "frequency": 5765,
+          "percentage": 0.24964274888494348
+        },
+        {
+          "frequency": 5767,
+          "percentage": 0.24972935521586628
+        },
+        {
+          "frequency": 5769,
+          "percentage": 0.24981596154678906
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstProbabilityESL",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.12695343966489447,
+            "total_percentage": 0.03412289438357944,
+            "frequency": 788,
+            "row_percentage": 0.136497488307639
+          },
+          {
+            "column_percentage": 0.2952149709818785,
+            "total_percentage": 0.2158662798250552,
+            "frequency": 4985,
+            "row_percentage": 0.863502511692361
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.3119059126792331,
+            "total_percentage": 0.08383492833326116,
+            "frequency": 1936,
+            "row_percentage": 0.33581960104076325
+          },
+          {
+            "column_percentage": 0.2267558924552884,
+            "total_percentage": 0.16580782055168233,
+            "frequency": 3829,
+            "row_percentage": 0.6641803989592368
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.20960206218785243,
+            "total_percentage": 0.05633741826527519,
+            "frequency": 1301,
+            "row_percentage": 0.22559389630657187
+          },
+          {
+            "column_percentage": 0.2644794504323108,
+            "total_percentage": 0.1933919369505911,
+            "frequency": 4466,
+            "row_percentage": 0.7744061036934281
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.35153858546801997,
+            "total_percentage": 0.09448750703676438,
+            "frequency": 2182,
+            "row_percentage": 0.3782284624718322
+          },
+          {
+            "column_percentage": 0.21242449366338978,
+            "total_percentage": 0.1553284545100247,
+            "frequency": 3587,
+            "row_percentage": 0.6217715375281678
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 1052.1688616999616,
+      "p_value": 6.420396678583302e-223,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 4509,
+          "percentage": 0.19525397306543107
+        },
+        {
+          "frequency": 4527,
+          "percentage": 0.1960334300437362
+        },
+        {
+          "frequency": 4509,
+          "percentage": 0.19525397306543107
+        },
+        {
+          "frequency": 4549,
+          "percentage": 0.1969860996838869
+        },
+        {
+          "frequency": 4450,
+          "percentage": 0.19269908630320876
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "EstHouseholdIncome",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.08699855002416626,
+            "total_percentage": 0.023383709349153424,
+            "frequency": 540,
+            "row_percentage": 0.11976047904191617
+          },
+          {
+            "column_percentage": 0.23504678431837026,
+            "total_percentage": 0.17187026371627767,
+            "frequency": 3969,
+            "row_percentage": 0.8802395209580839
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.17448042532624455,
+            "total_percentage": 0.04689732819469103,
+            "frequency": 1083,
+            "row_percentage": 0.2392312789927104
+          },
+          {
+            "column_percentage": 0.20395593983181334,
+            "total_percentage": 0.14913610184904516,
+            "frequency": 3444,
+            "row_percentage": 0.7607687210072896
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1445142580956984,
+            "total_percentage": 0.03884293941887152,
+            "frequency": 897,
+            "row_percentage": 0.1989354624085163
+          },
+          {
+            "column_percentage": 0.21390501006751156,
+            "total_percentage": 0.15641103364655956,
+            "frequency": 3612,
+            "row_percentage": 0.8010645375914837
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.33897212824230705,
+            "total_percentage": 0.09110986013077556,
+            "frequency": 2104,
+            "row_percentage": 0.46251923499670256
+          },
+          {
+            "column_percentage": 0.1447945043231079,
+            "total_percentage": 0.10587623955311133,
+            "frequency": 2445,
+            "row_percentage": 0.5374807650032974
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.2545513130336717,
+            "total_percentage": 0.06841900142900446,
+            "frequency": 1580,
+            "row_percentage": 0.3550561797752809
+          },
+          {
+            "column_percentage": 0.16996328319317777,
+            "total_percentage": 0.1242800848742043,
+            "frequency": 2870,
+            "row_percentage": 0.6449438202247191
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 1678.798161087291,
+      "p_value": 0.0,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 1036,
+          "percentage": 0.044862079418005456
+        },
+        {
+          "frequency": 634,
+          "percentage": 0.027454206902524574
+        },
+        {
+          "frequency": 1489,
+          "percentage": 0.0644784133720175
+        },
+        {
+          "frequency": 1523,
+          "percentage": 0.06595072099770494
+        },
+        {
+          "frequency": 2987,
+          "percentage": 0.12934655523318755
+        },
+        {
+          "frequency": 15424,
+          "percentage": 0.66790802407656
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "MajorRoadwayHighwayExposure",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          },
+          {
+            "value": 6,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.03141614306428226,
+            "total_percentage": 0.00844411726497207,
+            "frequency": 195,
+            "row_percentage": 0.18822393822393824
+          },
+          {
+            "column_percentage": 0.04980457183465593,
+            "total_percentage": 0.03641796215303339,
+            "frequency": 841,
+            "row_percentage": 0.8117760617760618
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.015144192041243757,
+            "total_percentage": 0.004070497553371151,
+            "frequency": 94,
+            "row_percentage": 0.14826498422712933
+          },
+          {
+            "column_percentage": 0.031979154329029966,
+            "total_percentage": 0.023383709349153424,
+            "frequency": 540,
+            "row_percentage": 0.8517350157728707
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0481714193652328,
+            "total_percentage": 0.012947646472957174,
+            "frequency": 299,
+            "row_percentage": 0.2008059100067159
+          },
+          {
+            "column_percentage": 0.07047258083619566,
+            "total_percentage": 0.05153076689906032,
+            "frequency": 1190,
+            "row_percentage": 0.7991940899932841
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.05654905751570807,
+            "total_percentage": 0.015199411076949726,
+            "frequency": 351,
+            "row_percentage": 0.2304661851608667
+          },
+          {
+            "column_percentage": 0.069406609025228,
+            "total_percentage": 0.05075130992075521,
+            "frequency": 1172,
+            "row_percentage": 0.7695338148391333
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.12469792170130498,
+            "total_percentage": 0.03351665006711991,
+            "frequency": 774,
+            "row_percentage": 0.2591228657515902
+          },
+          {
+            "column_percentage": 0.13105531209285798,
+            "total_percentage": 0.09582990516606764,
+            "frequency": 2213,
+            "row_percentage": 0.7408771342484097
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.7240212663122282,
+            "total_percentage": 0.19460442558351015,
+            "frequency": 4494,
+            "row_percentage": 0.29136410788381745
+          },
+          {
+            "column_percentage": 0.6472817718820325,
+            "total_percentage": 0.4733035984930498,
+            "frequency": 10930,
+            "row_percentage": 0.7086358921161826
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 168.88315830867245,
+      "p_value": 2.0027217109415458e-30,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 16082,
+          "percentage": 0.696401506950158
+        },
+        {
+          "frequency": 3294,
+          "percentage": 0.14264062702983588
+        },
+        {
+          "frequency": 2440,
+          "percentage": 0.10565972372580436
+        },
+        {
+          "frequency": 712,
+          "percentage": 0.0308318538085134
+        },
+        {
+          "frequency": 266,
+          "percentage": 0.011518642012731131
+        },
+        {
+          "frequency": 120,
+          "percentage": 0.005196379855367427
+        },
+        {
+          "frequency": 60,
+          "percentage": 0.0025981899276837136
+        },
+        {
+          "frequency": 30,
+          "percentage": 0.0012990949638418568
+        },
+        {
+          "frequency": 17,
+          "percentage": 0.0007361538128437189
+        },
+        {
+          "frequency": 15,
+          "percentage": 0.0006495474819209284
+        },
+        {
+          "frequency": 10,
+          "percentage": 0.0004330316546139523
+        },
+        {
+          "frequency": 9,
+          "percentage": 0.00038972848915255705
+        },
+        {
+          "frequency": 4,
+          "percentage": 0.00017321266184558093
+        },
+        {
+          "frequency": 7,
+          "percentage": 0.0003031221582297666
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 3,
+          "percentage": 0.00012990949638418567
+        },
+        {
+          "frequency": 5,
+          "percentage": 0.00021651582730697615
+        },
+        {
+          "frequency": 2,
+          "percentage": 8.660633092279046e-05
+        },
+        {
+          "frequency": 2,
+          "percentage": 8.660633092279046e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 2,
+          "percentage": 8.660633092279046e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 2,
+          "percentage": 8.660633092279046e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 2,
+          "percentage": 8.660633092279046e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        },
+        {
+          "frequency": 1,
+          "percentage": 4.330316546139523e-05
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "TotalEDInpatientVisits",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          },
+          {
+            "value": 2,
+            "operator": "="
+          },
+          {
+            "value": 3,
+            "operator": "="
+          },
+          {
+            "value": 4,
+            "operator": "="
+          },
+          {
+            "value": 5,
+            "operator": "="
+          },
+          {
+            "value": 6,
+            "operator": "="
+          },
+          {
+            "value": 7,
+            "operator": "="
+          },
+          {
+            "value": 8,
+            "operator": "="
+          },
+          {
+            "value": 9,
+            "operator": "="
+          },
+          {
+            "value": 10,
+            "operator": "="
+          },
+          {
+            "value": 11,
+            "operator": "="
+          },
+          {
+            "value": 12,
+            "operator": "="
+          },
+          {
+            "value": 13,
+            "operator": "="
+          },
+          {
+            "value": 14,
+            "operator": "="
+          },
+          {
+            "value": 15,
+            "operator": "="
+          },
+          {
+            "value": 16,
+            "operator": "="
+          },
+          {
+            "value": 17,
+            "operator": "="
+          },
+          {
+            "value": 18,
+            "operator": "="
+          },
+          {
+            "value": 19,
+            "operator": "="
+          },
+          {
+            "value": 20,
+            "operator": "="
+          },
+          {
+            "value": 21,
+            "operator": "="
+          },
+          {
+            "value": 22,
+            "operator": "="
+          },
+          {
+            "value": 23,
+            "operator": "="
+          },
+          {
+            "value": 25,
+            "operator": "="
+          },
+          {
+            "value": 27,
+            "operator": "="
+          },
+          {
+            "value": 33,
+            "operator": "="
+          },
+          {
+            "value": 37,
+            "operator": "="
+          },
+          {
+            "value": 50,
+            "operator": "="
+          },
+          {
+            "value": 51,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.7280489769614951,
+            "total_percentage": 0.19568700472004505,
+            "frequency": 4519,
+            "row_percentage": 0.2809973883845293
+          },
+          {
+            "column_percentage": 0.6847684472343953,
+            "total_percentage": 0.500714502230113,
+            "frequency": 11563,
+            "row_percentage": 0.7190026116154707
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.1245368132753343,
+            "total_percentage": 0.03347334690165851,
+            "frequency": 773,
+            "row_percentage": 0.23466909532483304
+          },
+          {
+            "column_percentage": 0.14929527419163804,
+            "total_percentage": 0.10916728012817736,
+            "frequency": 2521,
+            "row_percentage": 0.765330904675167
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.10133719993555663,
+            "total_percentage": 0.027237691075217597,
+            "frequency": 629,
+            "row_percentage": 0.25778688524590165
+          },
+          {
+            "column_percentage": 0.10724860831458012,
+            "total_percentage": 0.07842203265058675,
+            "frequency": 1811,
+            "row_percentage": 0.7422131147540983
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.02577734815530852,
+            "total_percentage": 0.006928506473823237,
+            "frequency": 160,
+            "row_percentage": 0.2247191011235955
+          },
+          {
+            "column_percentage": 0.03268980220300841,
+            "total_percentage": 0.023903347334690166,
+            "frequency": 552,
+            "row_percentage": 0.7752808988764045
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00918318028032866,
+            "total_percentage": 0.002468280431299528,
+            "frequency": 57,
+            "row_percentage": 0.21428571428571427
+          },
+          {
+            "column_percentage": 0.012377117138457894,
+            "total_percentage": 0.009050361581431602,
+            "frequency": 209,
+            "row_percentage": 0.7857142857142857
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.005316578057032383,
+            "total_percentage": 0.0014290044602260426,
+            "frequency": 33,
+            "row_percentage": 0.275
+          },
+          {
+            "column_percentage": 0.005152197086343717,
+            "total_percentage": 0.0037673753951413848,
+            "frequency": 87,
+            "row_percentage": 0.725
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0020944095376188173,
+            "total_percentage": 0.000562941150998138,
+            "frequency": 13,
+            "row_percentage": 0.21666666666666667
+          },
+          {
+            "column_percentage": 0.0027833708397489044,
+            "total_percentage": 0.0020352487766855756,
+            "frequency": 47,
+            "row_percentage": 0.7833333333333333
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0008055421298533913,
+            "total_percentage": 0.00021651582730697615,
+            "frequency": 5,
+            "row_percentage": 0.16666666666666666
+          },
+          {
+            "column_percentage": 0.0014805164041217576,
+            "total_percentage": 0.0010825791365348808,
+            "frequency": 25,
+            "row_percentage": 0.8333333333333334
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0008055421298533913,
+            "total_percentage": 0.00021651582730697615,
+            "frequency": 5,
+            "row_percentage": 0.29411764705882354
+          },
+          {
+            "column_percentage": 0.0007106478739784437,
+            "total_percentage": 0.0005196379855367427,
+            "frequency": 12,
+            "row_percentage": 0.7058823529411765
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0009666505558240696,
+            "total_percentage": 0.00025981899276837135,
+            "frequency": 6,
+            "row_percentage": 0.4
+          },
+          {
+            "column_percentage": 0.0005329859054838328,
+            "total_percentage": 0.00038972848915255705,
+            "frequency": 9,
+            "row_percentage": 0.6
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00032221685194135655,
+            "total_percentage": 8.660633092279046e-05,
+            "frequency": 2,
+            "row_percentage": 0.2
+          },
+          {
+            "column_percentage": 0.00047376524931896246,
+            "total_percentage": 0.00034642532369116185,
+            "frequency": 8,
+            "row_percentage": 0.8
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0005329859054838328,
+            "total_percentage": 0.00038972848915255705,
+            "frequency": 9,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00023688262465948123,
+            "total_percentage": 0.00017321266184558093,
+            "frequency": 4,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00032221685194135655,
+            "total_percentage": 8.660633092279046e-05,
+            "frequency": 2,
+            "row_percentage": 0.2857142857142857
+          },
+          {
+            "column_percentage": 0.00029610328082435155,
+            "total_percentage": 0.00021651582730697615,
+            "frequency": 5,
+            "row_percentage": 0.7142857142857143
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00017766196849461092,
+            "total_percentage": 0.00012990949638418567,
+            "frequency": 3,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00029610328082435155,
+            "total_percentage": 0.00021651582730697615,
+            "frequency": 5,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00016110842597067828,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 0.5
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 0.5
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00011844131232974062,
+            "total_percentage": 8.660633092279046e-05,
+            "frequency": 2,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00016110842597067828,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 0.5
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 0.5
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00011844131232974062,
+            "total_percentage": 8.660633092279046e-05,
+            "frequency": 2,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.00011844131232974062,
+            "total_percentage": 8.660633092279046e-05,
+            "frequency": 2,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.00016110842597067828,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          },
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 5.922065616487031e-05,
+            "total_percentage": 4.330316546139523e-05,
+            "frequency": 1,
+            "row_percentage": 1.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 65.00607263940944,
+      "p_value": 0.27555384437268865,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 18365,
+          "percentage": 0.7952626336985233
+        },
+        {
+          "frequency": 4728,
+          "percentage": 0.20473736630147663
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Fluticasone",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.7855646850330272,
+            "total_percentage": 0.21114623478976313,
+            "frequency": 4876,
+            "row_percentage": 0.26550503675469644
+          },
+          {
+            "column_percentage": 0.7988274310079355,
+            "total_percentage": 0.5841163989087602,
+            "frequency": 13489,
+            "row_percentage": 0.7344949632453036
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.21443531496697277,
+            "total_percentage": 0.057636513229117045,
+            "frequency": 1331,
+            "row_percentage": 0.28151438240270726
+          },
+          {
+            "column_percentage": 0.20117256899206443,
+            "total_percentage": 0.1471008530723596,
+            "frequency": 3397,
+            "row_percentage": 0.7184856175972927
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 4.903287838007195,
+      "p_value": 0.17901741601915602,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 21987,
+          "percentage": 0.9521066989996969
+        },
+        {
+          "frequency": 1106,
+          "percentage": 0.047893301000303125
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Budesonide",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9479619784114709,
+            "total_percentage": 0.25479582557484953,
+            "frequency": 5884,
+            "row_percentage": 0.2676126802201301
+          },
+          {
+            "column_percentage": 0.9536302262229065,
+            "total_percentage": 0.6973108734248473,
+            "frequency": 16103,
+            "row_percentage": 0.7323873197798699
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.05203802158852908,
+            "total_percentage": 0.013986922444030658,
+            "frequency": 323,
+            "row_percentage": 0.29204339963833637
+          },
+          {
+            "column_percentage": 0.04636977377709345,
+            "total_percentage": 0.033906378556272466,
+            "frequency": 783,
+            "row_percentage": 0.7079566003616636
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 3.1979041346873354,
+      "p_value": 0.36210711564945214,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 23055,
+          "percentage": 0.9983544797124669
+        },
+        {
+          "frequency": 38,
+          "percentage": 0.0016455202875330186
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Ciclesonide",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9974222651844692,
+            "total_percentage": 0.26808989737149785,
+            "frequency": 6191,
+            "row_percentage": 0.2685317718499241
+          },
+          {
+            "column_percentage": 0.9986971455643728,
+            "total_percentage": 0.7302645823409691,
+            "frequency": 16864,
+            "row_percentage": 0.731468228150076
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0025777348155308524,
+            "total_percentage": 0.0006928506473823237,
+            "frequency": 16,
+            "row_percentage": 0.42105263157894735
+          },
+          {
+            "column_percentage": 0.0013028544356271468,
+            "total_percentage": 0.000952669640150695,
+            "frequency": 22,
+            "row_percentage": 0.5789473684210527
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 4.490338050873566,
+      "p_value": 0.21315373197962592,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 19972,
+          "percentage": 0.8648508205949855
+        },
+        {
+          "frequency": 3121,
+          "percentage": 0.1351491794050145
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Diphenhydramine",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.875302078298695,
+            "total_percentage": 0.23526609795176026,
+            "frequency": 5433,
+            "row_percentage": 0.2720308431804526
+          },
+          {
+            "column_percentage": 0.8610091199810493,
+            "total_percentage": 0.6295847226432252,
+            "frequency": 14539,
+            "row_percentage": 0.7279691568195473
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.12469792170130498,
+            "total_percentage": 0.03351665006711991,
+            "frequency": 774,
+            "row_percentage": 0.24799743671900032
+          },
+          {
+            "column_percentage": 0.1389908800189506,
+            "total_percentage": 0.1016325293378946,
+            "frequency": 2347,
+            "row_percentage": 0.7520025632809997
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 7.932641254386157,
+      "p_value": 0.04742451468670237,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 22600,
+          "percentage": 0.9786515394275321
+        },
+        {
+          "frequency": 493,
+          "percentage": 0.021348460572467847
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Fexofenadine",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9750281939745449,
+            "total_percentage": 0.2620707573723639,
+            "frequency": 6052,
+            "row_percentage": 0.26778761061946904
+          },
+          {
+            "column_percentage": 0.9799834182162739,
+            "total_percentage": 0.7165807820551683,
+            "frequency": 16548,
+            "row_percentage": 0.732212389380531
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.02497180602545513,
+            "total_percentage": 0.00671199064651626,
+            "frequency": 155,
+            "row_percentage": 0.3144016227180527
+          },
+          {
+            "column_percentage": 0.020016581783726162,
+            "total_percentage": 0.014636469925951587,
+            "frequency": 338,
+            "row_percentage": 0.6855983772819473
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 5.334087711464663,
+      "p_value": 0.14890572158706505,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 21875,
+          "percentage": 0.9472567444680207
+        },
+        {
+          "frequency": 1218,
+          "percentage": 0.05274325553197939
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Ipratropium",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9555340744320928,
+            "total_percentage": 0.25683107435153507,
+            "frequency": 5931,
+            "row_percentage": 0.2711314285714286
+          },
+          {
+            "column_percentage": 0.9442141418926921,
+            "total_percentage": 0.6904256701164855,
+            "frequency": 15944,
+            "row_percentage": 0.7288685714285714
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.044465925567907204,
+            "total_percentage": 0.011951673667345083,
+            "frequency": 276,
+            "row_percentage": 0.22660098522167488
+          },
+          {
+            "column_percentage": 0.05578585810730783,
+            "total_percentage": 0.0407915818646343,
+            "frequency": 942,
+            "row_percentage": 0.7733990147783252
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 11.640756727546899,
+      "p_value": 0.008720780031835894,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 23084,
+          "percentage": 0.9996102715108475
+        },
+        {
+          "frequency": 9,
+          "percentage": 0.00038972848915255705
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Arformoterol",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 1.0,
+            "total_percentage": 0.2687827480188802,
+            "frequency": 6207,
+            "row_percentage": 0.2688875411540461
+          },
+          {
+            "column_percentage": 0.9994670140945162,
+            "total_percentage": 0.7308275234919672,
+            "frequency": 16877,
+            "row_percentage": 0.7311124588459539
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.0,
+            "total_percentage": 0.0,
+            "frequency": 0,
+            "row_percentage": 0.0
+          },
+          {
+            "column_percentage": 0.0005329859054838328,
+            "total_percentage": 0.00038972848915255705,
+            "frequency": 9,
+            "row_percentage": 1.0
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 3.3095333347645077,
+      "p_value": 0.34631798458364316,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    },
+    {
+      "rows": [
+        {
+          "frequency": 23046,
+          "percentage": 0.9979647512233144
+        },
+        {
+          "frequency": 47,
+          "percentage": 0.0020352487766855756
+        }
+      ],
+      "total": 23093,
+      "feature_b": {
+        "feature_name": "Theophylline",
+        "feature_qualifiers": [
+          {
+            "value": 0,
+            "operator": "="
+          },
+          {
+            "value": 1,
+            "operator": "="
+          }
+        ]
+      },
+      "feature_matrix": [
+        [
+          {
+            "column_percentage": 0.9988722410182053,
+            "total_percentage": 0.26847962586065044,
+            "frequency": 6200,
+            "row_percentage": 0.269027163065174
+          },
+          {
+            "column_percentage": 0.9976311737534052,
+            "total_percentage": 0.729485125362664,
+            "frequency": 16846,
+            "row_percentage": 0.730972836934826
+          }
+        ],
+        [
+          {
+            "column_percentage": 0.001127758981794748,
+            "total_percentage": 0.0003031221582297666,
+            "frequency": 7,
+            "row_percentage": 0.14893617021276595
+          },
+          {
+            "column_percentage": 0.0023688262465948124,
+            "total_percentage": 0.0017321266184558092,
+            "frequency": 40,
+            "row_percentage": 0.851063829787234
+          }
+        ]
+      ],
+      "columns": [
+        {
+          "frequency": 6207,
+          "percentage": 0.2687827480188802
+        },
+        {
+          "frequency": 16886,
+          "percentage": 0.7312172519811199
+        }
+      ],
+      "chi_squared": 3.441803813611089,
+      "p_value": 0.3283887777236194,
+      "feature_a": {
+        "feature_name": "EstResidentialDensity",
+        "feature_qualifiers": [
+          {
+            "value": 1,
+            "operator": ">"
+          },
+          {
+            "value": 1,
+            "operator": "<="
+          }
+        ]
+      }
+    }
+  ],
+  "terms and conditions": "The Translator Integrated Clinical and Environmental Exposures Service (ICEES) is providing you with Data that have been de-identified in accordance with 45 C.F.R. \u00a7\u00a7 164.514(a) and (b) and that UNC Health Care System (UNCHCS) is permitted to provide under 45 C.F.R. \u00a7 164.502(d)(2). Recipient agrees to notify UNCHCS via NC TraCS in the event that Recipient receives any identifiable data in error and to take such measures to return the identifiable data and/or destroy it at the direction of UNCHCS.\n\nRestrictions on Recipient\u2019s Use of Data. Recipient further agrees to use the data exclusively for the purposes and functionalities provided by the ICEES: cohort discovery; feature-rich cohort discovery; hypothesis-driven queries; and exploratory queries. Recipient agrees to use appropriate safeguards to protect the Data from misuse and unauthorized access or disclosure. Recipient will report to UNCHCS any unauthorized access, use, or disclosure of the Data not provided for by the Service of which Recipient becomes aware. Recipient will not attempt to identify the individuals whose information is contained in any Data transferred pursuant to this Service Agreement or attempt to contact those individuals. Recipient agrees not to sell the Data to any third party for any purpose. Recipient agrees not to disclose or publish the Data in any manner that would identify the Data as originating from UNCHCS. Finally, Recipient agrees to reasonably limit the number of queries to the Service per IP address within a given time interval, in order to prevent rapid \u2018attacks\u2019 on the Service.\n\nWe kindly request that users of this service provide proper attribution for any products (e.g., manuscripts, podium presentations, software) derived from work related to ICEES. Attribution should include acknowledgement of the funder (National Institutes of Health, National Center for Advancing Translational Sciences, Biomedical Data Translator Program [awards OT3TR002020 and OT2TR002514] and Center for Translational Science Program [award UL1TR002489]), UNC Hospitals and Health Care System, and all team members who contributed to the work.\n"
+}
