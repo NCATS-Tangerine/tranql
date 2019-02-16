@@ -24,7 +24,7 @@ In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wi
 
 It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a heterogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
 
-## Design Overview
+## Design
 
 ### Language
 
@@ -44,7 +44,7 @@ TranQL is a classic interpreter with a lexical analyzer & parser which produces 
        CREATE GRAPH <var> AT <service> AS <name>
       ```
 
-## Standard API
+## Translator Standard API
 
 The [Translator standard graph API](https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI) is a protocol for exchanging graphs with federated data sources. TranQL works with endpoints supporting this standard.
 
