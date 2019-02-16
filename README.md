@@ -24,18 +24,32 @@ The [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is amon
 
 ## Design Overview
 
+### Language
+
 TranQL is designed as a traditional parser which produces an abstract syntax tree modeling the program's constructs which are executed sequentially. It supports three statement types:
-  * **SET**: 
-    - `SET <variable> = <value>`
-  * **SELECT**:
+  * **SET**: Assign a value to a variable.
+    - ```
+       SET <variable> = <value>
+      ```
+  * **SELECT**: Select a graph described by a pattern from a service, given various constraints. Graphs patterns are expressed using concepts from the biolink-model.
     - ```
        SELECT <graph> 
        FROM <service> 
        [WHERE <constraint> [AND <constraint]*]
        [[SET <jsonpath> AS <var> | [SET <var>]]*```
-  * **CREATE GRAPH**:
-    - `CREATE GRAPH <var> AT <service> AS <name>`
-  
+  * **CREATE GRAPH**: Create a graph at a service.
+    - ```
+       CREATE GRAPH <var> AT <service> AS <name>
+      ```
+
+## Standard API
+
+The [Translator standard graph API](https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI) is a protocol for exchanging graphs with federated data sources. TranQL works with endpoints supporting this standard.
+
+## Backplane
+ 
+The TranQL Backplane is a collection of endpoints supporting the standard API which implement reusable question answering services, or modules.
+
 ## Example
 
 ```
@@ -73,3 +87,38 @@ CREATE GRAPH $phenotypic_pathways
     AT '/visualize/gamma'
     AS 'wf5_pheno_paths'
 ```
+
+#### The First Select Statement
+
+The first statement selects a graph pattern connecting disease nodes to chemical substances, both biolink-model concepts. The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
+
+The first where constraint parameterizes the disease question node sent to the service. In this case, it resolves an English word into ontology identifiers using the [bionames](https://bionames.renci.org/apidocs/) API. If curies are supplied, those are used directly.
+
+The rest of the constraints, because they do not map to graph query elements, are transmitted to the service as options in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
+
+The final part of the select statement is a set which uses a JSONPath query to extract chemical identifiers from the result nd store them as a variable for later use.
+
+#### The Second Select Statement
+
+The second select statement uses a more complex graph query with the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first, clinical step. The resulting graph is saved as a variable.
+
+#### Publishing to NDEx
+
+The Backplane implements a standard API endpoint for publishing the graph to NDEx.
+
+#### Publishing to Gamma
+
+Backplane also exposes an API for publishing to Gamma's answer visualisation facility.
+
+## Status
+
+TranQL is brand new. It is strictly alpha. 
+
+## Installation and Usage
+
+git clone <repository>
+cd tranql
+bin/test
+bin/run tranql/workflows/workflow-5.tranql
+ 
+ 
