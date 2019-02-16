@@ -213,19 +213,20 @@ if __name__ == '__main__':
     """ Process arguments. """
     arg_parser = argparse.ArgumentParser(
         description='TranQL',
-        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=60))
+        formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(prog,
+                                                            max_help_position=180))
     arg_parser.add_argument('-d', '--verbose', help="Verbose mode.", action="store_true")
     arg_parser.add_argument('-c', '--cache', help="Cache.", action="store_true")
-    arg_parser.add_argument('-b', '--backplane', help="Backplane address", default="http://localhost:8099")
-    arg_parser.add_argument('-s', '--shell', help="The interpreter read-eval-print-loop (REPL).", action="store_true")
-    arg_parser.add_argument('file')
+    arg_parser.add_argument('-b', '--backplane', help="Backplane URL prefix", default="http://localhost:8099")
+    arg_parser.add_argument('-i', '--shell', help="The interpreter read-eval-print-loop (REPL).", action="store_true")
+    arg_parser.add_argument('-s', '--source', help="The program's source file")
     args = arg_parser.parse_args ()
 
 
     #numeric_level = getattr(logging, loglevel.upper(), None)
     #if not isinstance(numeric_level, int):
     #    raise ValueError('Invalid log level: %s' % loglevel)
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
 
     if args.cache:
         requests_cache.install_cache('demo_cache',
@@ -236,6 +237,5 @@ if __name__ == '__main__':
     if args.shell:
         context = tranql.shell ()
     else:
-        context = tranql.execute_file (args.file)
-#    print (f"{json.dumps(context.mem, indent=2)}")
+        context = tranql.execute_file (args.source)
     

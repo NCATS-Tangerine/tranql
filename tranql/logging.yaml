@@ -31,11 +31,11 @@ handlers:
     encoding: utf8
 
 loggers:
-  tranql:
-    level: DEBUG
+  main:
+    level: INFO
     handlers: [console]
     propagate: no
-  tranqlast:
-    level: DEBUG
+  ast:
+    level: INFO
     handlers: [console]
     propagate: no
