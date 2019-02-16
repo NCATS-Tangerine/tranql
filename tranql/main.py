@@ -173,7 +173,41 @@ class TranQL:
             logger.info (f"{statement} {type(statement).__name__}")
             statement.execute (interpreter=self)
         return self.context
-    
+
+    def shell (self):
+        """ Read, Eval, Print Loop. """
+        header = """
+  ______                 ____    __ 
+ /_  __/________ _____  / __ \  / / 
+  / / / ___/ __ `/ __ \/ / / / / /  
+ / / / /  / /_/ / / / / /_/ / / /___
+/_/ /_/   \__,_/_/ /_/\___\_\/_____/
+                                     v0.1"""
+        print (header)
+        buf = []
+        print (f"$ ", end='')
+        while True:
+            try:
+                sys.stdout.flush ()
+                line = sys.stdin.readline ()
+                if line.isspace():
+                    block = "".join (buf)
+                    buf.clear ()
+                    if len(block) > 0:
+                        if block.strip() == 'quit()':
+                            break
+                        else:
+                            self.execute (block)
+                    print (f"$ ", end='')
+                else:
+                    buf.append (line)
+            except Exception as e:
+                print (e)
+                print (str(e))
+        return self.context
+            
+                
+            
 if __name__ == '__main__':
     
     """ Process arguments. """
@@ -183,6 +217,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('-d', '--verbose', help="Verbose mode.", action="store_true")
     arg_parser.add_argument('-c', '--cache', help="Cache.", action="store_true")
     arg_parser.add_argument('-b', '--backplane', help="Backplane address", default="http://localhost:8099")
+    arg_parser.add_argument('-s', '--shell', help="The interpreter read-eval-print-loop (REPL).", action="store_true")
     arg_parser.add_argument('file')
     args = arg_parser.parse_args ()
 
@@ -197,6 +232,10 @@ if __name__ == '__main__':
                                      allowable_methods=('GET', 'POST', ))
 
     tranql = TranQL (backplane = args.backplane)
-    context = tranql.execute_file (args.file)
+    context = None
+    if args.shell:
+        context = tranql.shell ()
+    else:
+        context = tranql.execute_file (args.file)
 #    print (f"{json.dumps(context.mem, indent=2)}")
     
