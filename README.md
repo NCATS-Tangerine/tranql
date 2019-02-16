@@ -62,7 +62,7 @@ The example program begins with a multi-line comment describing its intent:
 
 The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts.
 
-![image](https://user-images.githubusercontent.com/306971/52903969-5555a180-31f3-11e9-87c2-ba1d53973fbb.png)
+![image](https://user-images.githubusercontent.com/306971/52904001-9d74c400-31f3-11e9-8ea9-9362de79523b.png)
 
 The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
 
