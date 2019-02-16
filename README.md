@@ -28,7 +28,10 @@ TranQL is designed as a traditional parser which produces an abstract syntax tre
   * **SET**: 
     - `SET <variable> = <value>`
   * **SELECT**:
-    - `SELECT <graph> FROM <service> [WHERE <constraint> [AND <constraint]*] [[SET <jsonpath> AS <var> | [SET <var>]]*`
+    - ```SELECT <graph> 
+         FROM <service> 
+         [WHERE <constraint> [AND <constraint]*]
+         [[SET <jsonpath> AS <var> | [SET <var>]]*```
   * **CREATE GRAPH**:
     - `CREATE GRAPH <var> AT <service> AS <name>`
   
