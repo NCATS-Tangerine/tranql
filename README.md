@@ -13,8 +13,8 @@ Workflow languages generally provide capabilities to support large scale, fault 
 
 While these features are essential for some applications, they are neither targeted at nor well suited to
   * **Iterative, interactive exploration** of large data sets.
-  * Serving as **a programmatic interface between applications** and a data source.
   * **Accessibility** to communities like clinical data specialists and medical experts.
+  * **A programmatic interface between applications** and a data source.
   
 ## Interactive Exploration
 
@@ -22,6 +22,13 @@ The ability to explore large data sets with queries is extremely familiar to cli
 
 The [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is among the most pervasive data query languages in use. It is vital to the work of clinical data specialists. TranQL borrows concepts from SQL while adding graph semantics.
 
+## Design Overview
+
+TranQL is designed as a traditional parser which produces an abstract syntax tree modeling the program's constructs which are executed sequentially. It supports three statement types:
+  * **SET** Syntax: `SET <variable> = <value>`
+  * **SELECT** Syntax: `SELECT <graph> FROM <service> [WHERE <constraint> [AND <constraint]*] [[SET <jsonpath> AS <variable>\ | [SET <var>]]*
+  * **CREATE GRAPH** Syntax: `CREATE GRAPH <var> AT <service> AS <name>
+  
 ## Example
 
 ```
