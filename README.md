@@ -1,6 +1,6 @@
 # TranQL
 
-TranQL is a query language for interactive exploration of federated graph oriented data sources.
+TranQL is a query language for interactive exploration of federated knowledge graphs.
 
 ## Background
 
