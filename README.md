@@ -48,7 +48,11 @@ The [Translator standard graph API](https://github.com/NCATS-Gamma/NCATS-Reasone
 
 ## Backplane
  
-The TranQL Backplane is a collection of endpoints supporting the standard API which implement reusable question answering services, or modules. Backplane modules support a simplified syntax in the language for greater readability.
+The TranQL Backplane is a collection of endpoints supporting the standard API which implement reusable question answering services, or modules.
+
+![image](https://user-images.githubusercontent.com/306971/52904021-cb5a0880-31f3-11e9-8b72-6b6178d9757a.png)
+
+Backplane modules support a simplified syntax in the language for greater readability.
 
 ## Example
 
@@ -87,6 +91,14 @@ The Backplane implements two standard API endpoint for publishing the graph for 
 ![image](https://user-images.githubusercontent.com/306971/52903927-b9c43100-31f2-11e9-992e-11161e438a8b.png)
 
 The program ends by publishing the answer set to both services.
+
+##### NDEx:
+
+![image](https://user-images.githubusercontent.com/306971/52904073-95695400-31f4-11e9-9b1d-bfba64e532b7.png)
+
+##### Gamma:
+
+![image](https://user-images.githubusercontent.com/306971/52904079-c5185c00-31f4-11e9-88bc-54e745c0c216.png)
 
 ## Status
 
