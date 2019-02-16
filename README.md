@@ -58,47 +58,11 @@ The example program begins with a multi-line comment describing its intent:
 
 ![image](https://user-images.githubusercontent.com/306971/52903897-53d7a980-31f2-11e9-8d43-538ee2d44ad3.png)
 
-```
---
--- Workflow 5
---
---   Modules 1-4: Chemical Exposures by Clinical Clusters
---      For ICEES cohorts, eg, defined by differential population
---      density, which chemicals are associated with these
---      cohorts with a p_value lower than some threshold?
---
---   Modules 5-*: Knowledge Graph Phenotypic Associations 
---      For chemicals produced by steps 1-4, what phenotypes are
---      associated with exposure to these chemicals?
---
-
-SELECT disease->chemical_substance
-  FROM '/clinical/cohort/disease_to_chemical_exposure'
- WHERE disease = 'asthma'
-   AND EstResidentialDensity < '2'
-   AND cohort = 'all_patients'
-   AND max_p_value = '0.5'
-   SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
-
-SELECT chemical_substance->gene->biological_process->phenotypic_feature
-  FROM '/graph/gamma/quick'
- WHERE chemical_substance = $chemical_exposures
-   SET phenotypic_pathways 
-
-CREATE GRAPH $phenotypic_pathways
-    AT '/visualize/ndex'
-    AS 'wf5_pheno_paths'
-
-CREATE GRAPH $phenotypic_pathways
-    AT '/visualize/gamma'
-    AS 'wf5_pheno_paths'
-```
-
 #### The First Select Statement
 
 The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts.
 
-![image](https://user-images.githubusercontent.com/306971/52903902-75389580-31f2-11e9-90bd-3ee3854d9615.png)
+![image](https://user-images.githubusercontent.com/306971/52903969-5555a180-31f3-11e9-87c2-ba1d53973fbb.png)
 
 The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
 
@@ -110,7 +74,11 @@ The final part of the select statement is a `set` statement which uses a JSONPat
 
 #### The Second Select Statement
 
-The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. The resulting graph is saved as a variable.
+The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step.
+
+![image](https://user-images.githubusercontent.com/306971/52903985-7ddd9b80-31f3-11e9-9caf-ebcf96f84fc0.png)
+
+The resulting graph is saved as a variable.
 
 #### Publishing to Visualizers
 
