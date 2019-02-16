@@ -28,7 +28,7 @@ It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/s
 
 ### Language
 
-TranQL is a classic interpreter with a lexical analyzer & parser which produces token stream. The tokens are interpreted to build an abstract syntax tree modeling the program's constructs which are then executed sequentially. It supports three statement types:
+TranQL is a classic interpreter with a lexical analyzer & parser which produces a token stream. The tokens are interpreted to build an abstract syntax tree modeling the program's constructs which are then executed sequentially. The grammar supports three types of statements:
   * **SET**: Assign a value to a variable.
     - ```
        SET <variable> = <value>
@@ -157,4 +157,5 @@ optional arguments:
   * [ ] Model queries with predicates
   * [ ] Validate queries against the biolink-model
   * [ ] Add export to and possible integration with Neo4J
+  * [ ] Does the standard API need to support multiple values per question-graph node?
   * [ ] A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
