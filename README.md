@@ -25,9 +25,9 @@ The [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is amon
 ## Design Overview
 
 TranQL is designed as a traditional parser which produces an abstract syntax tree modeling the program's constructs which are executed sequentially. It supports three statement types:
-  * **SET** Syntax: `SET <variable> = <value>`
-  * **SELECT** Syntax: `SELECT <graph> FROM <service> [WHERE <constraint> [AND <constraint]*] [[SET <jsonpath> AS <variable>\ | [SET <var>]]*
-  * **CREATE GRAPH** Syntax: `CREATE GRAPH <var> AT <service> AS <name>`
+  * **SET**: `SET <variable> = <value>`
+  * **SELECT**: `SELECT <graph> FROM <service> [WHERE <constraint> [AND <constraint]*] [[SET <jsonpath> AS <variable>\ | [SET <var>]]*`
+  * **CREATE GRAPH**: `CREATE GRAPH <var> AT <service> AS <name>`
   
 ## Example
 
