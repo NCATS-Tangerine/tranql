@@ -112,13 +112,13 @@ The final part of the select statement is a `set` statement which uses a JSONPat
 
 The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. The resulting graph is saved as a variable.
 
-#### Publishing to NDEx
+#### Publishing to Visualizers
 
-The Backplane implements a standard API endpoint for publishing the graph to NDEx.
+The Backplane implements two standard API endpoint for publishing the graph for visualization. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualisation facility.
 
-#### Publishing to Gamma
+![image](https://user-images.githubusercontent.com/306971/52903927-b9c43100-31f2-11e9-992e-11161e438a8b.png)
 
-Backplane also exposes an API for publishing to Gamma's answer visualisation facility.
+The program ends by publishing the answer set to both services.
 
 ## Status
 
