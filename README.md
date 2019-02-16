@@ -157,4 +157,4 @@ optional arguments:
   * Model queries with predicates
   * Validate queries against the biolink-model
   * Add export to and possible integration with Neo4J
-  
+  * A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
