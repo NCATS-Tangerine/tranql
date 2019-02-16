@@ -52,6 +52,8 @@ The TranQL Backplane is a collection of endpoints supporting the standard API wh
 
 ## Example
 
+![TechnicalApproach](https://github.com/stevencox/tidbitc/blob/master/static/workflow5-tranql.png?raw=true)
+
 ```
 --
 -- Workflow 5
