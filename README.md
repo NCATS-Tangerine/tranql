@@ -18,17 +18,19 @@ While these features are essential for some applications, they are neither targe
   
 ## Interactive Exploration
 
-The ability to explore large data sets with queries is extremely familiar to clinical data experts and many medical informatics specialists. To make semantic databases more accessible to these communities, we designed TranQL to share structural and syntactic similarities to the most familiar and widely used languages able to interact with distributed data sets.
+The ability to explore large data sets with queries is extremely familiar to clinical data experts and many medical informatics specialists. To make semantic databases more accessible to these communities, we designed TranQL to share structural and syntactic similarities with the most familiar and widely used languages for interactive distributed data analytics.
 
-In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is among the most pervasive data query languages in use. It is vital to the work of clinical data specialists. TranQL borrows concepts from SQL while borrowing elements of graph semantics from query languages like [Cypher](https://neo4j.com/developer/cypher-query-language/).
+In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is among the most pervasive query languages in use. It is vital to the work of clinical data specialists. TranQL borrows concepts from SQL while borrowing elements of graph semantics from query languages like [Cypher](https://neo4j.com/developer/cypher-query-language/).
 
-It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a heterogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
+It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a homogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
 
-## Design Overview
+On a final contextual note, we've also evaluated a GraphQL interface to these federated data services. GraphQL, it's name not withstading, does not provide much in the way of constructs allowing the user to think explicitly in terms of a knowledge graph compared to Cypher or SPARQL. And, again, it's query syntax and approach is highly unfamiliar to clinical data and medical communities.
+
+## Design
 
 ### Language
 
-TranQL is a classic interpreter with a lexical analyzer & parser which produces token stream. The tokens are interpreted to build an abstract syntax tree modeling the program's constructs which are then executed sequentially. It supports three statement types:
+TranQL is a classic interpreter with a lexical analyzer & parser which produces a token stream. The tokens are interpreted to build an abstract syntax tree modeling the program's constructs which are then executed sequentially. The grammar supports three types of statements:
   * **SET**: Assign a value to a variable.
     - ```
        SET <variable> = <value>
@@ -44,7 +46,7 @@ TranQL is a classic interpreter with a lexical analyzer & parser which produces 
        CREATE GRAPH <var> AT <service> AS <name>
       ```
 
-## Standard API
+## Translator Standard API
 
 The [Translator standard graph API](https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI) is a protocol for exchanging graphs with federated data sources. TranQL works with endpoints supporting this standard.
 
@@ -74,7 +76,7 @@ The first **`where` constraint** parameterizes the disease question node sent to
 
 The rest of the constraints, because they do not map to graph query elements, are **transmitted to the service as `options`** in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
 
-The final part of the select statement is a `set` statement which **uses a JSONPath query to extract chemical identifiers** from the result, store them as a variable.
+The final part of the select statement is a `set` statement which **uses a JSONPath query to extract chemical identifiers** from the result and store them as a variable.
 
 #### The Second Select Statement
 
@@ -86,7 +88,7 @@ The resulting **graph is saved as a variable**.
 
 #### Publishing to Visualizers
 
-The Backplane implements two standard API endpoint for publishing the graph for visualization. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualisation facility.
+The TranQL Backplane implements two standard API endpoints for visualizing a knowledge graph. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualization facility.
 
 ![image](https://user-images.githubusercontent.com/306971/52903927-b9c43100-31f2-11e9-992e-11161e438a8b.png)
 
@@ -99,6 +101,8 @@ The program ends by publishing the answer set to both services.
 ##### Gamma:
 
 ![image](https://user-images.githubusercontent.com/306971/52904079-c5185c00-31f4-11e9-88bc-54e745c0c216.png)
+
+Here's a [link to the Gamma visualization for the answer](http://robokop.renci.org/simple/view/918894c4-e21d-4901-a0c9-a2fa291ba381).
 
 ## Status
 
@@ -117,17 +121,43 @@ pip install -r tranql/requirements.txt
 bin/test --capture=no
 ```
 ### Run
-```
-bin/run tranql/workflows/workflow-5.tranql
-```
 
+Run a program.
+```
+bin/tranql --source tranql/workflows/workflow-5.tranql
+```
+### Shell
+
+Run the interactive interpreter.
+```
+bin/tranql --shell
+```
+### Options
+```
+$ bin/tranql --help
+usage: main.py [-h] [-d] [-c] [-b BACKPLANE] [-i] [-s SOURCE]
+
+TranQL
+
+optional arguments:
+  -h, --help                           show this help message and exit
+  -d, --verbose                        Verbose mode. (default: False)
+  -c, --cache                          Cache. (default: False)
+  -b BACKPLANE, --backplane BACKPLANE  Backplane URL prefix (default:
+                                       http://localhost:8099)
+  -i, --shell                          The interpreter read-eval-print-loop
+                                       (REPL). (default: False)
+  -s SOURCE, --source SOURCE           The program's source file (default:
+                                       None)
+```
 ## Next
 
-  * [Done] Move to the latest standard API version (0.9.0)
-  * [Done] Implement basic NDEx visualization connectivity
-  * [Done] Implement basic Gamma visualization connectivity
-  * Handle mappings from the standard API
-  * Model queries with predicates
-  * Validate queries against the biolink-model
-  * Add export to and possible integration with Neo4J
-  
+  * [X] Move to the latest standard API version (0.9.0)
+  * [X] Implement basic NDEx visualization connectivity
+  * [X] Implement basic Gamma visualization connectivity
+  * [ ] Handle mappings from the standard API
+  * [ ] Model queries with predicates
+  * [ ] Validate queries against the biolink-model
+  * [ ] Add export to and possible integration with Neo4J
+  * [ ] Does the standard API need to support multiple values per question-graph node?
+  * [ ] A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
