@@ -117,10 +117,35 @@ pip install -r tranql/requirements.txt
 bin/test --capture=no
 ```
 ### Run
-```
-bin/run tranql/workflows/workflow-5.tranql
-```
 
+Run a program.
+```
+bin/tranql --source tranql/workflows/workflow-5.tranql
+```
+### Shell
+
+Run the interactive interpreter.
+```
+bin/tranql --shell
+```
+### Options
+```
+$ bin/tranql --help
+usage: main.py [-h] [-d] [-c] [-b BACKPLANE] [-i] [-s SOURCE]
+
+TranQL
+
+optional arguments:
+  -h, --help                           show this help message and exit
+  -d, --verbose                        Verbose mode. (default: False)
+  -c, --cache                          Cache. (default: False)
+  -b BACKPLANE, --backplane BACKPLANE  Backplane URL prefix (default:
+                                       http://localhost:8099)
+  -i, --shell                          The interpreter read-eval-print-loop
+                                       (REPL). (default: False)
+  -s SOURCE, --source SOURCE           The program's source file (default:
+                                       None)
+```
 ## Next
 
   * [Done] Move to the latest standard API version (0.9.0)
