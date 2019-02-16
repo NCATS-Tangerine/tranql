@@ -74,7 +74,7 @@ The first **`where` constraint** parameterizes the disease question node sent to
 
 The rest of the constraints, because they do not map to graph query elements, are **transmitted to the service as `options`** in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
 
-The final part of the select statement is a `set` statement which **uses a JSONPath query to extract chemical identifiers** from the result, store them as a variable.
+The final part of the select statement is a `set` statement which **uses a JSONPath query to extract chemical identifiers** from the result and store them as a variable.
 
 #### The Second Select Statement
 
@@ -86,7 +86,7 @@ The resulting **graph is saved as a variable**.
 
 #### Publishing to Visualizers
 
-The Backplane implements two standard API endpoint for publishing the graph for visualization. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualisation facility.
+The TranQL Backplane implements two standard API endpoints for visualizing a knowledge graph. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualisation facility.
 
 ![image](https://user-images.githubusercontent.com/306971/52903927-b9c43100-31f2-11e9-992e-11161e438a8b.png)
 
