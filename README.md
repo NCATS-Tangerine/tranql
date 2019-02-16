@@ -123,7 +123,6 @@ bin/run tranql/workflows/workflow-5.tranql
  
 ## Next
 
-In no particular order
   * [Done] Move to the latest standard API version (0.9.0)
   * [Done] Implement basic NDEx visualization connectivity
   * [Done] Implement basic Gamma visualization connectivity
