@@ -90,17 +90,17 @@ CREATE GRAPH $phenotypic_pathways
 
 #### The First Select Statement
 
-The first statement selects a graph pattern connecting disease nodes to chemical substances, both biolink-model concepts. The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
+The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts. The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
 
 The first `where` constraint parameterizes the disease question node sent to the service. In this case, it resolves an English word into ontology identifiers using the [bionames](https://bionames.renci.org/apidocs/) API. If curies are supplied, those are used directly.
 
-The rest of the constraints, because they do not map to graph query elements, are transmitted to the service as options in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
+The rest of the constraints, because they do not map to graph query elements, are transmitted to the service as `options` in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
 
-The final part of the select statement is a set which uses a JSONPath query to extract chemical identifiers from the result nd store them as a variable for later use.
+The final part of the select statement is a `set` statement which uses a JSONPath query to extract chemical identifiers from the result, store them as a variable.
 
 #### The Second Select Statement
 
-The second select statement uses a more complex graph query with the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first, clinical step. The resulting graph is saved as a variable.
+The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. The resulting graph is saved as a variable.
 
 #### Publishing to NDEx
 
@@ -112,15 +112,24 @@ Backplane also exposes an API for publishing to Gamma's answer visualisation fac
 
 ## Status
 
-TranQL is brand new. It is strictly alpha. 
+TranQL is brand new and strictly alpha. 
 
 ## Installation and Usage
 
+### Install:
+```
 git clone <repository>
 cd tranql
-bin/test
+```
+### Test
+```
+bin/test --capture=no
+```
+### Run
+```
 bin/run tranql/workflows/workflow-5.tranql
- 
+```
+
 ## Next
 
   * [Done] Move to the latest standard API version (0.9.0)
