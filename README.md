@@ -129,5 +129,5 @@ bin/run tranql/workflows/workflow-5.tranql
   * Handle mappings from the standard API
   * Model queries with predicates
   * Validate queries against the biolink-model
-  * Add export to Neo4J
+  * Add export to and possible integration with Neo4J
   
