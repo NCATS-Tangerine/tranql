@@ -150,11 +150,11 @@ optional arguments:
 ```
 ## Next
 
-  * [Done] Move to the latest standard API version (0.9.0)
-  * [Done] Implement basic NDEx visualization connectivity
-  * [Done] Implement basic Gamma visualization connectivity
-  * Handle mappings from the standard API
-  * Model queries with predicates
-  * Validate queries against the biolink-model
-  * Add export to and possible integration with Neo4J
-  * A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
+  * [X] Move to the latest standard API version (0.9.0)
+  * [X] Implement basic NDEx visualization connectivity
+  * [X] Implement basic Gamma visualization connectivity
+  * [ ] Handle mappings from the standard API
+  * [ ] Model queries with predicates
+  * [ ] Validate queries against the biolink-model
+  * [ ] Add export to and possible integration with Neo4J
+  * [ ] A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
