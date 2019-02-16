@@ -62,17 +62,17 @@ The example program begins with a multi-line comment describing its intent:
 
 #### The First Select Statement
 
-The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts.
+The first statement **selects a graph pattern** connecting disease nodes to chemical substances, both `biolink-model` concepts.
 
 ![image](https://user-images.githubusercontent.com/306971/52904001-9d74c400-31f3-11e9-8ea9-9362de79523b.png)
 
-The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
+The **from clause** specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
 
-The first `where` constraint parameterizes the disease question node sent to the service. In this case, it resolves an English word into ontology identifiers using the [bionames](https://bionames.renci.org/apidocs/) API. If curies are supplied, those are used directly.
+The first **`where` constraint** parameterizes the disease question node sent to the service. In this case, it resolves an English word into ontology identifiers using the [bionames](https://bionames.renci.org/apidocs/) API. If curies are supplied, those are used directly.
 
-The rest of the constraints, because they do not map to graph query elements, are transmitted to the service as `options` in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
+The rest of the constraints, because they do not map to graph query elements, are **transmitted to the service as `options`** in the standard protocol. The service being invoked validates and interprets the options. In the case above, the endpoint passes the options along to define a cohort in the ICEES clinical reasoner.
 
-The final part of the select statement is a `set` statement which uses a JSONPath query to extract chemical identifiers from the result, store them as a variable.
+The final part of the select statement is a `set` statement which **uses a JSONPath query to extract chemical identifiers** from the result, store them as a variable.
 
 #### The Second Select Statement
 
@@ -80,7 +80,7 @@ The second `select` statement sends a different graph query to the Gamma reasone
 
 ![image](https://user-images.githubusercontent.com/306971/52903985-7ddd9b80-31f3-11e9-9caf-ebcf96f84fc0.png)
 
-The resulting graph is saved as a variable.
+The resulting **graph is saved as a variable**.
 
 #### Publishing to Visualizers
 
