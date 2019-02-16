@@ -86,7 +86,7 @@ The resulting **graph is saved as a variable**.
 
 #### Publishing to Visualizers
 
-The TranQL Backplane implements two standard API endpoints for visualizing a knowledge graph. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualisation facility.
+The TranQL Backplane implements two standard API endpoints for visualizing a knowledge graph. One supports the UCSD NDEx network sharing platform and the other supports Gamma's answer visualization facility.
 
 ![image](https://user-images.githubusercontent.com/306971/52903927-b9c43100-31f2-11e9-992e-11161e438a8b.png)
 
