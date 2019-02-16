@@ -22,7 +22,7 @@ The ability to explore large data sets with queries is extremely familiar to cli
 
 In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is among the most pervasive query languages in use. It is vital to the work of clinical data specialists. TranQL borrows concepts from SQL while borrowing elements of graph semantics from query languages like [Cypher](https://neo4j.com/developer/cypher-query-language/).
 
-It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a heterogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
+It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a homogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
 
 ## Design
 
