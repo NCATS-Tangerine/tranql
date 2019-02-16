@@ -52,6 +52,10 @@ The TranQL Backplane is a collection of endpoints supporting the standard API wh
 
 ## Example
 
+#### The Comment
+
+The example program begins with a multi-line comment describing its intent:
+
 ![image](https://user-images.githubusercontent.com/306971/52903897-53d7a980-31f2-11e9-8d43-538ee2d44ad3.png)
 
 ```
@@ -92,7 +96,11 @@ CREATE GRAPH $phenotypic_pathways
 
 #### The First Select Statement
 
-The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts. The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
+The first statement selects a graph pattern connecting disease nodes to chemical substances, both `biolink-model` concepts.
+
+![image](https://user-images.githubusercontent.com/306971/52903902-75389580-31f2-11e9-90bd-3ee3854d9615.png)
+
+The from clause specifies the path to a Backplane endpoint. Because it begins with a "/", TranQL prepends the protocol, host, and port of a configured TranQL Backplane service. The service can be any endpoint implementing the standard graph endpoint interface.
 
 The first `where` constraint parameterizes the disease question node sent to the service. In this case, it resolves an English word into ontology identifiers using the [bionames](https://bionames.renci.org/apidocs/) API. If curies are supplied, those are used directly.
 
