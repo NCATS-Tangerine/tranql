@@ -4,7 +4,7 @@ TranQL is a query language for interactive exploration of federated knowledge gr
 
 ## Background
 
-Previous [work](https://github.com/NCATS-Tangerine/ros) focused on a workflow language for automating biomedical queries. We've also prototyped similar workflows using the [Common Workflow Language (CWL)](https://www.commonwl.org/).
+Previous [work](https://github.com/NCATS-Tangerine/ros) focused on a workflow language for automating biomedical queries. We've also [prototyped](https://github.com/NCATS-Tangerine/ros/blob/master/ros/wf5/workflow_5_main.cwl) similar workflows using the [Common Workflow Language (CWL)](https://www.commonwl.org/).
 
 [Workflow languages](https://github.com/common-workflow-language/common-workflow-language/wiki/Existing-Workflow-systems) generally provide capabilities to support large scale, fault tolerant, reproducible, automated computing. These are critical features where processes that have been refined by teams over time must be automated and shared. Common characteristics of these systems include:
   * The ability to **manage multiple, interacting, long running** third party programs (eg, genomic sequence alignment)
