@@ -113,6 +113,9 @@ TranQL is brand new and strictly alpha.
 ## Installation and Usage
 
 ### Install:
+
+Requires Python 3.7.x.
+
 ```
 git clone <repository>
 cd tranql
