@@ -18,7 +18,7 @@ While these features are essential for some applications, they are neither targe
   
 ## Interactive Exploration
 
-The ability to explore large data sets with queries is extremely familiar to clinical data experts and many medical informatics specialists. To make semantic databases more accessible to these communities, we designed TranQL to share structural and syntactic similarities with the most familiar and widely used languages for interactive distributed data analytics.
+The ability to explore large data sets with queries is extremely familiar to clinical data experts and many medical informatics specialists. To make semantic databases more accessible to these communities, we designed TranQL to share structural and syntactic similarities with the most familiar and widely used languages for interactive distributed data analytics, while providing an interface to heterogeneous semantic graph services existing environments don't address.
 
 In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) is among the most pervasive query languages in use. It is vital to the work of clinical data specialists. TranQL borrows concepts from SQL while borrowing elements of graph semantics from query languages like [Cypher](https://neo4j.com/developer/cypher-query-language/).
 
