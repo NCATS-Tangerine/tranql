@@ -67,19 +67,19 @@ class Statement:
         logger.debug (f"request> {json.dumps(message, indent=2)}")
         response = {}
         try:
-            response = requests.post (
+            http_response = requests.post (
                 url = url,
                 json = message,
                 headers = {
                     'accept': 'application/json'
                 })
             """ Check status and handle response. """
-            if response.status_code == 200 or response.status_code == 202:
-                response = response.json ()
+            if http_response.status_code == 200 or http_response.status_code == 202:
+                response = http_response.json ()
                 logging.debug (f"{json.dumps(response, indent=2)}")
             else:
-                logger.error (f"error {response.status_code} processing request: {message}")
-                logger.error (response.text)
+                logger.error (f"error {http_response.status_code} processing request: {message}")
+                logger.error (http_response.text)
         except:
             logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
             traceback.print_exc ()
@@ -134,7 +134,7 @@ class CreateGraphStatement(Statement):
         self.service = self.resolve_backplane_url(self.service,
                                                   interpreter)
         graph = interpreter.context.resolve_arg (self.graph)
-        
+        print (f"------- {type(graph).__name__}")
         print (f"--- create graph {self.service} at {json.dumps(graph, indent=2)}")
         logger.debug (f"--- create graph {self.service} graph-> {json.dumps(graph, indent=2)}")
         '''
@@ -198,7 +198,7 @@ class SelectStatement(Statement):
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
         value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and value.startswith ("$"):
+        if value and isinstance(value, str) and value.startswith ("$"):
             varname = value
             value = interpreter.context.resolve_arg (varname)
             logger.debug (f"resolved {varname} to {value}")

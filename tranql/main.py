@@ -194,10 +194,16 @@ class TranQL:
                     block = "".join (buf)
                     buf.clear ()
                     if len(block) > 0:
-                        if block.strip() == 'quit()':
+                        if block.strip() == 'quit':
                             break
                         else:
-                            self.execute (block)
+                            #print (f"---> {block}")
+                            if not '\n' in block.strip():
+                                if block.startswith('$'):
+                                    val = self.context.resolve_arg (block.strip())
+                                    print (f"{val}")
+                            else:
+                                self.execute (block)
                     print (f"$ ", end='')
                 else:
                     buf.append (line)
