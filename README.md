@@ -84,7 +84,7 @@ The second `select` statement sends a different graph query to the Gamma reasone
 
 ![image](https://user-images.githubusercontent.com/306971/52903985-7ddd9b80-31f3-11e9-9caf-ebcf96f84fc0.png)
 
-There's not a standard solution to explaining what graph patterns are supported by each endpoint. SQL lets users list the schema of a data source. Towards addressing this, Robokop(Gamma) provides a metadata endpoint describing its meta-knowledge-graph. The shallow hierarchy describes the kinds of transitions it supports and the data sources implementing the transitions. See the "View" tab [here](http://jsonviewer.stack.hu/#http://robokop.renci.org/api/operations).
+There's not a standard solution to explaining what graph patterns are supported by each endpoint. SQL lets users list the schema of a data source. Towards addressing this, Robokop(Gamma) provides a metadata endpoint describing its meta-knowledge-graph. The shallow hierarchy describes the kinds of transitions it supports and the data sources implementing the transitions. See the "Viewer" tab [here](http://jsonviewer.stack.hu/#http://robokop.renci.org/api/operations).
 
 The resulting **graph is saved as a variable**.
 
