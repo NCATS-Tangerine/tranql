@@ -80,9 +80,11 @@ The final part of the select statement is a `set` statement which **uses a JSONP
 
 #### The Second Select Statement
 
-The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. Knowing which graph topologies an endpoint is capable of handling is a hurdle. In SQL, one an list the schema of a data source fairly easily. Towards addressing this problem, Robokop(Gamma) exposes a metadata endpoint describing its meta-knowledge-graph which describes the kinds of transitions it supports. See the "View" tab [here](http://jsonviewer.stack.hu/#http://robokop.renci.org/api/operations).
+The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. 
 
 ![image](https://user-images.githubusercontent.com/306971/52903985-7ddd9b80-31f3-11e9-9caf-ebcf96f84fc0.png)
+
+There's not a standard solution to explaining what graph patterns are supported by each endpoint. SQL lets users list the schema of a data source. Towards addressing this, Robokop(Gamma) provides a metadata endpoint describing its meta-knowledge-graph. The shallow hierarchy describes the kinds of transitions it supports and the data sources implementing the transitions. See the "View" tab [here](http://jsonviewer.stack.hu/#http://robokop.renci.org/api/operations).
 
 The resulting **graph is saved as a variable**.
 
