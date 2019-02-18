@@ -35,7 +35,7 @@ TranQL is a classic interpreter with a lexical analyzer & parser which produces 
     - ```
        SET <variable> = <value>
       ```
-  * **SELECT**: Select a graph described by a pattern from a service, given various constraints. Graph patterns are expressed using concepts from the biolink-model.
+  * **SELECT**: Select a graph described by a pattern from a service, given various constraints. Graph patterns are expressed using concepts from the [biolink-model](https://biolink.github.io/biolink-model/).
     - ```
        SELECT <graph> 
        FROM <service> 
