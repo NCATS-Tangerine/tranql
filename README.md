@@ -66,7 +66,7 @@ The example program begins with a multi-line comment describing its intent:
 
 #### The First Select Statement
 
-The first statement **selects a graph pattern** connecting disease nodes to chemical substances, both `biolink-model` concepts.
+The first statement **selects a graph pattern** connecting disease nodes to chemical substances, both `biolink-model` [concepts](https://biolink.github.io/biolink-model/).
 
 ![image](https://user-images.githubusercontent.com/306971/52904001-9d74c400-31f3-11e9-8ea9-9362de79523b.png)
 
