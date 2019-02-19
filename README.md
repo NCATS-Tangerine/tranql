@@ -24,7 +24,7 @@ In particular, the [Structured Query Language (SQL)](https://en.wikipedia.org/wi
 
 It must be noted here that the [W3C Semantic Web](https://www.w3.org/standards/semanticweb/) stack has the most robust and mature toolkit in this space surrounding technologies  including RDF and SPARQL. However, wide spread adoption of this stack has not approached the levels of technologies like SQL, REST and OpenAPI. Also, the W3C stack envisions a homogeneous RDF/SPARQL environment. We sought something able to embrace more heterogeneous data sources.
 
-On a final contextual note, we've also evaluated a GraphQL interface to these federated data services. GraphQL, it's name not withstading, does not provide much in the way of constructs allowing the user to think explicitly in terms of a knowledge graph compared to Cypher or SPARQL. And, again, it's query syntax and approach is highly unfamiliar to clinical data and medical communities.
+On a final contextual note, we've also evaluated a [GraphQL interface](https://mesostars.wordpress.com/2017/08/25/graphql-alpha/) to these federated data services. GraphQL, it's name not withstading, does not provide much in the way of constructs allowing the user to think explicitly in terms of a knowledge graph compared to Cypher or SPARQL. And, again, it's query syntax and approach is highly unfamiliar to clinical data and medical communities.
 
 ## Design
 
