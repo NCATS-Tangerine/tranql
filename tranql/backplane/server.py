@@ -12,11 +12,11 @@ from flask import Flask, request, abort, Response
 from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
-from ros.lib.ndex import NDEx
+from tranql.lib.ndex import NDEx
 import networkx as nx
 from ndex2 import create_nice_cx_from_networkx
 from ndex2.client import Ndex2
-from ros.util import JSONKit
+from tranql.util import JSONKit
 
 from iceesclient import ICEES
 

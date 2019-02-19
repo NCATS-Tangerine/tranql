@@ -46,11 +46,12 @@ class ICEES:
     def __init__(self):
         """ Initalize ICEES API. """
         self.bionames = Bionames ()
-        self.drug_suffix = [ "one", "ide", "ol", "ine", "min", "map" ]
+        self.drug_suffix = [ "one", "ide", "ol", "ine", "min", "map", "exposure" ]
         self.drug_names = [ "Prednisone", "Fluticasone", "Mometasone", "Budesonide", "Beclomethasone",
                             "Ciclesonide", "Flunisolide", "Albuterol", "Metaproterenol", "Diphenhydramine",
                             "Fexofenadine", "Cetirizine", "Ipratropium", "Salmeterol", "Arformoterol",
                             "Formoterol", "Indacaterol", "Theophylline", "Omalizumab", "Mepolizumab", "Metformin" ]
+        self.diagnoses = [ "CroupDx", "ReactiveAirwayDx", "CoughDx", "PneumoniaDx", "ObesityICD", "ObesityBMI" ]
         self.def_cohort = DefineCohort ()
         self.all_features = AssociationToAllFeatures ()
         
@@ -67,7 +68,34 @@ class ICEES:
             maximum_p_value = max_p_val,
             cohort_id = cohort_id)
 
-    def parse_1_x_N (self, response):        
+    def get_identifiers (self, feature):
+        query = f"https://icees.renci.org/1.0.0/patient/{feature}/identifiers"
+        response = requests.get (query, verify=False).json ()
+        return response['return value']['identifiers']
+
+    def build_associations (self, feature, type_name, target_id, p_value, edges, nodes):
+        identifiers = self.get_identifiers (feature)
+        if len(identifiers) > 0:
+            logger.debug (f"Got ids for {feature}: {identifiers}")
+            for an_id in identifiers:
+                nodes.append ({
+                    "id" : an_id,
+                    "type" : type_name
+                })
+                edges.append ({
+                    "type" : "associated_with",
+                    "source_id" : an_id,
+                    "target_id" : target_id,
+                    "attributes" : {
+                        "p_val" : p_value
+                    }
+                })
+
+    def parse_1_x_N (self, response, target_types=[ 'chemical_substance' ]):
+        """
+        This is a stop-gap measure in which we overlay semantic information over ICEES data.
+        Biolink-model concepts are mapped, provisionally, to data elements retuned from the association service.
+        """
         asthma_id = "MONDO:0004979"
         nodes = [ {
             "id" : asthma_id,
@@ -79,30 +107,57 @@ class ICEES:
                 logger.debug (f" value {value}")
                 if 'feature_b' in value:
                     feature_name = value['feature_b'].get ('feature_name', None)
+                    if feature_name is None:
+                        continue
                     logger.debug (f"feature_name: {feature_name}")
-                    if feature_name and any([
-                            v for v in self.drug_suffix if feature_name.endswith (v) ]):
-                        chem_type = 'chemical_substance'
-                        ids = self.bionames.get_ids (feature_name,
-                                                     type_name=chem_type)
-                        ''' This is a temporary measure until the ICEES API returns identifiers, and hopefully a biolink-model type 
-                        with the responses to feature association requests. For now, we look up names that look like chemicals and 
-                        and call them chemical substances if we get ids back from bionames. '''
-                        if len(ids) > 0:
-                            logger.debug (f"Got ids for {feature_name}: {ids}")
-                            for v in ids:
-                                v['name'] = v['label']
-                                del v['label']
-                                v['type'] = chem_type
-                                edges.append ({
-                                    "type" : "associated_with",
-                                    "source_id" : v['id'],
-                                    "target_id" : asthma_id,
-                                    "attributes" : {
-                                        "p_val" : value['p_value']
-                                    }
-                                })
-                            nodes = nodes + ids
+
+                    for type_name in target_types:
+                        if type_name == 'chemical_substance':
+                            # Handle drugs 
+                            if any([ v for v in self.drug_suffix if feature_name.endswith (v) ]):
+                                self.build_associations (
+                                    feature=feature_name, type_name=type_name,
+                                    target_id=asthma_id, p_value=value['p_value'],
+                                    edges=edges, nodes=nodes)
+                        elif type_name == 'disease':
+                            # Handle disease diagnoses
+                            if feature_name in self.diagnoses:
+                                self.build_associations (
+                                    feature=feature_name, type_name=type_name,
+                                    target_id=asthma_id, p_value=value['p_value'],
+                                    edges = edges, nodes=nodes)
+                        else:
+                            logger.debug (f"ignoring unhanlded type name: {type_name}")
+                                    
+                            '''
+                                chem_type = 'chemical_substance'
+                                ids = self.bionames.get_ids (feature_name,
+                                                             type_name=chem_type)
+                                """ This is a temporary measure until the ICEES API returns identifiers, and hopefully a biolink-model type 
+                                with the responses to feature association requests. For now, we look up names that look like chemicals and 
+                                and call them chemical substances if we get ids back from bionames. """
+                                if len(ids) > 0:
+                                    logger.debug (f"Got ids for {feature_name}: {ids}")
+                                    for v in ids:
+                                        v['name'] = v['label']
+                                        del v['label']
+                                        v['type'] = chem_type
+                                        edges.append ({
+                                            "type" : "associated_with",
+                                            "source_id" : v['id'],
+                                            "target_id" : asthma_id,
+                                            "attributes" : {
+                                                "p_val" : value['p_value']
+                                            }
+                                        })
+                                        nodes = nodes + ids
+                        elif type_name == 'disease':
+                            # Handle disease diagnoses
+                            if feature_name and any([
+                                    v for v in self.drug_suffix if feature_name.endswith (v) ]):
+                                chem_type = 'chemical_substance'
+                            '''
+
         return {
             "nodes" : nodes,
             "edges" : edges

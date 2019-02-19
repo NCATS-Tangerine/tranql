@@ -221,7 +221,8 @@ class SelectStatement(Statement):
         instances for each value permutation.
         """
         for index, type_name in enumerate(self.concept_order):
-            concept = self.concepts[type_name]
+            type_name_id = f"{type_name}_{index}"
+            concept = self.concepts[type_name_id]
             if len(concept.nodes) > 0:
                 self.expand_nodes (interpreter, concept)
                 logger.debug (f"concept--nodes: {concept.nodes}")
@@ -229,17 +230,17 @@ class SelectStatement(Statement):
                     logger.debug (f"concept-nodes: index:{index} type:{type_name} concept:{concept}")
                     if isinstance (value, list):
                         """ It's a list. Build the set and permute. """
-                        self.concepts[type_name].nodes = [ self.node (
+                        self.concepts[type_name_id].nodes = [ self.node (
                             identifier = index,
                             type_name = type_name,
                             value = self.val(v)) for v in value ]
                     elif isinstance (value, str):
-                        self.concepts[type_name].nodes = [ self.node (
+                        self.concepts[type_name_id].nodes = [ self.node (
                             identifier = index,
                             type_name = type_name,
                             value = self.val(value)) ]
             else:
-                self.concepts[type_name].nodes = [ self.node (
+                self.concepts[type_name_id].nodes = [ self.node (
                     identifier = index,
                     type_name = type_name) ]
         options = {}
@@ -257,7 +258,8 @@ class SelectStatement(Statement):
         questions = []
         logger.debug (f"concept order> {self.concept_order}")
         for index, type_name in enumerate (self.concept_order):
-            concept = self.concepts [type_name]
+            type_name_id = f"{type_name}_{index}"
+            concept = self.concepts [type_name_id]
             previous = self.concept_order[index-1] if index > 0 else None
             if index == 0:
                 for node in concept.nodes:
@@ -301,6 +303,7 @@ class SelectStatement(Statement):
         elif len(responses) == 1:
             result = responses[0]
         elif len(responses) > 1:
+            # TODO - this isn't the right logic. Revisit merging nodes, edges, etc.
             result = responses[0]
             nodes = result['knowledge_graph']['nodes']
             edges = result['knowledge_graph']['edges']
@@ -369,7 +372,10 @@ class TranQL_AST:
                 if command == 'select':
                     for token in e[1:]:
                         select.concept_order.append (token)
-                        select.concepts[token] = Concept (token)
+                        token_number = len(select.concept_order) - 1
+                        concept_id = f"{token}_{token_number}"
+                        select.concepts[concept_id] = Concept (token)
+#                        select.concepts[token] = Concept (token)
                 if command == 'from':
                     select.service = e[1][0]
                 elif command == 'where':
