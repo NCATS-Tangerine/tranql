@@ -162,7 +162,7 @@ optional arguments:
   * [X] Move to the latest standard API version (0.9.0)
   * [X] Implement basic NDEx visualization connectivity
   * [X] Implement basic Gamma visualization connectivity
-  * [ ] Model concept graphs with multiple occurrences of the same concept.
+  * [X] Model concept graphs with multiple occurrences of the same concept.
   * [ ] Index previous answer via standard API "knowledge_maps" construct.
   * [ ] Model queries with predicates
   * [ ] Validate queries against the biolink-model
