@@ -246,13 +246,6 @@ if __name__ == '__main__':
     arg_parser.add_argument('-o', '--output', help="Output destination")
     args = arg_parser.parse_args ()
 
-
-    #numeric_level = getattr(logging, loglevel.upper(), None)
-    #if not isinstance(numeric_level, int):
-    #    raise ValueError('Invalid log level: %s' % loglevel)
-
-    #logging.basicConfig(level=logging.DEBUG)
-
     root_logger = logging.getLogger()
     if args.verbose:
         root_logger.setLevel (logging.DEBUG)
