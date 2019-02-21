@@ -134,8 +134,8 @@ class CreateGraphStatement(Statement):
         self.service = self.resolve_backplane_url(self.service,
                                                   interpreter)
         graph = interpreter.context.resolve_arg (self.graph)
-        print (f"------- {type(graph).__name__}")
-        print (f"--- create graph {self.service} at {json.dumps(graph, indent=2)}")
+        logger.debug (f"------- {type(graph).__name__}")
+        logger.debug (f"--- create graph {self.service} at {json.dumps(graph, indent=2)}")
         logger.debug (f"--- create graph {self.service} graph-> {json.dumps(graph, indent=2)}")
         '''
         message = self.message (
@@ -183,6 +183,8 @@ class SelectStatement(Statement):
         return e
     def node (self, identifier, type_name, value=None):
         """ Generate a question node. """
+        if identifier is None:
+            identifier = self.next_id ()
         n = {
             "id": f"n{identifier}",
             "type": type_name
@@ -208,12 +210,18 @@ class SelectStatement(Statement):
                 raise ValueError (f"Undefined variable: {varname}")
             if isinstance(value, list):
                 concept.nodes = value
-            elif isinstance(value, str) and not ':' in value:
-                logger.debug (f"no ':' in {value} concept:{concept}")
-                bionames = Bionames ()
-                response = bionames.get_ids (value, concept.name)
-                logger.debug (f"fetching ids for [{value}] from bionames.")
-                concept.nodes = response
+            elif isinstance(value, str):
+                if not ':' in value:
+                    logger.debug (f"no ':' in {value} concept:{concept}")
+                    bionames = Bionames ()
+                    response = bionames.get_ids (value, concept.name)
+                    logger.debug (f"fetching ids for [{value}] from bionames.")
+                    concept.nodes = response
+                else:
+                    concept.nodes = [ self.node (
+                        identifier = None,
+                        value=value,
+                        type_name = concept.name) ]
             else:
                 logger.debug (f"value: {value}")
                 raise ValueError (f"Invalid type {type(value)} interpolated.")
@@ -264,30 +272,49 @@ class SelectStatement(Statement):
         for index, name in enumerate (self.query.order):
             concept = self.query[name] 
             previous = self.query.order[index-1] if index > 0 else None
+            logger.debug (f"query:{self.query}")
+            logger.debug (f"questions:{index} ==>> {json.dumps(questions, indent=2)}")
             if index == 0:
                 """ Model the first step. """
-                for node in concept.nodes:
-                    questions.append (self.message (
-                        q_nodes = [ node ],
-                        q_edges = [],
-                        options = options))
+                if len(concept.nodes) > 0:
+                    """ The first concept is bound. """
+                    for node in concept.nodes:
+                        questions.append (self.message (
+                            q_nodes = [ node ],
+                            q_edges = [],
+                            options = options))
+                else:
+                    """ No nodes specified for the first concept. """
+                    questions.append (self.message (options))
             else:
                 """ Not the first concept - permute relative to previous. """
                 new_questions = []
                 for question in questions:
-                    for node in concept.nodes:
-                        """ Permute each question. """
-                        nodes = copy.deepcopy (question["question_graph"]['nodes'])
-                        lastnode = nodes[-1]
-                        nodes.append (node)
-                        edges = copy.deepcopy (question["question_graph"]['edges'])
-                        edges.append (self.edge (
-                            source=lastnode['id'],
-                            target=node['id']))
-                        new_questions.append (self.message (
-                            q_nodes = nodes,
-                            options = options,
-                            q_edges = edges))
+                    if len(concept.nodes) > 0:
+                        for node in concept.nodes:
+                            """ Permute each question. """
+                            nodes = copy.deepcopy (question["question_graph"]['nodes'])
+                            lastnode = nodes[-1]
+                            nodes.append (node)
+                            edges = copy.deepcopy (question["question_graph"]['edges'])
+                            edges.append (self.edge (
+                                source=lastnode['id'],
+                                target=node['id']))
+                            new_questions.append (self.message (
+                                q_nodes = nodes,
+                                options = options,
+                                q_edges = edges))
+                    else:
+                        next_id = len(question['question_graph']['nodes'])
+                        question['question_graph']['nodes'].append (
+                            self.node (identifier = str(next_id),
+                                       type_name = concept.name))
+                        question['question_graph']['edges'].append (
+                            self.edge (
+                                source = question['question_graph']['nodes'][-2]['id'],
+                                target = f"n{str(next_id)}"))
+                        next_id += 1
+                        new_questions.append (self.message (options))
                 questions = new_questions
         return questions
 

@@ -233,10 +233,17 @@ if __name__ == '__main__':
         formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(prog,
                                                             max_help_position=180))
     arg_parser.add_argument('-d', '--verbose', help="Verbose mode.", action="store_true")
-    arg_parser.add_argument('-c', '--cache', help="Cache.", action="store_true")
-    arg_parser.add_argument('-b', '--backplane', help="Backplane URL prefix", default="http://localhost:8099")
-    arg_parser.add_argument('-i', '--shell', help="The interpreter read-eval-print-loop (REPL).", action="store_true")
+    arg_parser.add_argument('-c', '--cache',
+                            help="Cache responses from backplane services?",
+                            action="store_true")
+    arg_parser.add_argument('-b', '--backplane',
+                            help="Backplane URL prefix",
+                            default="http://localhost:8099")
+    arg_parser.add_argument('-i', '--shell',
+                            help="The interpreter read-eval-print-loop (REPL).",
+                            action="store_true")
     arg_parser.add_argument('-s', '--source', help="The program's source file")
+    arg_parser.add_argument('-o', '--output', help="Output destination")
     args = arg_parser.parse_args ()
 
 
@@ -248,8 +255,8 @@ if __name__ == '__main__':
 
     root_logger = logging.getLogger()
     if args.verbose:
-        root_logger.setLevel(logging.DEBUG)
-    
+        root_logger.setLevel (logging.DEBUG)
+        
     if args.cache:
         requests_cache.install_cache('demo_cache',
                                      allowable_methods=('GET', 'POST', ))
@@ -260,4 +267,5 @@ if __name__ == '__main__':
         context = tranql.shell ()
     else:
         context = tranql.execute_file (args.source)
-    
+        if args.output == 'stdout':
+            print (f"{json.dumps(context.mem, indent=2)}")

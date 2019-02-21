@@ -51,6 +51,7 @@ class LoggingUtil(object):
         if os.path.exists(path):
             with open(path, 'rt') as f:
                 config = yaml.safe_load(f.read())
+            #print (f"config logging {json.dumps(config, indent=2)}")
             logging.config.dictConfig(config)
         else:
             logging.basicConfig(level=default_level)

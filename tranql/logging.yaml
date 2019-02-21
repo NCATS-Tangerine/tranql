@@ -31,6 +31,10 @@ handlers:
     encoding: utf8
 
 loggers:
+  root:
+    level: WARNING
+    handlers: [console]
+    propagate: no
   main:
     level: INFO
     handlers: [console]

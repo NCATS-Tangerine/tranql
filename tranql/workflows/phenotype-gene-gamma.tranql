@@ -5,9 +5,9 @@
 --
 
 set whooping_cough = 'HP:0031247'
-set phenotype = $whooping_cough
-
+set blue_eyes = 'HP:0000635'
+set chorea = 'HP:0002072'
 select gene->phenotypic_feature
   from '/graph/gamma/quick'
- where phenotypic_feature = $phenotype
+ where phenotypic_feature = $chorea --$blue_eyes --whooping_cough
    set chemical_pathways
