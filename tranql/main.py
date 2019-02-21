@@ -54,13 +54,15 @@ logger = logging.getLogger (__name__)
 
 """
 A program is a list of statements.
-Statements can be 'set' or 'select' statements.        
+Statements can be 'set' or 'select' statements.
+
 """
 statement = Forward()
 SELECT, FROM, WHERE, SET, AS, CREATE, GRAPH, AT = map(
     CaselessKeyword,
     "select from where set as create graph at".split())
 
+concept_name    = Word( alphas, alphanums + ":_")
 ident          = Word( "$" + alphas, alphanums + "_$" ).setName("identifier")
 columnName     = delimitedList(ident, ".", combine=True).setName("column name")
 columnNameList = Group( delimitedList(columnName))
@@ -69,10 +71,14 @@ tableName      = quotedString.setName ("service name")
 tableNameList  = Group(delimitedList(tableName))
 
 SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
-arrow = Literal ("->")
-t_expr = Group(ident + LPAR + Word("$" + alphas, alphanums + "_$") + RPAR + ZeroOrMore(LineEnd())).setName("t_expr") | \
-         Word(alphas, alphanums + "_$") + ZeroOrMore(LineEnd())
-t_expr_chain = t_expr + ZeroOrMore(arrow + t_expr)
+arrow = Literal ("->") | Literal ("<-")
+question_graph_element = (
+    concept_name + ZeroOrMore ( LineEnd () )
+) | \
+Group (
+    concept_name + COLON + concept_name + ZeroOrMore ( LineEnd () )
+)
+question_graph_expression = question_graph_element + ZeroOrMore(arrow + question_graph_element)
 
 whereExpression = Forward()
 and_, or_, in_ = map(CaselessKeyword, "and or in".split())
@@ -105,7 +111,8 @@ optWhite = ZeroOrMore(LineEnd() | White())
 """ Define the statement grammar. """
 statement <<= (
     Group(
-        Group(SELECT + t_expr_chain)("concepts") + optWhite + 
+#        Group(SELECT + t_expr_chain)("concepts") + optWhite + 
+        Group(SELECT + question_graph_expression)("concepts") + optWhite + 
         Group(FROM + tableNameList) + optWhite + 
         Group(Optional(WHERE + whereExpression("where"), "")) + optWhite + 
         Group(Optional(SET + setExpression("set"), ""))("select")
@@ -156,22 +163,26 @@ class TranQL:
         self.context = Context ()
         self.context.set ("backplane", backplane)
 
-    def execute_file (self, program):
-        with open (program, "r") as stream:
-            self.execute (stream.read ())
-        return self.context
+    def parse (self, program):
+        """ If we just want the AST. """
+        return self.parser.parse (program)
     
     def execute (self, program):
         """ Execute a program - a list of statements. """
         ast = None
         if isinstance(program, str):
-            ast = self.parser.parse (program)
+            ast = self.parse (program)
         if not ast:
             raise ValueError (f"Unhandled type: {type(program)}")
         for statement in ast.statements:
-            print (f"{statement}")
-            logger.info (f"{statement} {type(statement).__name__}")
+            logger.debug (f"execute: {statement} type={type(statement).__name__}")
             statement.execute (interpreter=self)
+        return self.context
+
+    def execute_file (self, program):
+        """ Execute a file on disk, soup to nuts. """
+        with open (program, "r") as stream:
+            self.execute (stream.read ())
         return self.context
 
     def shell (self):
@@ -232,8 +243,13 @@ if __name__ == '__main__':
     #numeric_level = getattr(logging, loglevel.upper(), None)
     #if not isinstance(numeric_level, int):
     #    raise ValueError('Invalid log level: %s' % loglevel)
+
     #logging.basicConfig(level=logging.DEBUG)
 
+    root_logger = logging.getLogger()
+    if args.verbose:
+        root_logger.setLevel(logging.DEBUG)
+    
     if args.cache:
         requests_cache.install_cache('demo_cache',
                                      allowable_methods=('GET', 'POST', ))

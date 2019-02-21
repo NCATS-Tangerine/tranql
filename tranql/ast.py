@@ -156,15 +156,17 @@ class SelectStatement(Statement):
     """
     def __init__(self):
         """ Initialize a new select statement. """
-        self.concept_order = []
-        self.concepts = {}
+        #self.concept_order = []
+        #self.concepts = {}
+        self.query = Query ()
         self.service = None
         self.where = []
         self.set_statements = []
         self.id_count = 0
 
     def __repr__(self):
-        return f"SELECT {self.concepts} from:{self.service} where:{self.where} set:{self.set_statements}"
+        #return f"SELECT {self.concepts} from:{self.service} where:{self.where} set:{self.set_statements}"
+        return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
     
     def next_id(self):
         self.id_count += 1
@@ -215,40 +217,42 @@ class SelectStatement(Statement):
             else:
                 logger.debug (f"value: {value}")
                 raise ValueError (f"Invalid type {type(value)} interpolated.")
+
     def generate_questions (self, interpreter):
         """
         Given an archetype question graph and values, generate question
         instances for each value permutation.
         """
-        for index, type_name in enumerate(self.concept_order):
-            type_name_id = f"{type_name}_{index}"
-            concept = self.concepts[type_name_id]
+        for index, name in enumerate(self.query.order):
+            concept = self.query[name]
             if len(concept.nodes) > 0:
                 self.expand_nodes (interpreter, concept)
                 logger.debug (f"concept--nodes: {concept.nodes}")
                 for value in concept.nodes:
-                    logger.debug (f"concept-nodes: index:{index} type:{type_name} concept:{concept}")
+                    logger.debug (f"concept-nodes: index:{index} type:{name} concept:{concept}")
                     if isinstance (value, list):
-                        """ It's a list. Build the set and permute. """
-                        self.concepts[type_name_id].nodes = [ self.node (
+                        """ It's a list of values. Build the set preparing to permute. """
+                        concept.nodes = [ self.node (
                             identifier = index,
-                            type_name = type_name,
+                            type_name = concept.name,
                             value = self.val(v)) for v in value ]
                     elif isinstance (value, str):
-                        self.concepts[type_name_id].nodes = [ self.node (
+                        """ It's a single value. """
+                        concept.nodes = [ self.node (
                             identifier = index,
-                            type_name = type_name,
+                            type_name = concept.name,
                             value = self.val(value)) ]
             else:
-                self.concepts[type_name_id].nodes = [ self.node (
+                """ There are no values - it's just a template for a model type. """
+                concept.nodes = [ self.node (
                     identifier = index,
-                    type_name = type_name) ]
+                    type_name = concept.name) ]
         options = {}
         for constraint in self.where:
             logger.debug (f"manage constraint: {constraint}")
             name, op, value = constraint
             value = interpreter.context.resolve_arg (value)
-            if not name in self.concepts:
+            if not name in self.query:
                 """
                 This is not constraining a concept name in the graph query.
                 So interpret it as an option to the underlying service.
@@ -256,19 +260,19 @@ class SelectStatement(Statement):
                 options[name] = constraint[1:]
         edges = []
         questions = []
-        logger.debug (f"concept order> {self.concept_order}")
-        for index, type_name in enumerate (self.concept_order):
-            type_name_id = f"{type_name}_{index}"
-            concept = self.concepts [type_name_id]
-            previous = self.concept_order[index-1] if index > 0 else None
+        logger.debug (f"concept order> {self.query.order}")
+        for index, name in enumerate (self.query.order):
+            concept = self.query[name] 
+            previous = self.query.order[index-1] if index > 0 else None
             if index == 0:
+                """ Model the first step. """
                 for node in concept.nodes:
-                    """ Model the first step. """
                     questions.append (self.message (
                         q_nodes = [ node ],
-                        options = options,
-                        q_edges = []))
+                        q_edges = [],
+                        options = options))
             else:
+                """ Not the first concept - permute relative to previous. """
                 new_questions = []
                 for question in questions:
                     for node in concept.nodes:
@@ -296,6 +300,8 @@ class SelectStatement(Statement):
         """
         self.service = self.resolve_backplane_url (self.service, interpreter)
         questions = self.generate_questions (interpreter)
+        if len(questions) == 0:
+            raise ValueError ("No questions generated")
         service = interpreter.context.resolve_arg (self.service)
         responses = [ self.request (service, q) for q in questions ]
         if len(responses) == 0:
@@ -371,11 +377,7 @@ class TranQL_AST:
                 command = e[0]
                 if command == 'select':
                     for token in e[1:]:
-                        select.concept_order.append (token)
-                        token_number = len(select.concept_order) - 1
-                        concept_id = f"{token}_{token_number}"
-                        select.concepts[concept_id] = Concept (token)
-#                        select.concepts[token] = Concept (token)
+                        select.query.add (token)
                 if command == 'from':
                     select.service = e[1][0]
                 elif command == 'where':
@@ -383,8 +385,8 @@ class TranQL_AST:
                         if isinstance(condition, list) and len(condition) == 3:
                             select.where.append (condition)
                             var, op, val = condition
-                            if var in select.concepts and op == "=":
-                                select.concepts[var].nodes.append (val)
+                            if var in select.query and op == '=':
+                                select.query[var].nodes.append (val)
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':
@@ -397,7 +399,6 @@ class TranQL_AST:
                     elif len(element) == 1:
                         select.set_statements.append (
                             SetStatement (variable=element[0]))
-
         self.statements.append (select)
 
     def is_command (self, e):
@@ -406,3 +407,33 @@ class TranQL_AST:
     
     def __repr__(self):
         return json.dumps(self.parse_tree)
+
+class Query:
+    """ Model a query. 
+    TODO:
+       - Model queries with arrows in both diretions.
+       - Model predicates
+       - Model arbitrary shaped graphs.
+    """
+    def __init__(self):
+        self.order = []
+        self.concepts = {}
+    def add(self, key):
+        concept = key
+        name = key
+        if ':' in key:
+            if key.count (':') > 1:
+                raise ValueError (f"Illegal concept id: {key}")
+            name, concept = key.split (':')
+        self.order.append (name)
+        self.concepts[name] = Concept (concept)
+    def __getitem__(self, key):
+        return self.concepts [key]
+    def __setitem__(self, key, value):
+        raise ValueError ("Not implemented")
+    def __delitem__ (self, key):
+        del self.concepts[key]
+    def __contains__ (self, key):
+        return key in self.concepts
+    def __repr__(self):
+        return str(self.concepts)

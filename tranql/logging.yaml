@@ -36,6 +36,6 @@ loggers:
     handlers: [console]
     propagate: no
   ast:
-    level: INFO
+    level: DEBUG
     handlers: [console]
     propagate: no

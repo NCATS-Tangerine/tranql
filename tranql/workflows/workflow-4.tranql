@@ -1,5 +1,5 @@
 --
--- Workflow 5
+-- Workflow 4
 --
 --   Modules 1-4: Chemical Exposures by Clinical Clusters
 --      For ICEES cohorts, eg, defined by differential population
@@ -11,25 +11,25 @@
 --      associated with exposure to these chemicals?
 --
 
-SELECT disease->chemical_substance
+SELECT cohort_diagnosis:disease->diagnoses:disease
   FROM '/clinical/cohort/disease_to_chemical_exposure'
- WHERE disease = 'MONDO:0004979' --asthma
-   AND EstResidentialDensity < '2'
+ WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+   AND Sex = '0'
    AND cohort = 'all_patients'
    AND max_p_value = '0.5'
-   SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
+   SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
 
-SELECT chemical_substance->gene->biological_process->phenotypic_feature
+SELECT disease->genes1:gene->pathway->candidate_genes:gene->chemical_substance
   FROM '/graph/gamma/quick'
- WHERE chemical_substance = $chemical_exposures
-   SET phenotypic_pathways 
+ WHERE disease = $diagnoses
+   SET chemical_pathways
 
-CREATE GRAPH $phenotypic_pathways
+CREATE GRAPH $chemical_pathways
     AT '/visualize/ndex'
-    AS 'wf5_pheno_paths'
+    AS 'wf4_paths'
 
-CREATE GRAPH $phenotypic_pathways
+CREATE GRAPH $chemical_pathways
     AT '/visualize/gamma'
-    AS 'wf5_pheno_paths'
+    AS 'wf4_paths'
 
 

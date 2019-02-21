@@ -1,6 +1,7 @@
 import json
 import pytest
 from tranql.main import TranQL
+from tranql.main import TranQLParser
 from tranql.ast import SetStatement
 from tranql.tests.mocks import mock_icees_wf5_mod_1_4_response
 from tranql.tests.mocks import mock_graph_gamma_quick
@@ -9,10 +10,27 @@ def assert_lists_equal (a, b):
     assert len(a) == len(b)
     for index, element in enumerate(a):
         actual = b[index]
+        assert type(actual) == type(element)
         assert len(element) == len(actual)
         for s_index, s in enumerate(element):
             print (f"  --assert: actual: {actual[s_index]} s: {s}")
+            actual = actual[s_index]
+            if isinstance(actual,str) and isinstance(s, str) and \
+               actual.isspace() and s.isspace ():
+                continue
             assert actual[s_index] == s
+
+def assert_lists_equal (a, b):
+    assert len(a) == len(b)
+    for index, expected in enumerate(a):
+        actual = b[index]
+        if isinstance(actual,str) and isinstance(expected, str) and \
+           actual.isspace() and expected.isspace ():
+            continue
+        elif isinstance(actual, list) and isinstance(expected, list):
+            assert_lists_equal (actual, expected)
+        else:
+            assert actual == expected
 
 def assert_parse_tree (code, expected):
     tranql = TranQL ()
@@ -99,6 +117,41 @@ def test_parse_select_complex ():
              ],
              ["set", ["$.nodes.[*].id", "as", "chemical_exposures"]]]
         ])
+
+def test_parse_query_with_repeated_concept ():
+    """ Verify the parser accepts a grammar allowing concept names to be prefixed by a name
+    and a colon. """
+    print (f"test_parse_query_with_repeated_concept")
+    assert_parse_tree (
+        code="""
+        SELECT cohort_diagnosis:disease->diagnoses:disease
+          FROM '/clinical/cohort/disease_to_chemical_exposure'
+         WHERE cohort_diagnosis = 'asthma'
+           AND Sex = '0'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.5'
+           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+        """,
+        expected = [
+            [["select", "cohort_diagnosis:disease","->","diagnoses:disease","\n"],
+             "  ",
+             ["from",
+              ["/clinical/cohort/disease_to_chemical_exposure"]
+             ],
+             ["where",
+              ["cohort_diagnosis","=","asthma"],
+              "and",
+              ["Sex","=","0"],
+              "and",
+              ["cohort","=","all_patients"],
+              "and",
+              ["max_p_value","=","0.5"]
+             ],
+             ["set",
+              ["$.knowledge_graph.nodes.[*].id","as","diagnoses"]
+             ]
+            ]])
+
     
 #####################################################
 #
@@ -129,13 +182,24 @@ def test_ast_set_graph ():
         }
     })
     assert tranql.context.resolve_arg ("$variable")[0]['id'] == "x:y"
-'''
-def test_ast_select_simple (requests_mock):
-    requests_mock.get("http://localhost:8099/flow/5/mod_1_4/icees/by_residential_density",
-                      text=mock_icees_wf5_mod_1_4_response)
-    requests_mock.get("http://localhost:8099/graph/gamma/quick",
-                      text=mock_graph_gamma_quick)
-'''
+def test_ast_generate_questions ():
+    """ Validate that
+           -- named query concepts work.
+           -- the question graph is build incorporating where clause constraints.
+    """
+    app = TranQL ()
+    ast = app.parse ("""
+        SELECT cohort_diagnosis:disease->diagnoses:disease
+          FROM '/clinical/cohort/disease_to_chemical_exposure'
+         WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+           AND Sex = '0'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.5'
+           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+    """)
+    questions = ast.statements[0].generate_questions (app)
+    assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
+    assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
 #####################################################
 #

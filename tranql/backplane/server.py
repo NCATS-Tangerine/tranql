@@ -201,8 +201,8 @@ class PublishToNDEx(StandardAPIResource):
 #######################################################
 class GammaResource(StandardAPIResource):
     def __init__(self):
-        #self.robokop_url = 'http://robokopdb2.renci.org'
-        self.robokop_url = 'http://robokop.renci.org'
+        self.robokop_url = 'http://robokopdb2.renci.org'
+        #self.robokop_url = 'http://robokop.renci.org'
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
         self.quick_url = f'{self.robokop_url}/api/simple/quick/'
     def view_url (self, uid):
