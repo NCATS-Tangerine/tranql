@@ -163,9 +163,10 @@ optional arguments:
   * [X] Implement basic NDEx visualization connectivity
   * [X] Implement basic Gamma visualization connectivity
   * [X] Model concept graphs with multiple occurrences of the same concept.
-  * [ ] Index previous answer via standard API "knowledge_maps" construct.
-  * [ ] Model queries with predicates
+  * [X] Does the standard API need to support multiple values per question-graph node? (So far, no one's in favor)
   * [ ] Validate queries against the biolink-model
+  * [ ] Model queries with predicates
+  * [ ] Bidirectional queries
+  * [ ] Index previous answer via standard API "knowledge_maps" construct.
   * [ ] Add export to and possible integration with Neo4J
-  * [ ] Does the standard API need to support multiple values per question-graph node?
   * [ ] A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
