@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Find drugs known to target a gene.
+target_gene=HGNC:6871
+bin/tranql --verbose \
+           --arg target_gene=$target_gene \
+           --source tranql/queries/drug-targets-gene.tranql
+
+# Map clinical outcome pathways between drug and disease.
+drug=PUBCHEM:2083
+disease=MONDO:0004979
+bin/tranql --verbose \
+           --arg drug=$drug \
+           --arg disease=$disease \
+           --source tranql/queries/cop.tranql
+
+# Map gene to phenotypic_feature associations.
+whooping_cough = 'HP:0031247'
+blue_eyes = 'HP:0000635'
+chorea = 'HP:0002072'
+for p in $whooping_cough $blue_eyes $chorea; do
+    phenotype=$blue_eyes
+    bin/tranql --verbose \
+               --arg drug=$drug \
+               --arg disease=$disease \
+               --source tranql/queries/cop.tranql
+done

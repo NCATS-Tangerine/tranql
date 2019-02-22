@@ -1,0 +1,7 @@
+--
+-- What tissue types are associated with [disease]?
+--
+
+select disease->anatomical_feature->cell
+  from '/graph/gamma/quick'
+ where disease = $disease

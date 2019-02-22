@@ -2,7 +2,7 @@
 -- What drug target some gene?
 --
 
-set target_gene = 'HGNC:6871' --mapk1
+--set target_gene = 'HGNC:6871' --mapk1
 select chemical_substance->gene
   from '/graph/gamma/quick'
  where gene = $target_gene

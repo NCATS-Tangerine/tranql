@@ -229,10 +229,7 @@ class TranQL:
                 print (str(e))
         return self.context
             
-                
-            
-if __name__ == '__main__':
-    
+def main ():
     """ Process arguments. """
     arg_parser = argparse.ArgumentParser(
         description='TranQL',
@@ -250,23 +247,40 @@ if __name__ == '__main__':
                             action="store_true")
     arg_parser.add_argument('-s', '--source', help="The program's source file")
     arg_parser.add_argument('-o', '--output', help="Output destination")
+    arg_parser.add_argument('-a', '--arg', help="Output destination",
+                            action="append", default=[])
     args = arg_parser.parse_args ()
 
+    """ Parse command line arguments to the query. """
+    query_args = { k : v for k, v in [ arg.split("=") for arg in args.arg ] }
+
     if args.verbose:
+        """ Turn up logging. """
         logging.getLogger().setLevel (logging.DEBUG)
         for logger_name in [ "main", "ast" ]:
             logger = logging.getLogger (logger_name)
             logger.setLevel (logging.DEBUG)
 
     if args.cache:
+        """ Turn on the requests cache. """
         requests_cache.install_cache('demo_cache',
                                      allowable_methods=('GET', 'POST', ))
 
+    """ Create an interpreter. """
     tranql = TranQL (backplane = args.backplane)
+    for k, v in query_args.items ():
+        logger.debug (f"setting {k}={v}")
+        tranql.context.set (k, v)
     context = None
     if args.shell:
+        """ Run it interactively. """
         context = tranql.shell ()
     else:
+        """ Run a program. """
         context = tranql.execute_file (args.source)
         if args.output == 'stdout':
             print (f"{json.dumps(context.mem, indent=2)}")
+
+if __name__ == '__main__':
+    main ()
+    
