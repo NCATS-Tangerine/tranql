@@ -178,4 +178,3 @@ optional arguments:
   * [ ] Index previous answer via standard API "knowledge_maps" construct.
   * [ ] Add export to and possible integration with Neo4J.
   * [ ] Integrate graph [metadata API](http://robokop.renci.org/api/operations).
-  * [ ] How would a `join` work in TranQL?
