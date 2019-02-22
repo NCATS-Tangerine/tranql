@@ -169,11 +169,12 @@ optional arguments:
   * [X] Move to the latest standard API version (0.9.0)
   * [X] Implement basic NDEx visualization connectivity
   * [X] Implement basic Gamma visualization connectivity
-  * [X] Model concept graphs with multiple occurrences of the same concept.
+  * [X] Query graphs with multiple occurrences of the same concept.
   * [X] Does the standard API need to support multiple values per question-graph node? (So far, looks like no)
-  * [ ] Validate queries against the biolink-model
-  * [ ] Model queries with predicates
-  * [ ] Bidirectional queries
+  * [X] Queries with bidirectional links.
+  * [ ] Validate query terms against the biolink-model.
+  * [ ] Predicates in queries.
   * [ ] Index previous answer via standard API "knowledge_maps" construct.
-  * [ ] Add export to and possible integration with Neo4J
-  * [ ] A graph [metadata API](http://robokop.renci.org/api/operations) would let users know which queries are possible.
+  * [ ] Add export to and possible integration with Neo4J.
+  * [ ] Integrate graph [metadata API](http://robokop.renci.org/api/operations).
+  * [ ] How would a `join` work in TranQL?
