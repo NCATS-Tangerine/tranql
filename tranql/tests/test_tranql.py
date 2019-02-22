@@ -220,9 +220,11 @@ def test_ast_bidirectional_query ():
     for program, expected_output in queries.items ():
         ast = app.parse_file (program)
         statement = ast.statements
-        statement[0].execute (app)
-        statement[1].execute (app)
-        questions = ast.statements[2].generate_questions (app)
+        """ This uses an unfortunate degree of knowledge about the implementation.
+        Consider alternatives. """
+        statement[0].execute (app) # set
+        statement[1].execute (app) # set
+        questions = ast.statements[2].generate_questions (app) # select
         differences = DeepDiff (questions[0], expected_output)
         assert len(differences) == 0, f"--differences--------> {differences}"
         
