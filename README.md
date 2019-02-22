@@ -125,13 +125,18 @@ pip install -r tranql/requirements.txt
 ```
 ### Test
 ```
-bin/test --capture=no
+bin/test
 ```
 ### Run
 
-Run a program.
+To run a program, first start the backplane:
 ```
-bin/tranql --source tranql/workflows/workflow-5.tranql
+cd backplane
+PYTHONPATH=$PWD/../.. python server.py
+```
+Then run the query:
+```
+bin/tranql --source tranql/queries/workflow-5.tranql
 ```
 ### Shell
 
@@ -142,20 +147,22 @@ bin/tranql --shell
 ### Options
 ```
 $ bin/tranql --help
-usage: main.py [-h] [-d] [-c] [-b BACKPLANE] [-i] [-s SOURCE]
+usage: main.py [-h] [-d] [-c] [-b BACKPLANE] [-i] [-s SOURCE] [-o OUTPUT]
 
 TranQL
 
 optional arguments:
   -h, --help                           show this help message and exit
   -d, --verbose                        Verbose mode. (default: False)
-  -c, --cache                          Cache. (default: False)
+  -c, --cache                          Cache responses from backplane
+                                       services? (default: False)
   -b BACKPLANE, --backplane BACKPLANE  Backplane URL prefix (default:
                                        http://localhost:8099)
   -i, --shell                          The interpreter read-eval-print-loop
                                        (REPL). (default: False)
   -s SOURCE, --source SOURCE           The program's source file (default:
                                        None)
+  -o OUTPUT, --output OUTPUT           Output destination (default: None)
 ```
 ## Next
 
@@ -163,7 +170,7 @@ optional arguments:
   * [X] Implement basic NDEx visualization connectivity
   * [X] Implement basic Gamma visualization connectivity
   * [X] Model concept graphs with multiple occurrences of the same concept.
-  * [X] Does the standard API need to support multiple values per question-graph node? (So far, no one's in favor)
+  * [X] Does the standard API need to support multiple values per question-graph node? (So far, looks like no)
   * [ ] Validate queries against the biolink-model
   * [ ] Model queries with predicates
   * [ ] Bidirectional queries
