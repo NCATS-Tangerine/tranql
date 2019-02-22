@@ -172,9 +172,9 @@ optional arguments:
   * [X] Query graphs with multiple occurrences of the same concept.
   * [X] Does the standard API need to support multiple values per question-graph node? (So far, looks like no)
   * [X] Queries with bidirectional links.
-  * [ ] Validate query terms against the biolink-model.
+  * [X] Validate query terms exist in the biolink-model.
   * [ ] Predicates in queries.
+  * [ ] Enforce constraint identifiers are sub-types of biolink-model parent types where this info exists.
   * [ ] Index previous answer via standard API "knowledge_maps" construct.
   * [ ] Add export to and possible integration with Neo4J.
   * [ ] Integrate graph [metadata API](http://robokop.renci.org/api/operations).
-  * [ ] How would a `join` work in TranQL?
