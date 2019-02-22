@@ -403,7 +403,6 @@ class TranQL_AST:
     def parse_select (self, statement):
         """ Parse a select statement. """
         select = SelectStatement ()
-        print (f"-------: {json.dumps(statement, indent=2)}")
         for e in statement:
             if self.is_command (e):
                 e = self.remove_whitespace (e) #, also=["->"])

@@ -1,27 +1,40 @@
 #!/bin/bash
 
 # Find drugs known to target a gene.
-target_gene=HGNC:6871
-bin/tranql --verbose \
-           --arg target_gene=$target_gene \
-           --source tranql/queries/drug-targets-gene.tranql
+drug_targets_gene () {
+    target_gene=$1
+    bin/tranql --verbose \
+               --arg target_gene=$target_gene \
+               --source tranql/queries/drug-targets-gene.tranql
+}
 
 # Map clinical outcome pathways between drug and disease.
-drug=PUBCHEM:2083
-disease=MONDO:0004979
-bin/tranql --verbose \
-           --arg drug=$drug \
-           --arg disease=$disease \
-           --source tranql/queries/cop.tranql
-
-# Map gene to phenotypic_feature associations.
-whooping_cough = 'HP:0031247'
-blue_eyes = 'HP:0000635'
-chorea = 'HP:0002072'
-for p in $whooping_cough $blue_eyes $chorea; do
-    phenotype=$blue_eyes
+clinical_outcome_pathway () {
+    drug=$1
+    disease=$2
     bin/tranql --verbose \
                --arg drug=$drug \
                --arg disease=$disease \
                --source tranql/queries/cop.tranql
-done
+}
+
+# Map gene to phenotypic_feature associations.
+phenotype_to_gene () {
+    echo $*
+    for p in $*; do
+        echo phenotype: $p
+        bin/tranql --verbose \
+                   --arg phenotype=$p \
+                   --source tranql/queries/phenotype-gene-gamma.tranql
+    done
+}
+
+#drug_targets_gene HGNC:6871
+#clinical_outcome_pathway PUBCHEM:2083 MONDO:0004979
+
+whooping_cough='HP:0031247'
+blue_eyes='HP:0000635'
+chorea='HP:0002072'
+#phenotype_to_gene $whooping_cough $blue_eyes $chorea
+
+$*

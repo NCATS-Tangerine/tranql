@@ -212,6 +212,8 @@ def test_ast_generate_questions ():
 def test_ast_bidirectional_query ():
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     app = TranQL ()
+    app.context.set ("drug", "PUBCHEM:2083")
+    app.context.set ("disease", "MONDO:0004979")
     expectations = {
         "cop.tranql" : mock_bidirectional_question
     }
@@ -222,9 +224,7 @@ def test_ast_bidirectional_query ():
         statement = ast.statements
         """ This uses an unfortunate degree of knowledge about the implementation,
         both of the AST, and of theq query. Consider alternatives. """
-        statement[0].execute (app) # set
-        statement[1].execute (app) # set
-        questions = ast.statements[2].generate_questions (app) # select
+        questions = ast.statements[0].generate_questions (app) # select
         differences = DeepDiff (questions[0], expected_output)
         assert len(differences) == 0, f"--differences--------> {differences}"
         
