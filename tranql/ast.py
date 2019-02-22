@@ -5,6 +5,7 @@ import requests
 import requests_cache
 import sys
 import traceback
+from collections import defaultdict
 from tranql.util import Concept
 from tranql.util import JSONKit
 
@@ -65,6 +66,7 @@ class Statement:
     def request (self, url, message):
         """ Make a web request to a service (url) posting a message. """
         logger.debug (f"request> {json.dumps(message, indent=2)}")
+        print (f"request> {json.dumps(message, indent=2)}")
         response = {}
         try:
             http_response = requests.post (
@@ -135,14 +137,7 @@ class CreateGraphStatement(Statement):
                                                   interpreter)
         graph = interpreter.context.resolve_arg (self.graph)
         logger.debug (f"------- {type(graph).__name__}")
-        logger.debug (f"--- create graph {self.service} at {json.dumps(graph, indent=2)}")
         logger.debug (f"--- create graph {self.service} graph-> {json.dumps(graph, indent=2)}")
-        '''
-        message = self.message (
-            k_nodes = graph['knowledge_graph']['nodes'],
-            k_edges = graph['knowledge_graph']['edges'],
-            options = { "name" : self.name })
-        '''
         response = None
         #with requests_cache.disabled ():
         response = self.request (url=self.service,
@@ -156,37 +151,36 @@ class SelectStatement(Statement):
     """
     def __init__(self):
         """ Initialize a new select statement. """
-        #self.concept_order = []
-        #self.concepts = {}
         self.query = Query ()
         self.service = None
         self.where = []
         self.set_statements = []
         self.id_count = 0
-
+        self.id_namespaces = defaultdict(int)
     def __repr__(self):
         #return f"SELECT {self.concepts} from:{self.service} where:{self.where} set:{self.set_statements}"
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
     
-    def next_id(self):
-        self.id_count += 1
-        return self.id_count
+    def next_id(self, namespace="n"):
+        result_id = self.id_namespaces[namespace]
+        result = f"{namespace}{result_id}"
+        self.id_namespaces[namespace] = result_id + 1
+        return result
     def edge (self, source, target, type_name=None):
         """ Generate a question edge. """
         e = {
-            "id" : f"e{self.next_id()}",
+            "id" : f"{self.next_id(namespace='e')}",
             "source_id": source,
             "target_id": target
         }
         if type_name:
             e["type_name"] = type_name
         return e
-    def node (self, identifier, type_name, value=None):
+    def node (self, type_name, value=None):
         """ Generate a question node. """
-        if identifier is None:
-            identifier = self.next_id ()
+        identifier = self.next_id ()
         n = {
-            "id": f"n{identifier}",
+            "id": f"{identifier}",
             "type": type_name
         }
         if value:
@@ -209,20 +203,27 @@ class SelectStatement(Statement):
             if value == None:
                 raise ValueError (f"Undefined variable: {varname}")
             if isinstance(value, list):
+                """ Binding multiple values to a node. """
                 concept.nodes = value
             elif isinstance(value, str):
+                """ Bind a single value to a node. """
                 if not ':' in value:
-                    logger.debug (f"no ':' in {value} concept:{concept}")
+                    """ Deprecated. """
+                    """ Bind something that's not a curie. Dynamic id lookup.
+                    This is frowned upon. While it *may* be useful for prototyping and,
+                    interactive exploration, it will probably be removed. """
+                    logger.debug (f"performing dynamic lookup resolving {concept}={value}")
                     bionames = Bionames ()
                     response = bionames.get_ids (value, concept.name)
-                    logger.debug (f"fetching ids for [{value}] from bionames.")
+                    logger.debug (f"resolved {response} to identifiers: {response}")
                     concept.nodes = response
                 else:
+                    """ This is a single curie. Bind it to the node. """
                     concept.nodes = [ self.node (
-                        identifier = None,
                         value=value,
                         type_name = concept.name) ]
             else:
+                """ We don't know what this is. Bad. """
                 logger.debug (f"value: {value}")
                 raise ValueError (f"Invalid type {type(value)} interpolated.")
 
@@ -237,23 +238,20 @@ class SelectStatement(Statement):
                 self.expand_nodes (interpreter, concept)
                 logger.debug (f"concept--nodes: {concept.nodes}")
                 for value in concept.nodes:
-                    logger.debug (f"concept-nodes: index:{index} type:{name} concept:{concept}")
+                    logger.debug (f"concept: {concept} index:{index} type:{name} ")
                     if isinstance (value, list):
                         """ It's a list of values. Build the set preparing to permute. """
                         concept.nodes = [ self.node (
-                            identifier = index,
                             type_name = concept.name,
                             value = self.val(v)) for v in value ]
                     elif isinstance (value, str):
                         """ It's a single value. """
                         concept.nodes = [ self.node (
-                            identifier = index,
                             type_name = concept.name,
                             value = self.val(value)) ]
             else:
                 """ There are no values - it's just a template for a model type. """
                 concept.nodes = [ self.node (
-                    identifier = index,
                     type_name = concept.name) ]
         options = {}
         for constraint in self.where:
@@ -297,23 +295,29 @@ class SelectStatement(Statement):
                             lastnode = nodes[-1]
                             nodes.append (node)
                             edges = copy.deepcopy (question["question_graph"]['edges'])
-                            edges.append (self.edge (
-                                source=lastnode['id'],
-                                target=node['id']))
+                            arrow = self.query.arrows[index-1]
+                            if arrow == self.query.forward_arrow:
+                                edges.append (self.edge (
+                                    source=lastnode['id'],
+                                    target=node['id']))
+                            else:
+                                edges.append (self.edge (
+                                    source=node['id'],
+                                    target=lastnode['id']))
                             new_questions.append (self.message (
                                 q_nodes = nodes,
                                 options = options,
                                 q_edges = edges))
                     else:
-                        next_id = len(question['question_graph']['nodes'])
+                        query_nodes = question['question_graph']['nodes']
                         question['question_graph']['nodes'].append (
-                            self.node (identifier = str(next_id),
-                                       type_name = concept.name))
+                            self.node (type_name = concept.name))
+                        source_id = query_nodes[-2]['id']
+                        target_id = query_nodes[-1]['id']
                         question['question_graph']['edges'].append (
                             self.edge (
-                                source = question['question_graph']['nodes'][-2]['id'],
-                                target = f"n{str(next_id)}"))
-                        next_id += 1
+                                source = source_id,
+                                target = target_id))
                         new_questions.append (self.message (options))
                 questions = new_questions
         return questions
@@ -398,9 +402,10 @@ class TranQL_AST:
     def parse_select (self, statement):
         """ Parse a select statement. """
         select = SelectStatement ()
+        print (f"-------: {json.dumps(statement, indent=2)}")
         for e in statement:
             if self.is_command (e):
-                e = self.remove_whitespace (e, also=["->"])
+                e = self.remove_whitespace (e) #, also=["->"])
                 command = e[0]
                 if command == 'select':
                     for token in e[1:]:
@@ -442,18 +447,29 @@ class Query:
        - Model predicates
        - Model arbitrary shaped graphs.
     """
+    back_arrow = "<-"
+    forward_arrow = "->"
     def __init__(self):
         self.order = []
+        self.arrows = []
         self.concepts = {}
     def add(self, key):
-        concept = key
-        name = key
-        if ':' in key:
-            if key.count (':') > 1:
-                raise ValueError (f"Illegal concept id: {key}")
-            name, concept = key.split (':')
-        self.order.append (name)
-        self.concepts[name] = Concept (concept)
+        if key == self.back_arrow:
+            """ It's a backward arrow. """
+            self.arrows.append (key)
+        elif key == self.forward_arrow:
+            """ It's a forward arrow. """
+            self.arrows.append (key)
+        else:
+            """ It's a concept identifier, potentially named. """
+            concept = key
+            name = key
+            if ':' in key:
+                if key.count (':') > 1:
+                    raise ValueError (f"Illegal concept id: {key}")
+                name, concept = key.split (':')
+            self.order.append (name)
+            self.concepts[name] = Concept (concept)
     def __getitem__(self, key):
         return self.concepts [key]
     def __setitem__(self, key, value):
@@ -463,4 +479,4 @@ class Query:
     def __contains__ (self, key):
         return key in self.concepts
     def __repr__(self):
-        return str(self.concepts)
+        return f"{self.concepts} | {self.arrows}"

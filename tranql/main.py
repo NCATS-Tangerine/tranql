@@ -166,6 +166,12 @@ class TranQL:
     def parse (self, program):
         """ If we just want the AST. """
         return self.parser.parse (program)
+
+    def parse_file (self, file_name):
+        result = None
+        with open(file_name, "r") as stream:
+            result = self.parse (stream.read ())
+        return result
     
     def execute (self, program):
         """ Execute a program - a list of statements. """
@@ -232,7 +238,7 @@ if __name__ == '__main__':
         description='TranQL',
         formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(prog,
                                                             max_help_position=180))
-    arg_parser.add_argument('-d', '--verbose', help="Verbose mode.", action="store_true")
+    arg_parser.add_argument('-v', '--verbose', help="Verbose mode.", action="store_true")
     arg_parser.add_argument('-c', '--cache',
                             help="Cache responses from backplane services?",
                             action="store_true")
@@ -246,10 +252,12 @@ if __name__ == '__main__':
     arg_parser.add_argument('-o', '--output', help="Output destination")
     args = arg_parser.parse_args ()
 
-    root_logger = logging.getLogger()
     if args.verbose:
-        root_logger.setLevel (logging.DEBUG)
-        
+        logging.getLogger().setLevel (logging.DEBUG)
+        for logger_name in [ "main", "ast" ]:
+            logger = logging.getLogger (logger_name)
+            logger.setLevel (logging.DEBUG)
+
     if args.cache:
         requests_cache.install_cache('demo_cache',
                                      allowable_methods=('GET', 'POST', ))

@@ -235,3 +235,61 @@ mock_graph_gamma_quick = {
         "edges" : [ "a-edge" ]
     }
 }
+
+mock_bidirectional_question = {
+    "question_graph": {
+        "edges": [
+            {
+                "id": "e0",
+                "source_id": "n0",
+                "target_id": "n1"
+            },
+            {
+                "id": "e1",
+                "source_id": "n1",
+                "target_id": "n2"
+            },
+            {
+                "id": "e2",
+                "source_id": "n2",
+                "target_id": "n3"
+            },
+            {
+                "id": "e3",
+                "source_id": "n4",
+                "target_id": "n3"
+            }
+        ],
+        "nodes": [
+            {
+                "id": "n0",
+                "type": "chemical_substance",
+                "curie": "PUBCHEM:2083"
+            },
+            {
+                "id": "n1",
+                "type": "gene"
+            },
+            {
+                "id": "n2",
+                "type": "anatomical_entity"
+            },
+            {
+                "id": "n3",
+                "type": "phenotypic_feature"
+            },
+            {
+                "id": "n4",
+                "type": "disease",
+                "curie": "MONDO:0004979"
+            }
+        ]
+    },
+    "options" : {
+    },
+    "knowledge_graph": {
+        "nodes": [],
+        "edges": []
+    },
+    "knowledge_maps": [{}]
+}

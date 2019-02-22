@@ -5,5 +5,5 @@
 set target_gene = 'HGNC:6871' --mapk1
 select chemical_substance->gene
   from '/graph/gamma/quick'
- where gene = $mapk1
+ where gene = $target_gene
    set chemical_pathways

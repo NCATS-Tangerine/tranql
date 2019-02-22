@@ -1,11 +1,15 @@
 import json
 import pytest
+import os
+from deepdiff import DeepDiff
 from tranql.main import TranQL
 from tranql.main import TranQLParser
 from tranql.ast import SetStatement
 from tranql.tests.mocks import mock_icees_wf5_mod_1_4_response
 from tranql.tests.mocks import mock_graph_gamma_quick
+from tranql.tests.mocks import mock_bidirectional_question
 
+'''
 def assert_lists_equal (a, b):
     assert len(a) == len(b)
     for index, element in enumerate(a):
@@ -19,8 +23,9 @@ def assert_lists_equal (a, b):
                actual.isspace() and s.isspace ():
                 continue
             assert actual[s_index] == s
-
+'''
 def assert_lists_equal (a, b):
+    """ Assert the equality of two lists. """
     assert len(a) == len(b)
     for index, expected in enumerate(a):
         actual = b[index]
@@ -33,6 +38,8 @@ def assert_lists_equal (a, b):
             assert actual == expected
 
 def assert_parse_tree (code, expected):
+    """ Parse a block of code into a parse tree. Then assert the equality
+    of that parse tree to a list of expected tokens. """
     tranql = TranQL ()
     assert_lists_equal (
         tranql.parser.parse (code).parse_tree,
@@ -201,6 +208,24 @@ def test_ast_generate_questions ():
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
+
+def test_ast_bidirectional_query ():
+    """ Validate that we parse and generate queries correctly for bidirectional queries. """
+    app = TranQL ()
+    expectations = {
+        "cop.tranql" : mock_bidirectional_question
+    }
+    queries = { os.path.join (os.path.dirname (__file__), "..", "queries", k) : v 
+                for k, v in expectations.items () }
+    for program, expected_output in queries.items ():
+        ast = app.parse_file (program)
+        statement = ast.statements
+        statement[0].execute (app)
+        statement[1].execute (app)
+        questions = ast.statements[2].generate_questions (app)
+        differences = DeepDiff (questions[0], expected_output)
+        assert len(differences) == 0, f"--differences--------> {differences}"
+        
 #####################################################
 #
 # Interpreter tests. Test the interpreter interface.
