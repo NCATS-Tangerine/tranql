@@ -20,9 +20,7 @@ clinical_outcome_pathway () {
 
 # Map gene to phenotypic_feature associations.
 phenotype_to_gene () {
-    echo $*
     for p in $*; do
-        echo phenotype: $p
         bin/tranql --verbose \
                    --arg phenotype=$p \
                    --source tranql/queries/phenotype-gene-gamma.tranql

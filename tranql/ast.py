@@ -67,7 +67,7 @@ class Statement:
     def request (self, url, message):
         """ Make a web request to a service (url) posting a message. """
         logger.debug (f"request> {json.dumps(message, indent=2)}")
-        print (f"request> {json.dumps(message, indent=2)}")
+        #print (f"request> {json.dumps(message, indent=2)}")
         response = {}
         try:
             http_response = requests.post (

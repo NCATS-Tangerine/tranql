@@ -2,7 +2,8 @@
 -- What genes are implicated in [phenotype]?
 --
 
-select gene->phenotypic_feature
+-- select gene->phenotypic_feature
+select phenotypic_feature->anatomical_entity->gene
   from '/graph/gamma/quick'
  where phenotypic_feature = $phenotype
 
