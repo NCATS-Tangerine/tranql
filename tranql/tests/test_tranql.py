@@ -220,8 +220,8 @@ def test_ast_bidirectional_query ():
     for program, expected_output in queries.items ():
         ast = app.parse_file (program)
         statement = ast.statements
-        """ This uses an unfortunate degree of knowledge about the implementation.
-        Consider alternatives. """
+        """ This uses an unfortunate degree of knowledge about the implementation,
+        both of the AST, and of theq query. Consider alternatives. """
         statement[0].execute (app) # set
         statement[1].execute (app) # set
         questions = ast.statements[2].generate_questions (app) # select

@@ -6,6 +6,7 @@ import requests_cache
 import sys
 import traceback
 from collections import defaultdict
+from tranql.concept import ConceptModel
 from tranql.util import Concept
 from tranql.util import JSONKit
 
@@ -447,13 +448,21 @@ class Query:
        - Model predicates
        - Model arbitrary shaped graphs.
     """
+
+    """ Arrows in the query. """
     back_arrow = "<-"
     forward_arrow = "->"
+
+    """ The biolink model. Will use for query validation. """
+    concept_model = ConceptModel ("biolink-model")
+    
     def __init__(self):
         self.order = []
         self.arrows = []
         self.concepts = {}
+        
     def add(self, key):
+        """ Add a token in the question graph to this query object. """
         if key == self.back_arrow:
             """ It's a backward arrow. """
             self.arrows.append (key)
@@ -469,6 +478,7 @@ class Query:
                     raise ValueError (f"Illegal concept id: {key}")
                 name, concept = key.split (':')
             self.order.append (name)
+            assert self.concept_model.get (concept) != None
             self.concepts[name] = Concept (concept)
     def __getitem__(self, key):
         return self.concepts [key]

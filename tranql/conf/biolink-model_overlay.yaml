@@ -1,0 +1,719 @@
+id: "http://bioentity.io/json-schema/biolink.json"
+name: biolink model (gamma)
+description: Entity and association taxonomy and datamodel for life-sciences data (Gamma Overlay)
+
+classes:
+  
+    #Not in biolink-model
+  genetic condition:
+    is_a: disease
+    description: >-
+      A disease that is caused by genetic modifications where those modifications are inherited from a parent's genome.
+    mappings:
+      - "MONDO:0003847"
+
+#The following modifications are to connect biolink concepts to identifier prefixes. 
+#There needs to be a better place to do this.  The problem is that for e.g. gene,
+# these get put into the main file, in a different order.  When we merge, things get messed
+# up.
+  disease:
+    id_prefixes: #Adding identifiers for ROBOKOP
+        - MONDO
+        - DOID
+        - OMIM
+        - ORPHANET
+        - EFO
+        - UMLS
+        - MESH
+        - MEDDRA
+        - PHAROS.DISEASE 
+
+  phenotypic feature:
+    id_prefixes:
+      - HP
+      - EFO
+      - NCIT
+      - UMLS
+      - MEDDRA
+      - EFO
+
+  chemical substance:
+    id_prefixes:
+      - CHEBI
+      - CHEMBL
+      - DRUGBANK
+      - PUBCHEM
+      - MESH
+      - HMDB
+      - INCHI
+      - INCHIKEY
+      - UNII
+      - PUBCHEM.COMPOUND
+      - KEGG.COMPOUND
+      - KEGG.DRUG
+      - PHAROS.DRUG
+      - DRUG.INTERACTION
+      - CTD
+
+  anatomical entity:
+    id_prefixes:
+      - UBERON
+      - UMLS
+
+  cell:
+    id_prefixes:
+      - CL
+      - UMLS
+
+  gene:
+    id_prefixes:
+      - HGNC
+      - NCBIGENE
+      - ENSEMBL
+      - UniProtKB
+      - EC
+      - RNAcentral
+      - MGI
+      - ZFIN
+      - HGNC.SYMBOL
+
+  sequence variant:
+    id_prefixes:
+      - CAID
+      - HGVS
+      - DBSNP
+      - CLINVARVARIANT
+      - MYVARIANT_HG19
+      - MYVARIANT_HG38
+      
+  pathway:
+    id_prefixes: 
+      - KEGG
+      - REACTOME
+      - SMPDB
+      - PHARMGKB.PATHWAYS
+      - WIKIPATHWAYS
+      - BIOCARTA.PATHWAY
+      - KEGG.PATHWAY
+      - REACT
+      - KEGG-path
+
+slots:
+
+  id:
+    mappings:
+      - rdfs:ID
+
+  gene associated with condition:
+    mappings:
+      - BIOLINK:0000001 # Minting id for this
+      - GENO:0000840 # pathogenic_for_condition
+      - GENO:0000841 # likely_pathogenic_for_condition
+
+  actively involved in:
+    mappings:
+      - biolink:gene_get_process             # biolink returns no relation_id or an identifier that is not a curie
+      - biolink:gene_get_process_or_function # biolink returns no relation_id or an identifier that is not a curie
+
+  capable of:
+    mappings:
+      - biolink:gene_get_function            # biolink returns no relation_id or an identifier that is not a curie
+      - RO:0002584
+
+  affects:
+    mappings:
+      - GO:acts_on_population_of
+      - GOREL:0001006
+      - CTD:inferred
+      - CTD:prediction/hypothesis
+      - UPHENO:0000001
+      - RO:0002573
+
+    #In the model, here for the hetio mappings
+  positively regulates, entity to entity:
+    mappings:
+      - RO:0002450
+      - hetio:UPREGULATES_AuG
+      - hetio:UPREGULATES_DuG
+
+    #In the model, here for the hetio mappings
+  negatively regulates, entity to entity:
+    mappings:
+      - RO:0002449
+      - hetio:DOWNREGULATES_AdG
+      - hetio:DOWNREGULATES_DdG
+
+  directly interacts with:
+    mappings:
+      - SIO:000203                # Connected to (is that really a good mapping?)
+      - chembio:interacts
+      - CTD:interacts_with
+      - CTD:affects^binding
+      - PHAROS:drug_targets
+
+  #New CTD Stuff
+  affects abundance of:
+    mappings:
+      - CTD:affects_abundance_of
+      - CTD:affects^abundance
+      - RO:0002332
+
+  increases abundance of:
+    mappings:
+      - CTD:increases_abundance_of
+      - CTD:increases^abundance
+
+  decreases abundance of:
+    mappings:
+      - CTD:decreases_abundance_of
+      - CTD:decreases^abundance
+
+  affects activity of:
+    mappings:
+      - CTD:affects_activity_of
+      - CTD:affects^activity
+
+  increases activity of:
+    mappings:
+      - CTD:increases_activity_of
+      - CTD:increases^activity
+
+  decreases activity of:
+    mappings:
+      - CTD:decreases_activity_of
+      - CTD:decreases^activity
+
+  affects expression of:
+    mappings:
+      - CTD:affects_expression_of
+      - CTD:affects^expression
+
+  increases expression of:
+    mappings:
+      - CTD:increases_expression_of
+      - CTD:increases^expression
+
+  decreases expression of:
+    mappings:
+      - CTD:decreases_expression_of
+      - CTD:decreases^expression
+
+  affects folding of:
+    mappings:
+      - CTD:affects_folding_of
+      - CTD:affects^folding
+
+  increases folding of:
+    mappings:
+      - CTD:increases_folding_of
+      - CTD:increases^folding
+
+  decreases folding of:
+    mappings:
+      - CTD:decreases_folding_of
+      - CTD:decreases^folding
+
+  affects localization of:
+    mappings:
+      - CTD:affects_localization_of
+      - CTD:affects^localization
+      - RO:0002313
+
+  increases localization of:
+    mappings:
+      - CTD:increases_localization_of
+      - CTD:increases^localization
+      - RO:0002340
+
+  decreases localization of:
+    mappings:
+      - CTD:decreases_localization_of
+      - CTD:decreases^localization
+      - RO:0002345
+
+  affects metabolic processing of:
+    mappings:
+      - CTD:affects_metabolic_processing_of
+      - CTD:affects^metabolic processing
+
+  increases metabolic processing of:
+    mappings:
+      - CTD:increases_metabolic_processing_of
+      - CTD:increases^metabolic processing
+
+  decreases metabolic processing of:
+    mappings:
+      - CTD:decreases_metabolic_processing_of
+      - CTD:decreases^metabolic processing
+
+  affects molecular modification of:
+    mappings:
+      - CTD:affects_molecular_modification_of
+      - CTD:affects^acetylation
+      - CTD:affects^acylation
+      - CTD:affects^alkylation
+      - CTD:affects^amination
+      - CTD:affects^carbamoylation
+      - CTD:affects^ethylation
+      - CTD:affects^glutathionylation
+      - CTD:affects^glycation
+      - CTD:affects^glycosylation
+      - CTD:affects^glucuronidation
+      - CTD:affects^N-linked glycosylation
+      - CTD:affects^O-linked glycosylation
+      - CTD:affects^hydroxylation
+      - CTD:affects^lipidation
+      - CTD:affects^farnesylation
+      - CTD:affects^geranoylation
+      - CTD:affects^myristoylation
+      - CTD:affects^palmitoylation
+      - CTD:affects^prenylation
+      - CTD:affects^methylation
+      - CTD:affects^nitrosation
+      - CTD:affects^nucleotidylation
+      - CTD:affects^phosphorylation
+      - CTD:affects^ribosylation
+      - CTD:affects^ADP-ribosylation
+      - CTD:affects^sulfation
+      - CTD:affects^sumoylation
+      - CTD:affects^ubiquitination
+      - CTD:affects^oxidation
+      - CTD:affects^reduction
+      - CTD:affects^carboxylation
+
+  increases molecular modification of:
+    mappings:
+      - CTD:increases_molecular_modification_of
+      - CTD:increases^acetylation
+      - CTD:increases^acylation
+      - CTD:increases^alkylation
+      - CTD:increases^amination
+      - CTD:increases^carbamoylation
+      - CTD:increases^ethylation
+      - CTD:increases^glutathionylation
+      - CTD:increases^glycation
+      - CTD:increases^glycosylation
+      - CTD:increases^glucuronidation
+      - CTD:increases^N-linked glycosylation
+      - CTD:increases^O-linked glycosylation
+      - CTD:increases^hydroxylation
+      - CTD:increases^lipidation
+      - CTD:increases^farnesylation
+      - CTD:increases^geranoylation
+      - CTD:increases^myristoylation
+      - CTD:increases^palmitoylation
+      - CTD:increases^prenylation
+      - CTD:increases^methylation
+      - CTD:increases^nitrosation
+      - CTD:increases^nucleotidylation
+      - CTD:increases^phosphorylation
+      - CTD:increases^ribosylation
+      - CTD:increases^ADP-ribosylation
+      - CTD:increases^sulfation
+      - CTD:increases^sumoylation
+      - CTD:increases^ubiquitination
+      - CTD:increases^oxidation
+      - CTD:increases^reduction
+      - CTD:increases^carboxylation
+
+  decreases molecular modification of:
+    mappings:
+      - CTD:decreases_molecular_modification_of
+      - CTD:decreases^acetylation
+      - CTD:decreases^acylation
+      - CTD:decreases^alkylation
+      - CTD:decreases^amination
+      - CTD:decreases^carbamoylation
+      - CTD:decreases^ethylation
+      - CTD:decreases^glutathionylation
+      - CTD:decreases^glycation
+      - CTD:decreases^glycosylation
+      - CTD:decreases^glucuronidation
+      - CTD:decreases^N-linked glycosylation
+      - CTD:decreases^O-linked glycosylation
+      - CTD:decreases^hydroxylation
+      - CTD:decreases^lipidation
+      - CTD:decreases^farnesylation
+      - CTD:decreases^geranoylation
+      - CTD:decreases^myristoylation
+      - CTD:decreases^palmitoylation
+      - CTD:decreases^prenylation
+      - CTD:decreases^methylation
+      - CTD:decreases^nitrosation
+      - CTD:decreases^nucleotidylation
+      - CTD:decreases^phosphorylation
+      - CTD:decreases^ribosylation
+      - CTD:decreases^ADP-ribosylation
+      - CTD:decreases^sulfation
+      - CTD:decreases^sumoylation
+      - CTD:decreases^ubiquitination
+      - CTD:decreases^oxidation
+      - CTD:decreases^reduction
+      - CTD:decreases^carboxylation
+
+  affects synthesis of:
+    mappings:
+      - CTD:affects_synthesis_of
+      - CTD:affects^chemical synthesis
+
+  increases synthesis of:
+    mappings:
+      - CTD:increases_synthesis_of
+      - CTD:increases^chemical synthesis
+
+  decreases synthesis of:
+    mappings:
+      - CTD:decreases_synthesis_of
+      - CTD:decreases^chemical synthesis
+
+  affects degradation of:
+    mappings:
+      - CTD:affects_degradation_of
+      - CTD:affects^degradation
+      - CTD:affects^cleavage
+      - CTD:affects^hydrolysis
+
+  increases degradation of:
+    mappings:
+      - CTD:increases_degradation_of
+      - CTD:increases^degradation
+      - CTD:increases^cleavage
+      - CTD:increases^hydrolysis
+
+  decreases degradation of:
+    mappings:
+      - CTD:decreases_degradation_of
+      - CTD:decreases^degradation
+      - CTD:decreases^cleavage
+      - CTD:decreases^hydrolysis
+
+  affects mutation rate of:
+     mappings:
+      - CTD:affects_mutation_rate_of
+      - CTD:affects^mutagenesis
+
+  increases mutation rate of:
+     mappings:
+      - CTD:increases_mutation_rate_of
+      - CTD:increases^mutagenesis
+
+  decreases mutation rate of:
+     mappings:
+      - CTD:decreases_mutation_rate_of
+      - CTD:decreases^mutagenesis
+
+  affects response to:
+    mappings:
+      - CTD:affects_response_to
+      - CTD:affects^response to substance
+
+  increases response to:
+    mappings:
+      - CTD:increases_response_to
+      - CTD:increases^response to substance
+
+  decreases response to:
+    mappings:
+      - CTD:decreases_response_to
+      - CTD:decreases^response to substance
+
+  affects splicing of:
+    mappings:
+      - CTD:affects_splicing_of
+      - CTD:affects^RNA splicing
+      - CTD:affects^splicing
+
+  increases splicing of:
+    mappings:
+      - CTD:increases_splicing_of
+      - CTD:increases^RNA splicing
+      - CTD:increases^splicing
+
+  decreases splicing of:
+    mappings:
+      - CTD:decreases_splicing_of
+      - CTD:decreases^RNA splicing
+      - CTD:decreases^splicing
+
+  affects stability of:
+    mappings:
+      - CTD:affects_stability_of
+      - CTD:affects^stability
+
+  increases stability of:
+    mappings:
+      - CTD:increases_stability_of
+      - CTD:increases^stability
+
+  decreases stability of:
+    mappings:
+      - CTD:decreases_stability_of
+      - CTD:decreases^stability
+
+  affects transport of:
+    mappings:
+      - CTD:affects_transport_of
+      - CTD:affects^transport
+
+  increases transport of:
+    mappings:
+      - CTD:increases_transport_of
+      - CTD:increases^transport
+      - RO:0002020
+
+  decreases transport of:
+    mappings:
+      - CTD:decreases_transport_of
+      - CTD:decreases^transport
+
+  affects secretion of:
+    mappings:
+      - CTD:affects_secretion_of
+      - CTD:affects^secretion
+      - CTD:affects^export
+
+  increases secretion of:
+    mappings:
+      - CTD:increases_secretion_of
+      - CTD:increases^secretion
+      - CTD:increases^export
+
+  decreases secretion of:
+    mappings:
+      - CTD:decreases_secretion_of
+      - CTD:decreases^secretion
+      - CTD:decreases^export
+
+  affects uptake of:
+    mappings:
+      - CTD:affects_uptake_of
+      - CTD:affects^uptake
+      - CTD:affects^import
+
+  increases uptake of:
+    mappings:
+      - CTD:increases_uptake_of
+      - CTD:increases^uptake
+      - CTD:increases^import
+
+  decreases uptake of:
+    mappings:
+      - CTD:decreases_uptake_of
+      - CTD:decreases^uptake
+      - CTD:decreases^import
+
+    # in translator_minimal, here for other mappings
+  has phenotype:
+    mappings:
+      - hetio:PRESENTS_DpS
+      - GAMMA:0000002 # inverse of UPHENO:0000001, which I can't seem to find an inverse of anywhere.
+      - gwascatalog:has_phenotype
+
+    #In translator_minimal
+  coexists with:
+    mappings:
+      - RO:0002325  # colocalizes_with
+
+    #In translator_minimal now, here for hetio
+  expresses:
+    description: >-
+        inverse of expressed in 
+    mappings:
+      - RO:0002292
+      - hetio:EXPRESSES_AeG
+
+  located in:
+    mappings:
+      - GO:regulates_o_occurs_in
+      - RO:0002231 # has_start_location
+      - RO:0002338 # has_target_start_location
+      - RO:0004026
+      - RO:0004027
+
+  contributes to:
+    mappings:
+      - RO:0002327 #enables
+      - CTD:marker/mechanism
+      - CTD:positivecorrelation
+
+  treats:
+    mappings:
+      - CTD:therapeutic
+      - CTD:negativecorrelation
+
+  produces:
+    mappings:
+      - GO:regulates_o_results_in_acquisition_of_features_of
+
+  participates in:
+    mappings:
+      - GO:mediated_by
+
+  has participant:
+    mappings:
+      - GOREL:0001007
+      - RO:0040036
+      - GOREL:0002008
+
+  capable of:
+    mappings:
+      - RO:0002328 #Part of is capable of
+      - RO:0002216 #Capable of part of
+      - RO:0002329 #part of something that is capable of
+
+  causes:
+    mappings:
+      - RO:0002595  #Actually causally relates entity to process, while causes is supposed to be entity to entity...
+      - RO:0002500  #Actually causally relates entity to process, and is only causally involved in
+      - mondo#disease:triggers
+
+  related to:
+    mappings:
+      - RO:0002324 #developmentally related to
+      - RO:0002487 # relation between structure and stage:
+      - RO:0002496
+      - RO:0002497
+      - RO:0002609 #causal or correlated
+      - RO:0004023 #causal relationship with disease as subject
+      - BFO:0000054
+      - RO:0040035
+      - RO:0009501  # Better to turn to B - (Causes) -> A  for Pheno -> Biological Process/ Molecular activity, where B = Biological process , A= Phenotypic feature.
+      - RO:0004028 # ^^ Similar case like 0009501
+      - RO:0002337
+
+  disrupts:
+    mappings:
+      - RO:0004024
+      - RO:0004025
+
+  #the following are not in the original biolink model
+  is missense variant of:
+    mappings:
+      - SO:0001583
+      - SNPEFF:missense_variant
+      - SNPEFF:initiator_codon_variant
+      - SNPEFF:structural_interaction_variant
+
+  is synonymous variant of:
+    mappings:
+      - SO:0001819
+      - SNPEFF:synonymous_variant
+      - SNPEFF:start_retained
+      - SNPEFF:stop_retained_variant
+
+  is nonsense variant of:
+    mappings:
+      - SO:0002054
+      - SNPEFF:stop_gained
+      - SNPEFF:start_lost
+      - SNPEFF:stop_lost
+      - SNPEFF:frameshift_variant
+
+  is splice site variant of:
+    mappings:
+      - SO:0001629
+      - SNPEFF:splice_region_variant
+      - SNPEFF:splice_acceptor_variant
+      - SNPEFF:splice_donor_variant
+
+  is nearby variant of:
+    mappings:
+      - GAMMA:0000102
+      - SNPEFF:downstream_gene_variant
+      - SNPEFF:upstream_gene_variant
+
+  is non coding variant of:
+    mappings:
+      - GAMMA:0000103
+      - SNPEFF:3_prime_UTR_variant
+      - SNPEFF:5_prime_UTR_variant
+      - SNPEFF:5_prime_UTR_premature_start_codon_gain_variant
+      - SNPEFF:non_coding_transcript_exon_variant
+      - SNPEFF:intron_variant
+
+  disease to gene association:
+    is_a: association
+    mappings:
+      - NCIT:R176 #disease_mapped_to_gene/gene_mapped_to_disease
+      - PHAROS:gene_involved
+      - hetio:ASSOCIATES_DaG
+
+  results in motion of:
+    domain: process
+    range: entity #?
+    mappings:
+      - RO:0002565
+
+  results in developmental progression of:
+    mappings:
+      - RO:0002295
+      - RO:0002296   # Probably should handle this some other way...
+      - RO:0002297
+      - RO:0002587
+      - RO:0002588
+      - RO:0002298
+      - RO:0002299
+      - RO:0002315
+      - RO:0002343
+      - RO:0002348
+      - RO:0002349
+      - RO:0002355
+      - RO:0002356
+      - RO:0002357
+      - RO:0002552
+      - RO:0002300
+      - RO:0002301
+      - RO:0002585
+
+  has output:
+    mappings:
+      - RO:0002234
+
+  disease has basis in:
+    is_a: related to 
+    description : >-
+      A relation that holds between a disease and an entity where the state of the entity has contribution to the disease.
+    mappings:
+      - RO:0004019
+      - RO:0004020
+      - RO:0004021
+      - RO:0004022
+      - RO:0004030
+      - RO:0004017
+      - mondo#disease:has:basis:in:development:of
+      
+  causes adverse event:
+    mappings:
+     - RO:0003302 #Causes or contributes to
+     - Aeolus:0000001
+
+  contraindicated for:
+    mappings:
+      - DrugCentral:0000001  
+ 
+  has not completed:
+    mappings:
+      - cl#has:not:completed
+
+  has completed:
+    mappings:
+      - cl#has:completed
+  
+  occurs in:
+    mappings:
+      - RO:0002339
+      - RO:0002344
+      - RO:0002479
+      - RO:0002232
+
+  regulates:
+    mappings:
+      - RO:0002596
+  
+  negatively regulates:
+    mappings:
+      - RO:0002597
+  
+  posetively regulates:
+    mappings:
+      - RO:0002598

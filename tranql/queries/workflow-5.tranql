@@ -11,7 +11,7 @@
 --      associated with exposure to these chemicals?
 --
 
-SELECT disease->chemical_substance
+SELECT population_of_individual_organisms->drug_exposure
   FROM '/clinical/cohort/disease_to_chemical_exposure'
  WHERE disease = 'MONDO:0004979' --asthma
    AND EstResidentialDensity < '2'
