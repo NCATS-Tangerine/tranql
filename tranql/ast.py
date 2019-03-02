@@ -68,6 +68,8 @@ class Statement:
         """ Make a web request to a service (url) posting a message. """
         logger.debug (f"request> {json.dumps(message, indent=2)}")
         #print (f"request> {json.dumps(message, indent=2)}")
+        #if 'gamma' in url:
+        #    return {}
         response = {}
         try:
             http_response = requests.post (
@@ -98,9 +100,11 @@ class SetStatement(Statement):
         self.jsonkit = JSONKit ()
     def execute (self, interpreter, context={}):
         logger.debug (f"set-statement: {self.variable}={self.value}")
+        return_val = None
         if self.value:
             logger.debug (f"exec-set-statement(explicit-value): {self}")
             interpreter.context.set (self.variable, self.value)
+            return_val = self.value
         elif 'result' in context:
             result = context['result']
             if self.jsonpath_query is not None:
@@ -111,9 +115,12 @@ class SetStatement(Statement):
                 interpreter.context.set (
                     self.variable,
                     value)
+                return_val = value
             else:
                 logger.debug (f"exec-set-statement(result): {self}")
                 interpreter.context.set (self.variable, result)
+                return_val = result
+        return return_val
 
     def __repr__(self):
         result = f"SET {self.variable}"
@@ -144,7 +151,8 @@ class CreateGraphStatement(Statement):
         response = self.request (url=self.service,
                                  message=graph)
         interpreter.context.set (self.name, response)
-        
+        return response
+    
 class SelectStatement(Statement):
     """
     Model a select statement.
@@ -159,7 +167,6 @@ class SelectStatement(Statement):
         self.id_count = 0
         self.id_namespaces = defaultdict(int)
     def __repr__(self):
-        #return f"SELECT {self.concepts} from:{self.service} where:{self.where} set:{self.set_statements}"
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
     
     def next_id(self, namespace="n"):
@@ -174,8 +181,8 @@ class SelectStatement(Statement):
             "source_id": source,
             "target_id": target
         }
-        if type_name:
-            e["type_name"] = type_name
+        if type_name is not None:
+            e["type"] = type_name
         return e
     def node (self, type_name, value=None):
         """ Generate a question node. """
@@ -194,6 +201,7 @@ class SelectStatement(Statement):
         if isinstance(value, dict) and field in value:
             result = value[field]
         return result
+
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
         value = concept.nodes[0] if len(concept.nodes) > 0 else None
@@ -227,33 +235,40 @@ class SelectStatement(Statement):
                 """ We don't know what this is. Bad. """
                 logger.debug (f"value: {value}")
                 raise ValueError (f"Invalid type {type(value)} interpolated.")
-
+        
     def generate_questions (self, interpreter):
         """
         Given an archetype question graph and values, generate question
         instances for each value permutation.
         """
         for index, name in enumerate(self.query.order):
+            """ Convert literals into nodes in the message's question graph. """
             concept = self.query[name]
             if len(concept.nodes) > 0:
                 self.expand_nodes (interpreter, concept)
                 logger.debug (f"concept--nodes: {concept.nodes}")
-                for value in concept.nodes:
-                    logger.debug (f"concept: {concept} index:{index} type:{name} ")
-                    if isinstance (value, list):
-                        """ It's a list of values. Build the set preparing to permute. """
-                        concept.nodes = [ self.node (
-                            type_name = concept.name,
-                            value = self.val(v)) for v in value ]
-                    elif isinstance (value, str):
-                        """ It's a single value. """
-                        concept.nodes = [ self.node (
-                            type_name = concept.name,
-                            value = self.val(value)) ]
+                #print (f"concept--nodes: {concept.nodes}")
+                concept.nodes = [
+                    self.node (
+                        type_name = concept.name,
+                        value = self.val(v, field='curie'))
+                    for v in concept.nodes
+                ]
+                #print (f"===========================> {concept.nodes}")
+                #sys.exit(0)
+                filters = interpreter.context.resolve_arg ('$id_filters')
+                if filters:
+                    filters = [ f.lower () for f in filters.split(",") ]
+                    concept.nodes = [
+                        n for n in concept.nodes
+                        if not n['curie'].split(':')[0].lower () in filters
+                    ]
+                
             else:
                 """ There are no values - it's just a template for a model type. """
                 concept.nodes = [ self.node (
                     type_name = concept.name) ]
+
         options = {}
         for constraint in self.where:
             logger.debug (f"manage constraint: {constraint}")
@@ -296,15 +311,17 @@ class SelectStatement(Statement):
                             lastnode = nodes[-1]
                             nodes.append (node)
                             edges = copy.deepcopy (question["question_graph"]['edges'])
-                            arrow = self.query.arrows[index-1]
-                            if arrow == self.query.forward_arrow:
+                            edge_spec = self.query.arrows[index-1]
+                            if edge_spec.direction == self.query.forward_arrow:
                                 edges.append (self.edge (
                                     source=lastnode['id'],
-                                    target=node['id']))
+                                    target=node['id'],
+                                    type_name = edge_spec.predicate))
                             else:
                                 edges.append (self.edge (
                                     source=node['id'],
-                                    target=lastnode['id']))
+                                    target=lastnode['id'],
+                                    type_name = edge_spec.predicate))
                             new_questions.append (self.message (
                                 q_nodes = nodes,
                                 options = options,
@@ -335,23 +352,32 @@ class SelectStatement(Statement):
         if len(questions) == 0:
             raise ValueError ("No questions generated")
         service = interpreter.context.resolve_arg (self.service)
-        responses = [ self.request (service, q) for q in questions ]
+
+        """ Invoke the service and store the response. """
+        responses = []
+        for q in questions:
+            logger.debug (f"executing question {q}")
+            response = self.request (service, q)
+            logger.debug (f"response: {json.dumps(response, indent=2)}")
+            responses.append (response)
+            
         if len(responses) == 0:
             raise ValueError ("No responses received")
         elif len(responses) == 1:
             result = responses[0]
         elif len(responses) > 1:
-            # TODO - this isn't the right logic. Revisit merging nodes, edges, etc.
             result = responses[0]
             nodes = result['knowledge_graph']['nodes']
             edges = result['knowledge_graph']['edges']
+            #print (f"----------------------------------> {[ n for n in nodes ]}")
             nodes = { n['id'] : n for n in nodes }
             for response in responses[1:]:
                 other_nodes = response['knowledge_graph']['nodes']
                 other_edges = response['knowledge_graph']['edges']
                 for n in other_nodes:
-                    nodes[n['id']] = n
-                edges += other_edges
+                    if not n['id'] in nodes:
+                        nodes[n['id']] = n
+                edges += other_edges # perhaps be a bit more judicious
             result['knowledge_graph']['nodes'] = nodes.values ()
         for set_statement in self.set_statements:
             logger.debug (f"{set_statement}")
@@ -361,6 +387,7 @@ class SelectStatement(Statement):
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
     def __init__(self, parse_tree):
+        #print (f"{json.dumps(parse_tree, indent=2)}")
         """ Create an abstract syntax tree from the parser token stream. """
         self.statements = []
         self.parse_tree = parse_tree
@@ -405,7 +432,7 @@ class TranQL_AST:
         select = SelectStatement ()
         for e in statement:
             if self.is_command (e):
-                e = self.remove_whitespace (e) #, also=["->"])
+                e = self.remove_whitespace (e)
                 command = e[0]
                 if command == 'select':
                     for token in e[1:]:
@@ -440,6 +467,13 @@ class TranQL_AST:
     def __repr__(self):
         return json.dumps(self.parse_tree)
 
+class Edge:
+    def __init__(self, direction, predicate=None):
+        self.direction = direction
+        self.predicate = predicate
+    def __repr__(self):
+        return f"edge[dir:{self.direction},pred:{self.predicate}]"
+    
 class Query:
     """ Model a query. 
     TODO:
@@ -462,12 +496,16 @@ class Query:
         
     def add(self, key):
         """ Add a token in the question graph to this query object. """
-        if key == self.back_arrow:
-            """ It's a backward arrow. """
-            self.arrows.append (key)
-        elif key == self.forward_arrow:
-            """ It's a forward arrow. """
-            self.arrows.append (key)
+        if key == self.forward_arrow or key == self.back_arrow:
+            """ It's a forward arrow, no predicate. """
+            self.arrows.append (Edge(direction=key))
+        elif isinstance(key, list) and len(key) == 3:
+            if key[2].endswith(self.forward_arrow):
+                self.arrows.append (Edge(direction=self.forward_arrow,
+                                         predicate=key[1]))
+            elif key[0].startswith(self.back_arrow):
+                self.arrows.append (Edge(direction=self.back_arrow,
+                                         predicate=key[1]))
         else:
             """ It's a concept identifier, potentially named. """
             concept = key

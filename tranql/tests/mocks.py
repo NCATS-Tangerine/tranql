@@ -231,65 +231,66 @@ mock_icees_wf5_mod_1_4_response = {
 }
 mock_graph_gamma_quick = {
     "knowledge_graph" : {
-        "nodes" : [ "a-node" ],
-        "edges" : [ "a-edge" ]
+        "nodes" : [ { "id" : "n0" } ],
+        "edges" : [ { "id" : "e0" } ]
     }
 }
 
 mock_bidirectional_question = {
-    "question_graph": {
-        "edges": [
-            {
-                "id": "e0",
-                "source_id": "n0",
-                "target_id": "n1"
-            },
-            {
-                "id": "e1",
-                "source_id": "n1",
-                "target_id": "n2"
-            },
-            {
-                "id": "e2",
-                "source_id": "n2",
-                "target_id": "n3"
-            },
-            {
-                "id": "e3",
-                "source_id": "n4",
-                "target_id": "n3"
-            }
-        ],
-        "nodes": [
-            {
-                "id": "n0",
-                "type": "chemical_substance",
-                "curie": "PUBCHEM:2083"
-            },
-            {
-                "id": "n1",
-                "type": "gene"
-            },
-            {
-                "id": "n2",
-                "type": "anatomical_entity"
-            },
-            {
-                "id": "n3",
-                "type": "phenotypic_feature"
-            },
-            {
-                "id": "n4",
-                "type": "disease",
-                "curie": "MONDO:0004979"
-            }
-        ]
-    },
-    "options" : {
-    },
-    "knowledge_graph": {
-        "nodes": [],
-        "edges": []
-    },
-    "knowledge_maps": [{}]
+  "question_graph": {
+    "edges": [
+      {
+        "id": "e0",
+        "source_id": "n1",
+        "target_id": "n2"
+      },
+      {
+        "id": "e1",
+        "source_id": "n2",
+        "target_id": "n3"
+      },
+      {
+        "id": "e2",
+        "source_id": "n3",
+        "target_id": "n4"
+      },
+      {
+        "id": "e3",
+        "source_id": "n6",
+        "target_id": "n4"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "n1",
+        "type": "chemical_substance",
+        "curie": "PUBCHEM:2083"
+      },
+      {
+        "id": "n2",
+        "type": "gene"
+      },
+      {
+        "id": "n3",
+        "type": "anatomical_entity"
+      },
+      {
+        "id": "n4",
+        "type": "phenotypic_feature"
+      },
+      {
+        "id": "n6",
+        "type": "disease",
+        "curie": "MONDO:0004979"
+      }
+    ]
+  },
+  "knowledge_graph": {
+    "nodes": [],
+    "edges": []
+  },
+  "knowledge_maps": [
+    {}
+  ],
+  "options": {}
 }

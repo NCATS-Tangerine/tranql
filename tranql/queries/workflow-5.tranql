@@ -11,12 +11,14 @@
 --      associated with exposure to these chemicals?
 --
 
+SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
+
 SELECT population_of_individual_organisms->drug_exposure
   FROM '/clinical/cohort/disease_to_chemical_exposure'
  WHERE disease = 'MONDO:0004979' --asthma
    AND EstResidentialDensity < '2'
    AND cohort = 'all_patients'
-   AND max_p_value = '0.5'
+   AND max_p_value = '0.1'
    SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
 
 SELECT chemical_substance->gene->biological_process->phenotypic_feature

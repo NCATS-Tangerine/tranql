@@ -9,21 +9,6 @@ from tranql.tests.mocks import mock_icees_wf5_mod_1_4_response
 from tranql.tests.mocks import mock_graph_gamma_quick
 from tranql.tests.mocks import mock_bidirectional_question
 
-'''
-def assert_lists_equal (a, b):
-    assert len(a) == len(b)
-    for index, element in enumerate(a):
-        actual = b[index]
-        assert type(actual) == type(element)
-        assert len(element) == len(actual)
-        for s_index, s in enumerate(element):
-            print (f"  --assert: actual: {actual[s_index]} s: {s}")
-            actual = actual[s_index]
-            if isinstance(actual,str) and isinstance(s, str) and \
-               actual.isspace() and s.isspace ():
-                continue
-            assert actual[s_index] == s
-'''
 def assert_lists_equal (a, b):
     """ Assert the equality of two lists. """
     assert len(a) == len(b)
@@ -41,8 +26,10 @@ def assert_parse_tree (code, expected):
     """ Parse a block of code into a parse tree. Then assert the equality
     of that parse tree to a list of expected tokens. """
     tranql = TranQL ()
+    actual = tranql.parser.parse (code).parse_tree
+    print (f"{actual}")
     assert_lists_equal (
-        tranql.parser.parse (code).parse_tree,
+        actual,
         expected)
     
 #####################################################
@@ -52,6 +39,35 @@ def assert_parse_tree (code, expected):
 #
 #####################################################
 
+def test_parse_predicate ():
+    """ Test parsing a predicate. """
+    print (f"test_parse_predicate()")
+    assert_parse_tree (
+        code = """
+        SELECT chemical_substance-[treats]->disease
+          FROM "/graph/gamma/quick"
+          WHERE chemical_substance='PUBCHEM:2083'
+            SET "$.knowledge_graph.nodes.[*].id as indications
+        """,
+        expected = [
+            [ [ "select",
+                "chemical_substance",
+                [ "-[",
+                  "treats",
+                  "]->"
+                ], "disease", "\n"
+            ],
+            "          ",
+            [ "from", [ "/graph/gamma/quick"] ],
+            ["where",
+             [
+                 "chemical_substance",
+                 "=",
+                 "PUBCHEM:2083"
+             ]
+            ], [ "" ]
+            ]])
+    
 def test_parse_set ():
     """ Test parsing set statements. """
     print (f"test_parse_set()")
@@ -159,7 +175,6 @@ def test_parse_query_with_repeated_concept ():
              ]
             ]])
 
-    
 #####################################################
 #
 # AST tests. Test abstract syntax tree components.
@@ -225,6 +240,7 @@ def test_ast_bidirectional_query ():
         """ This uses an unfortunate degree of knowledge about the implementation,
         both of the AST, and of theq query. Consider alternatives. """
         questions = ast.statements[0].generate_questions (app) # select
+        print (f"---- {json.dumps(questions[0], indent=2)}")
         differences = DeepDiff (questions[0], expected_output)
         assert len(differences) == 0, f"--differences--------> {differences}"
         
@@ -293,7 +309,7 @@ def test_program (requests_mock):
     print (f" expos =======> {json.dumps(expos)}")
     
     kg = tranql.context.resolve_arg("$knowledge_graph")
-    print (f" kg =======> {json.dumps(kg)}")
+    print (f" kg =======> {kg}") #json.dumps(kg)}")
 
 def test_program_variables (requests_mock):
     requests_mock.post (

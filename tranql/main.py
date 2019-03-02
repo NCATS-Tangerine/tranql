@@ -24,7 +24,7 @@
 #
 #       Reasoners apply analytics to knowledge graphs comprised of data from
 #       multiple sources which, in addition to ontologies, will incorporate
-#       graph analytics, machine learning, and statistical methods as needed.
+#       graph analytics, machine learning, and statistical methods.
 #
 #    TranQL borrows metaphors from both graph and relational query languages like
 #    Cypher and SQL. We need both kinds of capabilities to address the range of
@@ -36,6 +36,7 @@ import logging
 import os
 import requests_cache
 import sys
+import traceback
 from tranql.util import Context
 from tranql.util import JSONKit
 from tranql.util import Concept
@@ -71,7 +72,10 @@ tableName      = quotedString.setName ("service name")
 tableNameList  = Group(delimitedList(tableName))
 
 SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
-arrow = Literal ("->") | Literal ("<-")
+arrow = Literal ("->") | \
+        Literal ("<-") | \
+        Group(Literal("-[") + concept_name + Literal("]->")) | \
+        Group(Literal("<-[") + concept_name + Literal("]-"))
 question_graph_element = (
     concept_name + ZeroOrMore ( LineEnd () )
 ) | \
@@ -111,7 +115,6 @@ optWhite = ZeroOrMore(LineEnd() | White())
 """ Define the statement grammar. """
 statement <<= (
     Group(
-#        Group(SELECT + t_expr_chain)("concepts") + optWhite + 
         Group(SELECT + question_graph_expression)("concepts") + optWhite + 
         Group(FROM + tableNameList) + optWhite + 
         Group(Optional(WHERE + whereExpression("where"), "")) + optWhite + 
@@ -126,7 +129,6 @@ statement <<= (
     )("set")
     |
     Group(
-        #CREATE GRAPH $phenotypic_relationships AT $ndex AS "wf5_pheno_features"
         Group(CREATE + GRAPH + ident) + optWhite +
         Group(AT + ( ident | quotedString )) + optWhite +
         Group(AS + ( ident | quotedString ))
@@ -191,6 +193,9 @@ class TranQL:
             self.execute (stream.read ())
         return self.context
 
+    def __call__(self, val):
+        return self.execute (val)
+    
     def shell (self):
         """ Read, Eval, Print Loop. """
         header = """
@@ -220,12 +225,14 @@ class TranQL:
                                     val = self.context.resolve_arg (block.strip())
                                     print (f"{val}")
                             else:
-                                self.execute (block)
+                                response = self.execute (block)
+                                print (f"{json.dumps(response.mem, indent=2)}")
                     print (f"$ ", end='')
                 else:
                     buf.append (line)
             except Exception as e:
                 print (e)
+                traceback.print_exc ()
                 print (str(e))
         return self.context
             
@@ -280,7 +287,8 @@ def main ():
         context = tranql.execute_file (args.source)
         if args.output == 'stdout':
             print (f"{json.dumps(context.mem, indent=2)}")
-
+            print (f"top-gene: {json.dumps(context.top('gene',k='chemical_pathways'), indent=2)}")
+            
 if __name__ == '__main__':
     main ()
     

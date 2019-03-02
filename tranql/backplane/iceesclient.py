@@ -75,6 +75,7 @@ class ICEES:
 
     def build_associations (self, feature, type_name, target_id, p_value, edges, nodes):
         identifiers = self.get_identifiers (feature)
+        print (identifiers)
         if len(identifiers) > 0:
             logger.debug (f"Got ids for {feature}: {identifiers}")
             for an_id in identifiers:
@@ -102,6 +103,7 @@ class ICEES:
             "type" : "disease"
         }]
         edges = []
+        print (f"{json.dumps(response, indent=2)}")
         if 'return value' in response:
             for value in response['return value']:
                 logger.debug (f" value {value}")

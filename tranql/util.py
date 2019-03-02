@@ -1,6 +1,7 @@
 import copy
 import logging
 import logging.config
+import importlib
 import json
 import traceback
 import unittest
@@ -215,15 +216,69 @@ class Context:
     """ A trivial context implementation. """
     def __init__(self):
         self.mem = {
-            "$drugs" : [ "curie:1234", "curie:4567", "curie:1341" ],
-            "$disease" : "curie:7890",
-            "$diseases" : [ "curie:9999", "curie:129191", "curie:234535" ]
         }
+        self.jk = JSONKit ()
     def resolve_arg(self, val):
         return self.mem.get (val[1:], None) if val.startswith ("$") else val
     def set(self, name, val):
         self.mem[name] = val
-        
+    def select (self, key, query):
+        """ context.select ('chemical_pathways', '$.knowledge_graph.nodes.[*].id,equivalent_identifiers') 
+        context.select ('chemical_pathways', '$.knowledge_graph.edges.[*].type')"""
+        if key in self.mem:
+            return self.jk.select (query, self.mem[key])
+    def top (self, type_name, k='result', n=10, start=-1):
+        obj = self.mem[k] if k in self.mem else None
+        result = []
+        count = 0
+        if obj:
+            nodes = obj['knowledge_graph']['nodes']
+            id2node = { n['id'] : n for n in nodes }
+            edges = obj['knowledge_graph']['edges']
+            sorted_edges = sorted(edges,
+                                  key=lambda e: e['weight'],
+                                  reverse=True)
+            for e in sorted_edges:
+                target = id2node [e['target_id']]
+                source = id2node [e['source_id']]
+                if target['type'] == type_name:
+                    count = count + 1
+                    if count < start:
+                        continue
+                    result.append ([
+                        source['name'], source['id'],
+                        e['type'],
+                        target['name'], target['id'],
+                        round(e['weight'], 2), e['publications']
+                    ])
+                    if len(result) == n:
+                        break
+        return result
+    
+    def anchor (self, url, s, suffix='', delete=None):
+        result = f"<a href='{url}{s}{suffix}' target='x'>{s}</a>"
+        return result if delete is None else result.replace(delete,'')
+    
+    def toph (self, type_name, k='result', n=10, start=0):
+        top = self.top (type_name, k, n, start)
+        search = "https://www.google.com/search?q="
+        pubmed = "https://www.ncbi.nlm.nih.gov/pubmed/?term="
+        biolink_model = "https://biolink.github.io/biolink-model/docs/"
+        for t in top:
+            t[0] = self.anchor (search, t[0])
+            t[1] = self.anchor (search, t[1])
+            t[2] = self.anchor (biolink_model, t[2], suffix=".html")
+            t[3] = self.anchor (search, t[3])
+            t[4] = self.anchor (search, t[4])
+            t[-1] = [ self.anchor (pubmed, v.replace('PMID:','')) for v in t[-1] ]
+        result = '<table><tr>{}</tr></table>'.format(
+            '</tr><tr>'.join(
+                '<td>{}</td>'.format('</td><td>'.join(str(_) for _ in row)) for row in top)
+        )
+        ipd = importlib.import_module('IPython.core.display')
+        ipd.display(ipd.HTML(result))
+        return result
+    
 class Concept:
     def __init__(self, name):
         self.name = name

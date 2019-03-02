@@ -120,6 +120,7 @@ class ICEESClusterQuery(StandardAPIResource):
             max_p_val=self.cluster_args.max_p_val,
             cohort_id=cohort_id)
         request.json['knowledge_graph'] = icees.parse_1_x_N (correlation)
+        #print (json.dumps(request.json, indent=2))
         return request.json
 
     def parse_options (self, options):
@@ -203,6 +204,7 @@ class GammaResource(StandardAPIResource):
     def __init__(self):
         self.robokop_url = 'http://robokopdb2.renci.org'
         #self.robokop_url = 'http://robokop.renci.org'
+        #self.robokop_url = 'http://robokop.renci.org'
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
         self.quick_url = f'{self.robokop_url}/api/simple/quick/'
     def view_url (self, uid):
@@ -242,11 +244,13 @@ class GammaQuery(GammaResource):
         """ This is just a pass-through to simplify workflow syntax. """
         
         self.validate (request)
+        print (json.dumps(request.json, indent=2))
         response = requests.post (self.quick_url, json=request.json)
         if response.status_code >= 300:
             print(response)
             print(response.text)
             raise Exception("Bad Gamma quick response.")
+        print (json.dumps(response.json (), indent=2))
         return response.json ()
         
 class PublishToGamma(GammaResource):
