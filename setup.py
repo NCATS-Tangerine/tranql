@@ -1,5 +1,5 @@
 #from distutils.core import setup
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 # read the contents of your README file
 from os import path
@@ -15,7 +15,7 @@ install_reqs = parse_requirements("tranql/requirements.txt")
 requirements = [str(r) for r in install_reqs]
 setup(
     name = 'tranql',
-    packages = [ 'tranql' ], # this must be the same as the name above
+    packages = find_packages #[ 'tranql' ], # this must be the same as the name above
     package_dir = { 'tranql' : 'tranql' },
     package_data={ 'tranql' : [ ] },
     version = '0.011',
