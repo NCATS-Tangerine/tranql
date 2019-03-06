@@ -202,11 +202,11 @@ class PublishToNDEx(StandardAPIResource):
 #######################################################
 class GammaResource(StandardAPIResource):
     def __init__(self):
-        self.robokop_url = 'http://robokopdb2.renci.org'
-        #self.robokop_url = 'http://robokop.renci.org'
+        #self.robokop_url = 'http://robokopdb2.renci.org'
+        self.robokop_url = 'http://robokop.renci.org'
         #self.robokop_url = 'http://robokop.renci.org'
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
-        self.quick_url = f'{self.robokop_url}/api/simple/quick/'
+        self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
     def view_url (self, uid):
         return f'{self.robokop_url}/simple/view/{uid}'
 
@@ -297,7 +297,7 @@ class PublishToGamma(GammaResource):
         uid = json.loads(view_post_response.text)
         print(f"view-post-response: {view_post_response}")
         print(f"view-url: {self.view_url(uid)}")
-        
+
 ###############################################################################################
 #
 # Define routes.

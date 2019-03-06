@@ -241,7 +241,8 @@ class Context:
             for e in sorted_edges:
                 target = id2node [e['target_id']]
                 source = id2node [e['source_id']]
-                if target['type'] == type_name:
+                node_type = target['type']
+                if node_type == type_name or (isinstance(node_type, list) and type_name in node_type):
                     count = count + 1
                     if count < start:
                         continue
@@ -277,7 +278,7 @@ class Context:
         )
         ipd = importlib.import_module('IPython.core.display')
         ipd.display(ipd.HTML(result))
-        return result
+        #return result
     
 class Concept:
     def __init__(self, name):

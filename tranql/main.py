@@ -194,8 +194,11 @@ class TranQL:
         return self.context
 
     def __call__(self, val):
-        return self.execute (val)
-    
+        self.execute (val)
+
+    def show (self, type_name, k='result', n=10, start=0):
+        self.context.toph (type_name=type_name, k=k, n=n, start=start)
+        
     def shell (self):
         """ Read, Eval, Print Loop. """
         header = """
