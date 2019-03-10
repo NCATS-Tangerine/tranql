@@ -1,296 +1,46 @@
-mock_icees_wf5_mod_1_4_response = {
-  "nodes": [
-    {
-      "id": "MONDO:0004979",
-      "type": "disease"
-    },
-    {
-      "id": "MESH:D000068298",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:5311101",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:62924",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:24847768",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:122130768",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:134687786",
-      "name": "Fluticasone",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "MESH:D019819",
-      "name": "Budesonide",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:5281004",
-      "name": "Budesonide",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "MESH:C120481",
-      "name": "Ciclesonide",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:6918155",
-      "name": "Ciclesonide",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "MESH:D004155",
-      "name": "Diphenhydramine",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:3100",
-      "name": "Diphenhydramine",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "MESH:C093230",
-      "name": "Fexofenadine",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:3348",
-      "name": "Fexofenadine",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:3083544",
-      "name": "Arformoterol",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "MESH:D013806",
-      "name": "Theophylline",
-      "type": "chemical_substance"
-    },
-    {
-      "id": "PUBCHEM:2153",
-      "name": "Theophylline",
-      "type": "chemical_substance"
-    }
-  ],
-  "edges": [
-    {
-      "type": "associated_with",
-      "source_id": "MESH:D000068298",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:5311101",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:62924",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:24847768",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:122130768",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:134687786",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.17901741601915602
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "MESH:D019819",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.36210711564945214
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:5281004",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.36210711564945214
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "MESH:C120481",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.21315373197962592
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:6918155",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.21315373197962592
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "MESH:D004155",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.04742451468670237
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:3100",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.04742451468670237
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "MESH:C093230",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.14890572158706505
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:3348",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.14890572158706505
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:3083544",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.34631798458364316
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "MESH:D013806",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.32838877772361846
-      }
-    },
-    {
-      "type": "associated_with",
-      "source_id": "PUBCHEM:2153",
-      "target_id": "MONDO:0004979",
-      "attributes": {
-        "p_val": 0.32838877772361846
-      }
-    }
-  ]
-}
-mock_graph_gamma_quick = {
-    "knowledge_graph" : {
-        "nodes" : [ { "id" : "n0" } ],
-        "edges" : [ { "id" : "e0" } ]
-    }
-}
+import json
+import os
 
-mock_bidirectional_question = {
-  "question_graph": {
-    "edges": [
-      {
-        "id": "e0",
-        "source_id": "n1",
-        "target_id": "n2"
-      },
-      {
-        "id": "e1",
-        "source_id": "n2",
-        "target_id": "n3"
-      },
-      {
-        "id": "e2",
-        "source_id": "n3",
-        "target_id": "n4"
-      },
-      {
-        "id": "e3",
-        "source_id": "n6",
-        "target_id": "n4"
-      }
-    ],
-    "nodes": [
-      {
-        "id": "n1",
-        "type": "chemical_substance",
-        "curie": "PUBCHEM:2083"
-      },
-      {
-        "id": "n2",
-        "type": "gene"
-      },
-      {
-        "id": "n3",
-        "type": "anatomical_entity"
-      },
-      {
-        "id": "n4",
-        "type": "phenotypic_feature"
-      },
-      {
-        "id": "n6",
-        "type": "disease",
-        "curie": "MONDO:0004979"
-      }
-    ]
-  },
-  "knowledge_graph": {
-    "nodes": [],
-    "edges": []
-  },
-  "knowledge_maps": [
-    {}
-  ],
-  "options": {}
-}
+class MockHelper:
+    def get_obj (self, file_name):
+        """ Get an object from file. """
+        file_path = os.path.join (os.path.dirname (__file__), "mock", file_name)
+        result = None
+        with open(file_path) as stream:
+            result = json.load (stream)
+        return result
+
+    def get_obj_text (self, file_name):
+        """ Pretty print an object. """
+        return json.dumps (self.get_obj (file_name), indent=2)
+
+class MockMap(MockHelper):
+    def __init__(self, requests_mock, test_name):
+        super().__init__()
+        """ A map of urls to file names of responses. """
+        self.mock_map = {
+            "workflow-5" : {
+                "http://localhost:8099/clinical/cohort/disease_to_chemical_exposure" : {
+                    "path" : "disease_to_chemical_exposure.json"
+                },
+                "http://localhost:8099/graph/gamma/quick" : {
+                    "path" : "gamma_quick.json"
+                },
+                "https://bionames.renci.org/lookup/asthma/disease/" : {
+                    "path" : "bionames_asthma_disease.json"
+                },
+                "http://robokop.renci.org/api/operations" : {
+                    "path" : "robokop_schema.json",
+                    "method" : "get"
+                }
+            }
+        }
+        for k, v in self.mock_map[test_name].items ():
+            method = v['method'] if 'method' in v else 'post'
+            text = self.get_obj_text (v['path'])
+            if method == 'post':
+                requests_mock.post (k, text=text)
+            elif method == 'get':
+                requests_mock.get (k, text=text)
+            else:
+                raise ValueError (f"unknown method {method}")            

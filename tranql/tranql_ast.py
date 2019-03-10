@@ -9,6 +9,12 @@ from collections import defaultdict
 from tranql.concept import ConceptModel
 from tranql.util import Concept
 from tranql.util import JSONKit
+from tranql.tranql_schema import Schema
+from tranql.exception import ServiceInvocationError
+from tranql.exception import UndefinedVariableError
+from tranql.exception import UnableToGenerateQuestionError
+from tranql.exception import MalformedResponseError
+from tranql.exception import IllegalConceptIdentifierError
 
 logger = logging.getLogger (__name__)
 
@@ -32,7 +38,7 @@ class Bionames:
         if response.status_code == 200 or response.status_code == 202:
             result = response.json ()
         else:
-            raise ValueError (response.text)
+            raise ServiceInvocationError (response.text)
         return result
     
 class Statement:
@@ -67,9 +73,6 @@ class Statement:
     def request (self, url, message):
         """ Make a web request to a service (url) posting a message. """
         logger.debug (f"request> {json.dumps(message, indent=2)}")
-        #print (f"request> {json.dumps(message, indent=2)}")
-        #if 'gamma' in url:
-        #    return {}
         response = {}
         try:
             http_response = requests.post (
@@ -112,6 +115,9 @@ class SetStatement(Statement):
                 value = self.jsonkit.select (
                     query=self.jsonpath_query,
                     graph=result)
+                if len(value) == 0:
+                    print (f"Got empty set for query {self.jsonpath_query} on " +
+                           f"object {json.dumps(result, indent=2)}")
                 interpreter.context.set (
                     self.variable,
                     value)
@@ -153,6 +159,17 @@ class CreateGraphStatement(Statement):
         interpreter.context.set (self.name, response)
         return response
     
+def synonymize(nodetype,identifier):
+    robokop_server = 'robokopdb2.renci.org'
+    robokop_server = 'robokop.renci.org'
+    url=f'http://{robokop_server}/api/synonymize/{identifier}/{nodetype}/'
+    url=f'http://{robokop_server}:6010/api/synonymize/{identifier}/{nodetype}/'
+    response = requests.post(url)
+    logger.debug (f'Return Status: {response.status_code}' )
+    if response.status_code == 200:
+        return response.json()
+    return []
+
 class SelectStatement(Statement):
     """
     Model a select statement.
@@ -202,19 +219,38 @@ class SelectStatement(Statement):
             result = value[field]
         return result
 
+    def resolve_name (self, name, type_name):
+        bionames = Bionames ()
+        result = [ r['id'] for r in bionames.get_ids (name, type_name) ]
+        #result += self.synonymize (value, type_name)
+        if type_name == 'chemical_substance':
+            response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
+            for obj in response['hits']:
+                if 'chebi' in obj:
+                    result.append (obj['chebi']['id'])
+        logger.debug (f"name resolution result: {name} => {result}")
+        return result
+    
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
         value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and isinstance(value, str) and value.startswith ("$"):
-            varname = value
-            value = interpreter.context.resolve_arg (varname)
-            logger.debug (f"resolved {varname} to {value}")
-            if value == None:
-                raise ValueError (f"Undefined variable: {varname}")
-            if isinstance(value, list):
-                """ Binding multiple values to a node. """
-                concept.nodes = value
-            elif isinstance(value, str):
+        if value and isinstance(value, str):
+            if value.startswith ("$"):
+                varname = value
+                value = interpreter.context.resolve_arg (varname)
+                print (f"resolved {varname}............... {value}")
+                logger.debug (f"resolved {varname} to {value}")
+                if value == None:
+                    raise UndefinedVariableError (f"Undefined variable: {varname}")
+                elif isinstance (value, str):
+                    concept.nodes = [ value ]
+                elif isinstance(value, list):
+                    """ Binding multiple values to a node. """
+                    concept.nodes = value
+                else:
+                    raise TranQLException (
+                        f"Internal failure: object of unhandled type {type(value)}.")
+            else:
                 """ Bind a single value to a node. """
                 if not ':' in value:
                     """ Deprecated. """
@@ -222,20 +258,14 @@ class SelectStatement(Statement):
                     This is frowned upon. While it *may* be useful for prototyping and,
                     interactive exploration, it will probably be removed. """
                     logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    bionames = Bionames ()
-                    response = bionames.get_ids (value, concept.name)
-                    logger.debug (f"resolved {response} to identifiers: {response}")
-                    concept.nodes = response
+                    concept.nodes = self.resolve_name (value, concept.name)
+                    logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
                 else:
                     """ This is a single curie. Bind it to the node. """
                     concept.nodes = [ self.node (
                         value=value,
                         type_name = concept.name) ]
-            else:
-                """ We don't know what this is. Bad. """
-                logger.debug (f"value: {value}")
-                raise ValueError (f"Invalid type {type(value)} interpolated.")
-        
+
     def generate_questions (self, interpreter):
         """
         Given an archetype question graph and values, generate question
@@ -244,18 +274,16 @@ class SelectStatement(Statement):
         for index, name in enumerate(self.query.order):
             """ Convert literals into nodes in the message's question graph. """
             concept = self.query[name]
+            print (f"concept---->: {concept}")
             if len(concept.nodes) > 0:
                 self.expand_nodes (interpreter, concept)
-                logger.debug (f"concept--nodes: {concept.nodes}")
-                #print (f"concept--nodes: {concept.nodes}")
+                #logger.debug (f"concept--nodes: {concept.nodes}")
                 concept.nodes = [
                     self.node (
                         type_name = concept.name,
                         value = self.val(v, field='curie'))
                     for v in concept.nodes
                 ]
-                #print (f"===========================> {concept.nodes}")
-                #sys.exit(0)
                 filters = interpreter.context.resolve_arg ('$id_filters')
                 if filters:
                     filters = [ f.lower () for f in filters.split(",") ]
@@ -263,12 +291,11 @@ class SelectStatement(Statement):
                         n for n in concept.nodes
                         if not n['curie'].split(':')[0].lower () in filters
                     ]
-                
             else:
                 """ There are no values - it's just a template for a model type. """
                 concept.nodes = [ self.node (
                     type_name = concept.name) ]
-
+            
         options = {}
         for constraint in self.where:
             logger.debug (f"manage constraint: {constraint}")
@@ -308,6 +335,7 @@ class SelectStatement(Statement):
                         for node in concept.nodes:
                             """ Permute each question. """
                             nodes = copy.deepcopy (question["question_graph"]['nodes'])
+                            print (f"------> {concept} {json.dumps(nodes, indent=2)}")
                             lastnode = nodes[-1]
                             nodes.append (node)
                             edges = copy.deepcopy (question["question_graph"]['edges'])
@@ -350,35 +378,40 @@ class SelectStatement(Statement):
         self.service = self.resolve_backplane_url (self.service, interpreter)
         questions = self.generate_questions (interpreter)
         if len(questions) == 0:
-            raise ValueError ("No questions generated")
+            raise UnableToGenerateQuestionError ("No questions generated")
         service = interpreter.context.resolve_arg (self.service)
 
         """ Invoke the service and store the response. """
         responses = []
         for q in questions:
-            logger.debug (f"executing question {q}")
+            logger.debug (f"executing question {json.dumps(q, indent=2)}")
             response = self.request (service, q)
             logger.debug (f"response: {json.dumps(response, indent=2)}")
             responses.append (response)
             
         if len(responses) == 0:
-            raise ValueError ("No responses received")
+            raise ServiceInvocationError (f"No responses received from {service}")
         elif len(responses) == 1:
             result = responses[0]
         elif len(responses) > 1:
             result = responses[0]
+            if not 'knowledge_graph' in result:
+                message = "Malformed response does not contain knowledge_graph element."
+                logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
+                raise MalformedResponseError (message)
             nodes = result['knowledge_graph']['nodes']
             edges = result['knowledge_graph']['edges']
-            #print (f"----------------------------------> {[ n for n in nodes ]}")
             nodes = { n['id'] : n for n in nodes }
             for response in responses[1:]:
+                # TODO: Preserve reasoner provenance. This treats nodes as equal if
+                # their ids are equal. Instead, consider merging provenance/properties.
+                # Edges, we may keep distinct and whole or merge to some tbd extent.
+                edges += response['knowledge_graph']['edges']
                 other_nodes = response['knowledge_graph']['nodes']
-                other_edges = response['knowledge_graph']['edges']
                 for n in other_nodes:
                     if not n['id'] in nodes:
                         nodes[n['id']] = n
-                edges += other_edges # perhaps be a bit more judicious
-            result['knowledge_graph']['nodes'] = nodes.values ()
+            result['knowledge_graph']['nodes'] = list(nodes.values ())
         for set_statement in self.set_statements:
             logger.debug (f"{set_statement}")
             set_statement.execute (interpreter, context = { "result" : result })
@@ -387,8 +420,9 @@ class SelectStatement(Statement):
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
     def __init__(self, parse_tree):
-        #print (f"{json.dumps(parse_tree, indent=2)}")
+        logger.debug (f"{json.dumps(parse_tree, indent=2)}")
         """ Create an abstract syntax tree from the parser token stream. """
+        self.schema = Schema ()
         self.statements = []
         self.parse_tree = parse_tree
         logger.debug (f"{json.dumps(self.parse_tree, indent=2)}")
@@ -512,7 +546,7 @@ class Query:
             name = key
             if ':' in key:
                 if key.count (':') > 1:
-                    raise ValueError (f"Illegal concept id: {key}")
+                    raise IllegalConceptIdentifierError (f"Illegal concept id: {key}")
                 name, concept = key.split (':')
             self.order.append (name)
             assert self.concept_model.get (concept) != None

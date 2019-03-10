@@ -3,11 +3,12 @@ import pytest
 import os
 from deepdiff import DeepDiff
 from tranql.main import TranQL
-from tranql.main import TranQLParser
-from tranql.ast import SetStatement
-from tranql.tests.mocks import mock_icees_wf5_mod_1_4_response
-from tranql.tests.mocks import mock_graph_gamma_quick
-from tranql.tests.mocks import mock_bidirectional_question
+from tranql.main import TranQLParser, set_verbose
+from tranql.tranql_ast import SetStatement
+from tranql.tests.mocks import MockHelper
+from tranql.tests.mocks import MockMap
+from tranql.tests.mocks import bidirectional_question
+set_verbose ()
 
 def assert_lists_equal (a, b):
     """ Assert the equality of two lists. """
@@ -223,14 +224,16 @@ def test_ast_generate_questions ():
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
-
 def test_ast_bidirectional_query ():
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     app = TranQL ()
-    app.context.set ("drug", "PUBCHEM:2083")
-    app.context.set ("disease", "MONDO:0004979")
+    disease_id = "MONDO:0004979"
+    chemical = "PUBCHEM:2083"
+    app.context.set ("drug", chemical)
+    app.context.set ("disease", disease_id)
+    mocker = MockHelper ()
     expectations = {
-        "cop.tranql" : mock_bidirectional_question
+        "cop.tranql" : mocker.get_obj ("bidirectional_question.json")
     }
     queries = { os.path.join (os.path.dirname (__file__), "..", "queries", k) : v 
                 for k, v in expectations.items () }
@@ -239,10 +242,13 @@ def test_ast_bidirectional_query ():
         statement = ast.statements
         """ This uses an unfortunate degree of knowledge about the implementation,
         both of the AST, and of theq query. Consider alternatives. """
-        questions = ast.statements[0].generate_questions (app) # select
-        print (f"---- {json.dumps(questions[0], indent=2)}")
-        differences = DeepDiff (questions[0], expected_output)
-        assert len(differences) == 0, f"--differences--------> {differences}"
+        questions = ast.statements[2].generate_questions (app)
+        nodes = questions[0]['question_graph']['nodes']
+        edges = questions[0]['question_graph']['edges']
+        node_index = { n['id'] : i for i, n in enumerate (nodes) }
+        assert nodes[-1]['curie'] == disease_id
+        assert nodes[0]['curie'] == chemical
+        assert node_index[edges[-1]['target_id']] == node_index[edges[-1]['source_id']] - 1
         
 #####################################################
 #
@@ -268,13 +274,7 @@ def test_interpreter_set ():
     assert output['cohort'] == "COHORT:22"
 
 def test_program (requests_mock):
-    requests_mock.post (
-        "http://localhost:8099/flow/5/mod_1_4/icees/by_residential_density",
-        text=json.dumps (mock_icees_wf5_mod_1_4_response, indent=2))
-    requests_mock.post (
-        "http://localhost:8099/graph/gamma/quick",
-        text=json.dumps (mock_graph_gamma_quick, indent=2))
-
+    mock_map = MockMap (requests_mock, "workflow-5")
     tranql = TranQL ()
     ast = tranql.execute ("""
     --
@@ -289,14 +289,15 @@ def test_program (requests_mock):
     --      For chemicals produced by the first steps, what phenotypes are
     --      associated with exposure to these chemicals?
     --
-    
-    SELECT disease->chemical_substance
-      FROM "/flow/5/mod_1_4/icees/by_residential_density"
-     WHERE disease = "asthma"
-       AND EstResidentialDensity < "2"
-       AND cohort = "COHORT:22"
-       AND max_p_value = "0.5"
-       SET '$.nodes.[*].id' AS chemical_exposures
+    SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
+
+    SELECT population_of_individual_organisms->drug_exposure
+      FROM "/clinical/cohort/disease_to_chemical_exposure"
+     WHERE EstResidentialDensity < '2'
+       AND population_of_individual_organizms = 'x'
+       AND cohort = 'all_patients'
+       AND max_p_value = '0.1'
+       SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
     
     SELECT chemical_substance->gene->biological_process->phenotypic_feature
       FROM "/graph/gamma/quick"
@@ -306,54 +307,7 @@ def test_program (requests_mock):
     
     print (f"{ast}")
     expos = tranql.context.resolve_arg("$chemical_exposures")
-    print (f" expos =======> {json.dumps(expos)}")
+    #print (f" expos =======> {json.dumps(expos)}")
     
     kg = tranql.context.resolve_arg("$knowledge_graph")
-    print (f" kg =======> {kg}") #json.dumps(kg)}")
-
-def test_program_variables (requests_mock):
-    requests_mock.post (
-        "http://localhost:8099/flow/5/mod_1_4/icees/by_residential_density",
-        text=json.dumps (mock_icees_wf5_mod_1_4_response, indent=2))
-    requests_mock.post (
-        "http://localhost:8099/graph/gamma/quick",
-        text=json.dumps (mock_graph_gamma_quick, indent=2))
-
-    tranql = TranQL ()
-    ast = tranql.execute ("""
-    --
-    -- Workflow 5
-    --
-    --   Modules 1-4: Chemical Exposures by Clinical Clusters
-    --      For sub-clusters within the overall ICEES asthma cohort defined by
-    --      differential population density, which chemicals are related to these clusters
-    --      with a p_value less than some threshold?
-    --
-    --   Modules 5-*: Knowledge Graph Phenotypic Associations 
-    --      For chemicals produced by the first steps, what phenotypes are associated with exposure
-    --      to these chemicals?
-    --
-    
-    SET disease = "asthma"
-    SET max_p_value = '0.5'
-    SET cohort = 'COHORT:22'
-    SET population_density = 2
-    SET icees.population_density_cluster = '/wf5/mod_1_4/icees/by_residential_density'
-    SET gamma.quick = '/graph/gamma/quick/'
-    
-    SELECT disease->chemical_substance
-      FROM $icees.population_density_cluster
-     WHERE disease = $disease
-       AND population_density < $population_density
-       AND cohort = $cohort
-       AND max_p_value = $max_p_value
-       SET '$.nodes.[*]' AS exposures
-    
-    SELECT chemical_substance->gene->biological_process->phenotypic_feature
-      FROM $gamma.quick
-     WHERE chemical_substance = $exposures
-       SET knowledge_graph
-    """ )
-    
-
-
+    #print (f" kg =======> {kg}") #json.dumps(kg)}")

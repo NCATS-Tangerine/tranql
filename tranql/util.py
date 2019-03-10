@@ -9,6 +9,8 @@ import datetime
 import os
 import re
 from collections import namedtuple
+from tranql.disease_vocab import DiseaseVocab
+from jinja2 import Template
 import copy
 import yaml
 from jsonpath_rw import parse
@@ -56,6 +58,15 @@ class LoggingUtil(object):
             logging.config.dictConfig(config)
         else:
             logging.basicConfig(level=default_level)
+
+
+    @staticmethod    
+    def setup_logging ():
+        logging_config_path = os.path.join(os.path.dirname(__file__), 'logging.yaml')
+        with open(logging_config_path, 'rt') as f:
+            logging_config = yaml.safe_load(f.read())
+            #    print (json.dumps(logging_config, indent=2))    
+            logging.config.dictConfig(logging_config)
             
 class Resource:
     @staticmethod
@@ -154,79 +165,28 @@ class JSONKit:
         values = [ match.value for match in jsonpath_query.find (graph) ]
         return [ val for val in values if target is None or val[field] in target ]
 
-class Syfur:
-    """
-    An intentionall bad implementation of a query language reminiscent of cypher.
-    Workflow's must be secure even posted from non-secure clients.
-    So we prevent them from executing arbitrary cppher.
-    Some of this can be achived with parameters but not all.
-    Hopefully, will be replaced by a cypher parser in the future.
-    In the meantime, we provide a basic graph query capability enabling automated validation and other features.
-
-    TODO: edges.
-    """
-    def __init__(self):
-        self.queries = {
-            "match"            : "match (obj) return {field}",
-            "match_type"       : "match (obj:{type}) return {field}",
-            "match_params"     : "match (obj{props}) return {field}",
-        }
-        self.id_pat = re.compile ("^([a-zA-Z_\.0-9]+)$")
-        self.value_pat = re.compile ("^([a-zA-Z_:\.0-9]+)$")
-        
-    def _field(self, val):
-        return val if val == "*" else f"obj.{val}"
-    def _gen(self, template, parameters):
-        logger.debug (f"syfur template: {template}, parameters: {json.dumps(parameters, indent=2)}")
-        return self.queries[template].format (**parameters)
-    
-    def parse (self, query):
-        tokens = query.split ()
-        syntax_message = "Invalid syntax. 'Query := match <filter> return <field>. Filter := arg=value. Field := <str>."
-        assert len(tokens) >= 3, syntax_message
-        assert tokens[0].lower() == 'match' and tokens[-2].lower() == 'return', syntax_message
-
-        parameters = {}
-        for t in tokens:
-            if t == 'match':
-                continue
-            if t == 'return':
-                break
-            assert '=' in t, syntax_message
-            assert not 'delete' in t and not 'detach' in t, syntax_message
-            
-            k, v = t.split ('=')
-            assert self.id_pat.match (k).groups(), syntax_message
-            assert self.value_pat.match (k).groups(), syntax_message
-
-            parameters[k] = v
-
-        field = self._field (tokens[-1])
-        assert self.id_pat.match (field), syntax_message
-
-        query_template = "match_params"
-
-        props = ",".join([f"""{k}:'{v}'""" for k, v in parameters.items() ])
-        parameters['props'] = f"{{ {props} }}" if len(props) > 0 else props
-        parameters['field'] = field
-        
-        return self._gen (query_template, parameters)
-
 class Context:
     """ A trivial context implementation. """
     def __init__(self):
         self.mem = {
         }
         self.jk = JSONKit ()
+        generate_gene_vocab (self)
+        #generate_disease_vocab (self)
+        DiseaseVocab (self)
+        
     def resolve_arg(self, val):
         return self.mem.get (val[1:], None) if val.startswith ("$") else val
+    
     def set(self, name, val):
         self.mem[name] = val
+        
     def select (self, key, query):
         """ context.select ('chemical_pathways', '$.knowledge_graph.nodes.[*].id,equivalent_identifiers') 
         context.select ('chemical_pathways', '$.knowledge_graph.edges.[*].type')"""
         if key in self.mem:
             return self.jk.select (query, self.mem[key])
+        
     def top (self, type_name, k='result', n=10, start=-1):
         obj = self.mem[k] if k in self.mem else None
         result = []
@@ -286,128 +246,61 @@ class Concept:
         self.nodes = []
     def __repr__(self):
         return f"{self.name}:{self.nodes}"
-    
-class MaQ:
-    def __init__(self):
-        """ Extract values within parantheses someplace in a string. """
-        self.paren = re.compile("^.*\(([\\\\$a-zA-Z0-9_]+)\).*$")
 
-        """ Map a few shortcut names to common biolink model concepts. Ok, there's really just one annoying one. """
-        self.shortcuts = {
-            "chem" : "chemical_substance",
-        }
+def generate_gene_vocab ():
+    gene_map = {}
+    with open('genes.txt', 'r') as stream:
+        for line in stream:
+            parts = line.split ('\t')
+            identifier = parts[0]
+            symbol = parts[1]
 
-    def question (self, nodes, edges):
-        return {
-            "machine_question": {
-                "edges": edges,
-                "nodes": nodes
-            }
-        }
-    def edge (self, source, target, type_name=None):
-        e = {
-            "source_id": source,
-            "target_id": target
-        }
-        if type_name:
-            e["type_name"] = type_name
-        return e
-    def node (self, identifier, type_name, value=None):
-        logger.debug (f"value -> {value}")
-        n = {
-            "id": identifier,
-            "type": type_name
-        }
-        if value:
-            n ['curie'] = value 
-        return n
+            symbol = symbol.replace ('@', '_')
+            symbol = symbol.replace ('-', '_')
+            if not "~withdrawn" in symbol and not ' ' in symbol:
+                gene_map[symbol] = identifier
 
-    def val(self, value, field="id"):
-        result = value
-        if isinstance(value, dict) and field in value:
-            result = value[field]
-        return result
-    
-    def parse (self, query, context):
-        """ chem($drugs)->gene->disease($disease) """
-        """ eventually: chem($drugs)-[$predicates]->gene->[$gd_preds]->disease($disease) """
-        
-        if isinstance(query, list):
-            return [ question for sublist in [ self.parse (q, context) for q in query ] for question in sublist ]
+def generate_gene_vocab (context):
+    file_name = os.path.join (os.path.dirname (__file__), "conf", "genes.txt")
+    with open(file_name, 'r') as stream:
+        for line in stream:
+            parts = line.split ('\t')
+            identifier = parts[0]
+            symbol = parts[1]
+            symbol = symbol.replace ('@', '_')
+            symbol = symbol.replace ('-', '_')
+            if not "~withdrawn" in symbol and not ' ' in symbol:
+                context.set(symbol, identifier)
 
-        concepts = query.split ("->")
-        logger.debug (f"concepts: {concepts}")
-        concept_order = []
-        concept_map = {}
-        for index, concept in enumerate(concepts):
-            if '(' in concept:
-                """ This concept is parameterized. """
-                name = concept.split ('(')[0]
-                name = self.shortcuts.get (name, name)
-                logger.debug (f"concept name concept: {concept} ===> {name}")
-                concept_order.append (name)
-                
-                """ Match and extract the parameters. """
-                val = self.paren.match (concept).groups()[0]
-                value = context.resolve_arg (val)
-                concept_map[name] = Concept (name)
-                
-                if isinstance (value,list):
-                    """ It's a list. Build the set and permute. """
-                    concept_map[name].nodes = [ self.node (
-                        identifier = index,
-                        type_name = name,
-                        value = self.val(v)) for v in value ]
-                elif isinstance (value, str):
-                    concept_map[name].nodes = [ self.node (
-                        identifier = index,
-                        type_name = name,
-                        value = self.val(value)) ]
-            else:
-                name = self.shortcuts.get (concept, concept)
-                concept_order.append (name)
-                concept_map[name] = Concept (name)
-                concept_map[name].nodes = [ self.node (
-                    identifier = index,
-                    type_name = name) ]
-            
-        edges = []
-        questions = []
-        for index, name in enumerate (concept_order):
-            concept = concept_map [name]
-            logger.debug (f"concept: {concept}")
-            previous = concept_order[index-1] if index > 0 else None
-            if index == 0:
-                for node in concept.nodes:
-                    """ Model the first step. """
-                    questions.append (self.question (
-                        nodes = [ node ],
-                        edges = []))
-            else:
-                new_questions = []
-                for question in questions:
-                    logger.debug (f"question: {question}")
-                    for node in concept.nodes:
-                        """ Permute each question. """
-                        nodes = copy.deepcopy (question["machine_question"]['nodes'])
-                        lastnode = nodes[-1]
-                        nodes.append (node)
-                        edges = copy.deepcopy (question["machine_question"]['edges'])
-                        edges.append (self.edge (
-                            source=lastnode['id'],
-                            target=node['id']))
-                        new_questions.append (self.question (
-                            nodes = nodes,
-                            edges = edges))
-                        #logger.debug (f"-------------------------------------------------")
-                        #logger.debug (f"new_questions: {json.dumps(new_questions, indent=2)}")
-                questions = new_questions
+def generate_disease_vocab (context):
+    file_name = os.path.join (os.path.dirname (__file__), "conf", "mondo.json")
+    with open(file_name, "r") as stream:
+        ontology = json.load (stream)
+        for graph in ontology['graphs']:
+            for node in graph['nodes']:
+                label = node['lbl'].\
+                        replace (' ', '_').\
+                        replace (',', '').\
+                        replace ('-','_') if 'lbl' in node else None
+                if label:
+                    identifier = node['id'].\
+                                 split ('/')[-1].\
+                                 replace ('_', ':')
+                    #print (f"{label}={identifier}")
+                    context.set (label, identifier)
+        template = Template ("""
+class DiseaseVocab:
+   def __init__(self, context):
+       context.mem.update ({
+           {% for k, v in disease_map.items () %}
+           "{{ k.lower() }}" : "{{ v }}"{{ "," if not loop.last }}{% endfor %}
+       })""")
+        text = template.render (disease_map=context.mem)
+        with open("disease_vocab.py", "w") as stream:
+            stream.write (text)
 
-        return questions
-                
-                
+#{% if i < len(list(disease_map.items ())) %},{%
+
 if __name__ == '__main__':
-    m = MaQ ()
-    c = Context ()
-    m.parse ("""chem($drugs)->gene->disease($disease) """, c)
-    
+    #generate_gene_vocab ()
+    generate_disease_vocab (Context ())

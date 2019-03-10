@@ -34,12 +34,20 @@ loggers:
   root:
     level: WARNING
     handlers: [console]
-    propagate: no
-  main:
+    propagate: false
+  tranql.main:
     level: INFO
     handlers: [console]
-    propagate: no
-  ast:
-    level: DEBUG
+    propagate: false
+  tranql.tranql_ast:
+    level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
+  tranql.util:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  __main__:
+    level: INFO
+    handlers: [console]
+    propagate: false

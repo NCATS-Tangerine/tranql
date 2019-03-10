@@ -1,0 +1,72 @@
+[
+  {
+    "id": "MONDO:0004766",
+    "label": "status asthmaticus",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0004979",
+    "label": "asthma",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0005405",
+    "label": "childhood onset asthma",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0008834",
+    "label": "asthma, nasal polyps, and aspirin intolerance",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0008835",
+    "label": "asthma, short stature, and elevated IgA",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0010940",
+    "label": "inherited susceptibility to asthma",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0011805",
+    "label": "asthma-related traits, susceptibility to, 1",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012067",
+    "label": "asthma-related traits, susceptibility to, 2",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012379",
+    "label": "asthma-related traits, susceptibility to, 3",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012577",
+    "label": "asthma-related traits, susceptibility to, 4",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012607",
+    "label": "asthma-related traits, susceptibility to, 5",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012666",
+    "label": "asthma-related traits, susceptibility to, 6",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0012771",
+    "label": "asthma-related traits, susceptibility to, 7",
+    "type": "disease"
+  },
+  {
+    "id": "MONDO:0013180",
+    "label": "asthma-related traits, susceptibility to, 8",
+    "type": "disease"
+  }
+]

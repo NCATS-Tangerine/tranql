@@ -1,0 +1,298 @@
+{
+  "anatomical_entity": {
+    "cell": [
+      {
+        "link": "anatomy_to_cell_type",
+        "op": "uberongraph.get_cell_by_anatomy_graph"
+      }
+    ],
+    "gene": [
+      {
+        "link": "anatomy_to_gene",
+        "op": "hetio.anatomy_to_gene"
+      }
+    ],
+    "phenotypic_feature": [
+      {
+        "link": "anatomy_to_phenotype",
+        "op": "uberongraph.get_phenotype_by_anatomy_graph"
+      }
+    ]
+  },
+  "cell": {
+    "anatomical_entity": [
+      {
+        "link": "cell_type_to_anatomy",
+        "op": "uberongraph.get_anatomy_by_cell_graph"
+      }
+    ],
+    "biological_process_or_activity": [
+      {
+        "link": "bio_process_cell_type",
+        "op": "uberongraph.get_process_or_activity_by_cell"
+      }
+    ]
+  },
+  "biological_process_or_activity": {
+    "gene": [
+      {
+        "link": "bio_process_gene",
+        "op": "quickgo.go_term_to_gene_annotation"
+      }
+    ],
+    "cell": [
+      {
+        "link": "bio_process_cell_type",
+        "op": "uberongraph.get_cell_by_process_or_activity"
+      }
+    ],
+    "chemical_substance": [
+      {
+        "link": "bio_process_chemical_substance",
+        "op": "uberongraph.get_chemical_entity_by_process_or_activity"
+      }
+    ]
+  },
+  "chemical_substance": {
+    "gene": [
+      {
+        "link": "chemical_targets_gene",
+        "op": "chembio.graph_pubchem_to_ncbigene"
+      },
+      {
+        "link": "drug_to_gene",
+        "op": "ctd.drug_to_gene_expanded"
+      }
+    ],
+    "disease_or_phenotypic_feature": [
+      {
+        "link": "adverse_events",
+        "op": "mychem.get_adverse_events"
+      },
+      {
+        "link": "drugcentral",
+        "op": "mychem.get_drugcentral"
+      }
+    ]
+  },
+  "disease_or_phenotypic_feature": {
+    "chemical_substance": [
+      {
+        "link": "exposures",
+        "op": "ctd.disease_to_exposure"
+      },
+      {
+        "link": "disease_to_chemical",
+        "op": "ctd.disease_to_chemical"
+      }
+    ],
+    "sequence_variant": [
+      {
+        "link": "disease_or_phenotypic_feature_to_sequence_variant",
+        "op": "gwascatalog.disease_or_phenotypic_feature_to_sequence_variant"
+      }
+    ]
+  },
+  "disease": {
+    "phenotypic_feature": [
+      {
+        "link": "disease_to_phenotype",
+        "op": "biolink.disease_get_phenotype"
+      },
+      {
+        "link": "disease_to_phenotype",
+        "op": "hetio.disease_to_phenotype"
+      }
+    ],
+    "gene": [
+      {
+        "link": "disease_to_gene",
+        "op": "pharos.disease_get_gene"
+      },
+      {
+        "link": "disease_to_gene",
+        "op": "biolink.disease_get_gene"
+      }
+    ],
+    "metabolite": [
+      {
+        "link": "disease_to_metabolite",
+        "op": "hmdb.disease_to_metabolite"
+      }
+    ],
+    "biological_process_or_activity": [
+      {
+        "link": "disease_to_biological_process_or_activity",
+        "op": "uberongraph.get_process_or_activity_by_disease"
+      }
+    ],
+    "anatomical_entity": [
+      {
+        "link": "disease_to_anatomical_entity",
+        "op": "uberongraph.get_anatomy_by_disease"
+      }
+    ]
+  },
+  "drug": {
+    "gene": [
+      {
+        "link": "drug_to_gene",
+        "op": "pharos.drug_get_gene"
+      }
+    ]
+  },
+  "metabolite": {
+    "gene": [
+      {
+        "link": "metabolite_to_gene",
+        "op": "hmdb.metabolite_to_enzyme"
+      },
+      {
+        "link": "chemical_to_gene",
+        "op": "kegg.chemical_get_enzyme"
+      }
+    ],
+    "disease": [
+      {
+        "link": "metabolite_to_disease",
+        "op": "hmdb.metabolite_to_disease"
+      }
+    ],
+    "pathway": [
+      {
+        "link": "metabolite_to_pathway",
+        "op": "hmdb.metabolite_to_pathway"
+      }
+    ],
+    "metabolite": [
+      {
+        "link": "metabolite_to_metabolite",
+        "op": "kegg.chemical_get_chemical"
+      }
+    ]
+  },
+  "gene": {
+    "anatomical_entity": [
+      {
+        "link": "gene_to_anatomy",
+        "op": "hetio.gene_to_anatomy"
+      }
+    ],
+    "disease": [
+      {
+        "link": "gene_to_disease",
+        "op": "biolink.gene_get_disease"
+      },
+      {
+        "link": "gene_to_disease",
+        "op": "hetio.gene_to_disease"
+      },
+      {
+        "link": "gene_to_disease",
+        "op": "pharos.gene_get_disease"
+      }
+    ],
+    "gene_family": [
+      {
+        "link": "gene_to_gene_family",
+        "op": "hgnc.gene_get_gene_family"
+      }
+    ],
+    "chemical_substance": [
+      {
+        "link": "gene_to_drug",
+        "op": "ctd.gene_to_drug_expanded"
+      },
+      {
+        "link": "gene_get_drug",
+        "op": "pharos.gene_get_drug"
+      }
+    ],
+    "metabolite": [
+      {
+        "link": "enzyme_to_metabolite",
+        "op": "hmdb.enzyme_to_metabolite"
+      }
+    ],
+    "pathway": [
+      {
+        "link": "gene_to_pathway",
+        "op": "biolink.gene_get_pathways"
+      },
+      {
+        "link": "gene_to_pathway",
+        "op": "chembio.graph_get_pathways_by_gene"
+      }
+    ],
+    "sequence_variant": [
+      {
+        "link": "gene_to_sequence_variant",
+        "op": "clingen.gene_to_sequence_variant"
+      }
+    ],
+    "biological_process_or_activity": [
+      {
+        "link": "biological_process_or_activity",
+        "op": "biolink.gene_get_process_or_function"
+      }
+    ],
+    "phenotypic_feature": [
+      {
+        "link": "gene_get_phenotype",
+        "op": "biolink.gene_get_phenotype"
+      }
+    ]
+  },
+  "pathway": {
+    "gene": [
+      {
+        "link": "pathway_to_gene",
+        "op": "biolink.pathway_get_gene"
+      }
+    ],
+    "metabolite": [
+      {
+        "link": "pathway_to_metabolite",
+        "op": "hmdb.pathway_to_metabolite"
+      }
+    ]
+  },
+  "phenotypic_feature": {
+    "anatomical_entity": [
+      {
+        "link": "phenotype_to_anatomy",
+        "op": "uberongraph.get_anatomy_by_phenotype_graph"
+      }
+    ],
+    "disease": [
+      {
+        "link": "phenotype_to_disease",
+        "op": "biolink.phenotype_get_disease"
+      }
+    ],
+    "biological_process_or_activity": [
+      {
+        "link": "phenotype_to_biological_process_or_activity",
+        "op": "uberongraph.get_process_or_activity_by_phenotype"
+      }
+    ]
+  },
+  "sequence_variant": {
+    "gene": [
+      {
+        "link": "sequence_variant_to_gene",
+        "op": "myvariant.sequence_variant_to_gene"
+      }
+    ],
+    "disease_or_phenotypic_feature": [
+      {
+        "link": "sequence_variant_to_disease_or_phenotypic_feature",
+        "op": "biolink.sequence_variant_get_phenotype"
+      },
+      {
+        "link": "sequence_variant_to_disease_or_phenotypic_feature",
+        "op": "gwascatalog.sequence_variant_to_disease_or_phenotypic_feature"
+      }
+    ]
+  }
+}

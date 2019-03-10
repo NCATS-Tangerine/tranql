@@ -120,7 +120,7 @@ class ICEESClusterQuery(StandardAPIResource):
             max_p_val=self.cluster_args.max_p_val,
             cohort_id=cohort_id)
         request.json['knowledge_graph'] = icees.parse_1_x_N (correlation)
-        #print (json.dumps(request.json, indent=2))
+        print (json.dumps(request.json, indent=2))
         return request.json
 
     def parse_options (self, options):
@@ -202,8 +202,8 @@ class PublishToNDEx(StandardAPIResource):
 #######################################################
 class GammaResource(StandardAPIResource):
     def __init__(self):
-        #self.robokop_url = 'http://robokopdb2.renci.org'
-        self.robokop_url = 'http://robokop.renci.org'
+        self.robokop_url = 'http://robokopdb2.renci.org'
+        #self.robokop_url = 'http://robokop.renci.org'
         #self.robokop_url = 'http://robokop.renci.org'
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
         self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
@@ -252,7 +252,100 @@ class GammaQuery(GammaResource):
             raise Exception("Bad Gamma quick response.")
         print (json.dumps(response.json (), indent=2))
         return response.json ()
+
+
+class RTXQuery(StandardAPIResource):
+    """ Generic graph query to RTX. """
+    def post(self):
+        """
+        Visualize
+        ---
+        tag: validation
+        description: Query RTX, given a question graph.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+
+        """ This is just a pass-through to simplify workflow syntax. """
         
+        self.validate (request)
+        url = "https://rtx.ncats.io/beta/api/rtx/v1/query"
+        #request.json['results'] = []
+        del request.json['knowledge_graph']
+        del request.json['knowledge_maps']
+        del request.json['options']
+        edges = request.json['question_graph']['edges']
+        del edges[0]
+        nodes = request.json['question_graph']['nodes']
+        del nodes[0]
+        query = {
+            "bypass_cache": "true",
+            "query_message" : {
+                "query_graph" : request.json['question_graph']
+            }
+        }
+        '''
+            "previous_message_processing_plan" : {
+                "previous_messages" : [
+                    request.json
+                ]
+            }
+        '''
+
+        query = {
+            "bypass_cache": "true",
+            "query_message": {
+                "query_graph": {
+                    "edges": [
+                        {
+                            "edge_id": "e00",
+                            "source_id": "n00",
+                            "target_id": "n01",
+                            "type": "physically_interacts_with"
+                        }
+                    ],
+                    "nodes": [
+                        {
+                            "curie": "CHEMBL.COMPOUND:CHEMBL112",
+                            "node_id": "n00",
+                            "type": "chemical_substance"
+                        },
+                        {
+                            "node_id": "n01",
+                            "type": "protein"
+                        }
+                    ]
+                }
+            }
+        }
+        print (json.dumps(query, indent=2))
+        response = requests.post (url, json=query)
+        if response.status_code >= 300:
+            print(response)
+            print(response.text)
+            raise Exception("Bad RTX query response.")
+        print (json.dumps(response.json (), indent=2))
+        return response.json ()
+
 class PublishToGamma(GammaResource):
     """ Publish a graph to Gamma. """
     def post(self):
@@ -285,7 +378,6 @@ class PublishToGamma(GammaResource):
         """
 
         """ This is just a pass-through to simplify workflows. """
-        
         self.validate (request)
         print (f"{json.dumps(request.json, indent=2)}")
         view_post_response = requests.post(
@@ -306,6 +398,7 @@ class PublishToGamma(GammaResource):
 
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
+api.add_resource(RTXQuery, '/graph/rtx/query')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')

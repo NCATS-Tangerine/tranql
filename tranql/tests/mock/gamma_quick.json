@@ -1,0 +1,16 @@
+{
+    "knowledge_graph" : {
+        "nodes" : [ {
+            "id" : "n0",
+            "type" : "chemical_substance"
+        },{
+            "id" : "n1",
+            "type" : "gene"
+        } ],
+        "edges" : [ {
+            "id" : "e0",
+            "source_id" : "n0",
+            "target_id" : "n1"
+        } ]
+    }
+}

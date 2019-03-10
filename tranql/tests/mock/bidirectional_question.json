@@ -1,0 +1,58 @@
+{
+  "question_graph": {
+    "edges": [
+      {
+        "id": "e0",
+        "source_id": "n1",
+        "target_id": "n2"
+      },
+      {
+        "id": "e1",
+        "source_id": "n2",
+        "target_id": "n3"
+      },
+      {
+        "id": "e2",
+        "source_id": "n3",
+        "target_id": "n4"
+      },
+      {
+        "id": "e3",
+        "source_id": "n6",
+        "target_id": "n4"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "n1",
+        "type": "chemical_substance",
+        "curie": "PUBCHEM:2083"
+      },
+      {
+        "id": "n2",
+        "type": "gene"
+      },
+      {
+        "id": "n3",
+        "type": "anatomical_entity"
+      },
+      {
+        "id": "n4",
+        "type": "phenotypic_feature"
+      },
+      {
+        "id": "n6",
+        "type": "disease",
+        "curie": "MONDO:0004979"
+      }
+    ]
+  },
+  "knowledge_graph": {
+    "nodes": [],
+    "edges": []
+  },
+  "knowledge_maps": [
+    {}
+  ],
+  "options": {}
+}

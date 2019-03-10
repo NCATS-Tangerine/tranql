@@ -41,16 +41,14 @@ from tranql.util import Context
 from tranql.util import JSONKit
 from tranql.util import Concept
 from tranql.util import LoggingUtil
-from tranql.ast import TranQL_AST
+from tranql.tranql_ast import TranQL_AST
 from pyparsing import (
     Combine, Word, White, Literal, delimitedList, Optional,
     Group, alphas, alphanums, printables, Forward, oneOf, quotedString,
     ZeroOrMore, restOfLine, CaselessKeyword, ParserElement, LineEnd,
     removeQuotes, pyparsing_common as ppc)
 
-LoggingUtil.setup_logging (
-    default_path=os.path.join(os.path.dirname(__file__), 'logging.yaml'))
-
+LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
 
 """
@@ -164,7 +162,7 @@ class TranQL:
         self.parser = TranQLParser ()
         self.context = Context ()
         self.context.set ("backplane", backplane)
-
+        
     def parse (self, program):
         """ If we just want the AST. """
         return self.parser.parse (program)
@@ -198,7 +196,16 @@ class TranQL:
 
     def show (self, type_name, k='result', n=10, start=0):
         self.context.toph (type_name=type_name, k=k, n=n, start=start)
-        
+
+    def val (self, term):
+        result = {}
+        if isinstance(term, list):
+            for t in term:
+                result.update ({ x : self.context.mem[x] for x in list(self.context.mem.keys ()) if x.lower().startswith (t) })
+        else:
+            result = { x : self.context.mem[x] for x in list(self.context.mem.keys ()) if x.lower().startswith (term) } 
+        return result
+    
     def shell (self):
         """ Read, Eval, Print Loop. """
         header = """
@@ -238,7 +245,14 @@ class TranQL:
                 traceback.print_exc ()
                 print (str(e))
         return self.context
-            
+
+def set_verbose ():
+    """ Turn up logging. """
+    logging.getLogger().setLevel (logging.DEBUG)
+    for logger_name in [ "tranql.main", "tranql.tranql_ast", "tranql.util" ]:
+        logger = logging.getLogger (logger_name)
+        logger.setLevel (logging.DEBUG)
+        
 def main ():
     """ Process arguments. """
     arg_parser = argparse.ArgumentParser(
@@ -261,15 +275,12 @@ def main ():
                             action="append", default=[])
     args = arg_parser.parse_args ()
 
+    global logger
     """ Parse command line arguments to the query. """
     query_args = { k : v for k, v in [ arg.split("=") for arg in args.arg ] }
 
     if args.verbose:
-        """ Turn up logging. """
-        logging.getLogger().setLevel (logging.DEBUG)
-        for logger_name in [ "main", "ast" ]:
-            logger = logging.getLogger (logger_name)
-            logger.setLevel (logging.DEBUG)
+        set_verbose ()
 
     if args.cache:
         """ Turn on the requests cache. """
@@ -285,13 +296,15 @@ def main ():
     if args.shell:
         """ Run it interactively. """
         context = tranql.shell ()
-    else:
+    elif args.source:
         """ Run a program. """
         context = tranql.execute_file (args.source)
         if args.output == 'stdout':
             print (f"{json.dumps(context.mem, indent=2)}")
             print (f"top-gene: {json.dumps(context.top('gene',k='chemical_pathways'), indent=2)}")
-            
-if __name__ == '__main__':
+    else:
+        print ("Either source or shell must be specified")
+        
+if __name__ == '__main__':    
     main ()
     
