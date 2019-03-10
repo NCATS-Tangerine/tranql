@@ -1,0 +1,28 @@
+---
+schema:
+  import:
+    robokop :
+      url: /graph/gamma/quick
+      schema: http://robokop.renci.org/api/operations
+  layers:
+    rtx :
+      url: -------------
+      schema:
+        chemical_substance :
+          protein :
+            link : chem_to_protein
+        protein :
+          phenotypic_feature :
+            link : protein_to_phenotype
+    icees :
+      url: /clinical/cohort/disease_to_chemical_exposure
+      schema:
+        population_of_individual_organisms :
+          drug_exposure :
+            link : population_to_drug_exposure
+    local :
+      url: http://localhost:8099/graph/gamma/quick
+      schema:
+        gene :
+          my_new_thing :
+            link : local_link_type
