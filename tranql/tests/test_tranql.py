@@ -7,7 +7,6 @@ from tranql.main import TranQLParser, set_verbose
 from tranql.tranql_ast import SetStatement
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
-from tranql.tests.mocks import bidirectional_question
 set_verbose ()
 
 def assert_lists_equal (a, b):
