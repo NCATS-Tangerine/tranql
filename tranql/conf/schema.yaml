@@ -1,28 +1,34 @@
 ---
+doc : |
+  The Translator schema aggregates reasoner schemas. Reasoner schemas
+  describe transitions between biolink-model types. These transitions are
+  expressed as predicates, also from the biolink-model. 
 schema:
-  import:
-    robokop :
-      url: /graph/gamma/quick
-      schema: http://robokop.renci.org/api/operations
-  layers:
-    rtx :
-      url: -------------
-      schema:
+  robokop :
+    doc: |
+      The Robokop reasoner provides an endpoint returning the transitions it supports.
+    url: /graph/gamma/quick
+    schema: http://robokop.renci.org:6010/api/predicates
+  icees :
+    doc: |
+      For now, we provide a simple schema for one endpoint modeling the ICEES clinical
+      reasoners capabilities. It would be good to get an ICEES reasoner endpoint
+      capable of managing general question graphs.
+    url: /clinical/cohort/disease_to_chemical_exposure
+    schema:
+      population_of_individual_organisms :
+        drug_exposure :
+          - population_to_drug_exposure
         chemical_substance :
-          protein :
-            link : chem_to_protein
-        protein :
-          phenotypic_feature :
-            link : protein_to_phenotype
-    icees :
-      url: /clinical/cohort/disease_to_chemical_exposure
-      schema:
-        population_of_individual_organisms :
-          drug_exposure :
-            link : population_to_drug_exposure
-    local :
-      url: http://localhost:8099/graph/gamma/quick
-      schema:
-        gene :
-          my_new_thing :
-            link : local_link_type
+          - population_to_drug_exposure
+  implicit_conversion:
+    doc: |
+      Implicit conversions bridge segments of a query. If one reasoner can return a drug exposure
+      and another can take a chemical substance, implicit conversion provides a bridge between these
+      types allowing the implementation of complex queries.
+    url: /implicit_conversion
+    schema:
+      drug_exposure:
+        chemical_substance:
+          - is_a
+          

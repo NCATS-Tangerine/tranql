@@ -241,8 +241,9 @@ class Context:
         #return result
     
 class Concept:
-    def __init__(self, name):
+    def __init__(self, name, type_name):
         self.name = name
+        self.type_name = type_name
         self.nodes = []
     def __repr__(self):
         return f"{self.name}:{self.nodes}"

@@ -114,6 +114,9 @@ class ConceptModel:
 
     def get (self, concept_name):
         return self.by_name[concept_name]
+
+    def __contains__ (self, name):
+        return name in self.by_name
     
     def add_item (self, concept):
         self.by_name [concept.name] = concept
@@ -216,3 +219,28 @@ class BiolinkConceptModelLoader (ConceptModelLoader):
         parent = self.model.relations_by_name [is_a] if is_a in self.model.relations_by_name else None
         return Relationship (name = name, is_a = parent, mappings = mappings)
 
+class BiolinkModelWalker:
+    def __init__(self):
+        self.concept_map = {
+            "drug_exposure" : {
+                "chemical_substance" : lambda n, t: self.convert_direct(n, t)
+            }
+        }
+
+    def get_transitions (self, source_type):
+        return list(self.concept_map.get(source_type, {}).keys ())
+
+    def convert_direct (self, node, target_type):
+        return {
+            'id' : node['curie'],
+            'type' : target_type
+        }
+
+    def translate (self, node, target_type):
+        result = None
+        source_type = node['type']
+        if source_type in self.concept_map:
+            conversions = self.concept_map[source_type]
+            if target_type in conversions:
+                result = conversions[target_type] (node, target_type)
+        return result

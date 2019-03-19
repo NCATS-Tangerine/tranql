@@ -32,6 +32,10 @@ class MockMap(MockHelper):
                 "http://robokop.renci.org/api/operations" : {
                     "path" : "robokop_schema.json",
                     "method" : "get"
+                },
+                "http://robokop.renci.org:6010/api/predicates" : {
+                    "path" : "predicates.json",
+                    "method" : "get"
                 }
             }
         }

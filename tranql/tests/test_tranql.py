@@ -27,7 +27,7 @@ def assert_parse_tree (code, expected):
     of that parse tree to a list of expected tokens. """
     tranql = TranQL ()
     actual = tranql.parser.parse (code).parse_tree
-    print (f"{actual}")
+    #print (f"{actual}")
     assert_lists_equal (
         actual,
         expected)
@@ -182,18 +182,21 @@ def test_parse_query_with_repeated_concept ():
 #####################################################
 def test_ast_set_variable ():
     """ Test setting a varaible to an explicit value. """
+    print ("test_ast_set_variable ()")
     tranql = TranQL ()
     statement = SetStatement (variable="variable", value="x")
     statement.execute (tranql)
     assert tranql.context.resolve_arg ("$variable") == 'x'
 def test_ast_set_graph ():
     """ Set a variable to a graph passed as a result. """
+    print ("test_ast_set_graph ()")
     tranql = TranQL ()
     statement = SetStatement (variable="variable", value=None, jsonpath_query=None)
     statement.execute (tranql, context={ 'result' : { "a" : 1 } })
     assert tranql.context.resolve_arg ("$variable")['a'] == 1
 def test_ast_set_graph ():
     """ Set a variable to the value returned by executing a JSONPath query. """
+    print ("test_ast_set_graph ()")
     tranql = TranQL ()
     statement = SetStatement (variable="variable", value=None, jsonpath_query="$.nodes.[*]")
     statement.execute (tranql, context={
@@ -209,6 +212,7 @@ def test_ast_generate_questions ():
            -- named query concepts work.
            -- the question graph is build incorporating where clause constraints.
     """
+    print ("test_ast_set_generate_questions ()")
     app = TranQL ()
     ast = app.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -225,6 +229,7 @@ def test_ast_generate_questions ():
 
 def test_ast_bidirectional_query ():
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
+    print ("test_ast_bidirectional_query ()")
     app = TranQL ()
     disease_id = "MONDO:0004979"
     chemical = "PUBCHEM:2083"
@@ -256,6 +261,7 @@ def test_ast_bidirectional_query ():
 #####################################################
 def test_interpreter_set ():
     """ Test set statements by executing a few and checking values after. """
+    print ("test_interpreter_set ()")
     tranql = TranQL ()
     tranql.execute ("""
         -- Test set statements.
@@ -268,11 +274,12 @@ def test_interpreter_set ():
 
     variables = [ "disease", "max_p_value", "cohort", "icees.population_density_cluster", "gamma.quick" ]
     output = { k : tranql.context.resolve_arg (f"${k}") for k in variables }
-    print (f"resolved variables --> {json.dumps(output, indent=2)}")
+    #print (f"resolved variables --> {json.dumps(output, indent=2)}")
     assert output['disease'] == "asthma"
     assert output['cohort'] == "COHORT:22"
 
 def test_program (requests_mock):
+    print ("test_program ()")
     mock_map = MockMap (requests_mock, "workflow-5")
     tranql = TranQL ()
     ast = tranql.execute ("""
@@ -304,9 +311,10 @@ def test_program (requests_mock):
        SET knowledge_graph
     """)
     
-    print (f"{ast}")
+    #print (f"{ast}")
     expos = tranql.context.resolve_arg("$chemical_exposures")
     #print (f" expos =======> {json.dumps(expos)}")
     
     kg = tranql.context.resolve_arg("$knowledge_graph")
-    #print (f" kg =======> {kg}") #json.dumps(kg)}")
+    assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
+    assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"

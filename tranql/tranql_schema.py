@@ -4,7 +4,59 @@ import yaml
 import requests
 import requests_cache
 import os
+from tranql.concept import BiolinkModelWalker
+from collections import defaultdict
 from tranql.exception import TranQLException
+from tranql.redis_graph import RedisGraph
+
+class NetworkxGraph:
+    def __init__(self):
+        self.net = nx.MultiDiGraph ()
+    def add_edge (self, start, predicate, end, properties={}):
+        return self.net.add_edge (start, end, key=predicate)
+    def add_node (self, identifier, label=None, properties={}):
+        return self.net.add_node (identifier, attr_dict=properties)
+    def has_node (self, identifier):
+        return identifier in self.net.nodes
+    def get_node (self, identifier, properties=None):
+        return self.net.nodes [identifier]
+    def get_edge (self, start, end, properties=None):
+        result = None
+        for e in self.net.edges:
+            #print (f"-----    {start} {end} | {e[0]} {e[2]}")
+            if e[0] == start and e[1] == end:
+                result = e
+                break
+        return result
+    def delete (self):
+        self.net.clear ()
+    def commit (self):
+        pass
+    
+class GraphTranslator:
+    """
+    An interface to a knowledge graph.
+      - Support a general underlying graph interface with plugins for different
+        in-memory or persistent implementations.
+      - Support writing and reading graphs to multiple formats.
+    """
+    def __init__(self, graph):
+        """ Connect to an abstract graph interface. """
+        self.graph = graph
+
+    def write_kgs (self, message):
+        """ Write KGS message to the graph.
+        :param message: Get a knowledge graph as a network.
+        :return: Return a network.
+        """
+        kg = message['knowledge_graph']
+        nodes = kg['nodes']
+        edges = kg['edges']
+        for n in nodes:
+            self.graph.add_node(n['id'], properties=n)
+        for e in edges:
+            self.graph.add_edge (e['source_id'], e['target_id'], properties=e)
+        return g
 
 class Schema:
     """ A schema for a distributed knowledge network. """
@@ -14,81 +66,143 @@ class Schema:
         Create a metadata map of the knowledge network.
         """
 
-        """ A map of reasoner-like systems to maps of their knowledge schema. """
-        config_file = os.path.join (os.path.dirname(__file__), "conf", "schema.yaml")
+        """ Load the schema, a map of reasoner systems to maps of their schemas. """
         self.config = None
+        config_file = os.path.join (os.path.dirname(__file__), "conf", "schema.yaml")
         with open(config_file) as stream:
             self.config = yaml.safe_load (stream)
-            #print (json.dumps(config, indent=2))
 
-        schema = self.config.get ("schema", {}).get("layers", {})
-        imports = self.config.get ("schema", {}).get ("import", {})
-
-        for source, conf in imports.items ():
-            layer_schema = conf['schema']
-            layer_schema = requests.get (layer_schema).json () \
-                           if layer_schema.startswith('http') else \
-                              layer_schema
-            schema[source] = {
-                "url" : conf['url'],
-                "schema" : layer_schema
-            }
-            
-        """ Build a graph of the schema. """
-        self.knet = nx.MultiDiGraph ()
-        for k, v in self.config['schema']['layers'].items ():
-            self.add_meta_layer (
-                layer=v['schema'])  #requests.get (v['url']).json ())
-        #for k, v in self.layer.items ():
-        #    self.add_meta_layer (v)
-        for k, v in schema.items ():
-            self.add_meta_layer (v["schema"])
-
+        """ Resolve remote schemas. """
+        for schema_name, metadata in self.config['schema'].items ():
+            schema_data = metadata['schema']
+            metadata['schema'] = requests.get (schema_data).json () \
+                                 if isinstance(schema_data, str) and schema_data.startswith('http') \
+                                    else schema_data
+        self.schema = self.config['schema']
         
-    def add_meta_layer (self, layer):
+        """ Build a graph of the schema. """
+        #self.schema_graph = RedisGraph ()
+        self.schema_graph = NetworkxGraph ()
+        try:
+            self.schema_graph.delete ()
+        except:
+            pass
+        
+        for k, v in self.config['schema'].items ():
+            #print (f"layer: {k}")
+            self.add_layer (layer=v['schema'])
+
+        self.schema_graph.commit ()
+        
+    def add_layer (self, layer):
         """
         :param layer: Knowledge schema metadata layers.
         """
         for source_name, targets_list in layer.items ():
-            source_node = self.get_node (source_name)
+            source_node = self.get_node (node_id=source_name)
             for target_type, links in targets_list.items ():
-                target_node = self.get_node (target_type)
+                target_node = self.get_node (node_id=target_type)
+                #self.schema_graph.commit ()
                 if isinstance(links, list):
                     for link in links:
-                        print (f" {source_name}->{target_type} [{link}]")
-                        self.knet.add_edge (source_name,
-                                            target_type,
-                                            key=link['link'])
+                        #print (f"   {source_name}->{target_type} [{link}]")
+                        self.schema_graph.add_edge (source_name, link, target_type)
                 elif isinstance(links, str):
-                    print (f" {source_name}->{target_type} [{link}]")
-                    self.knet.add_edge (source_name,
-                                        target_type,
-                                        key=links)
-    def plan_query (self, query):
-        pass
+                    #print (f" {source_name}->{target_type} [{link}]")
+                    self.schema_graph.add_edge (source_name, link, target_type)
+
+    def get_edge (self, plan, source_name, source_type, target_name, target_type,
+                  predicate, edge_direction):
+        """ Determine if a transition between two types is supported by
+        any of the registered sub-schemas.
+        """
+        edge = None
+        schema = None
+        for schema_name, sub_schema_package in self.schema.items ():
+            sub_schema = sub_schema_package ['schema']
+            sub_schema_url = sub_schema_package ['url']
+            #print (sub_schema)
+            if source_type in sub_schema:
+                print (f"  --{schema_name} - {source_type} => {target_type}")
+                if target_type in sub_schema[source_type]:
+                    top_schema = None
+                    if len(plan) > 0:
+                        top = plan[-1]
+                        top_schema = top[0]
+                    if top_schema == schema_name:
+                        # this is the next edge in an ongoing segment.
+                        top[2].append ([ source_name, source_type,
+                                         predicate, edge_direction,
+                                         target_name, target_type ])
+                    else:
+                        plan.append ([ schema_name, sub_schema_url, [
+                            [ source_name, source_type,
+                              predicate, edge_direction,
+                              target_name, target_type ]
+                        ]])
+            else:
+                implicit_conversion = BiolinkModelWalker ()
+                for conv_type in implicit_conversion.get_transitions (source_type):
+                    implicit_conversion_schema = "implicit_conversion"
+                    implicit_conversion_url = self.schema[implicit_conversion_schema]['url']
+                    if conv_type in sub_schema:
+                        print (f"  --impconv: {schema_name} - {conv_type} => {target_type}")
+                        if target_type in sub_schema[conv_type]:
+                            plan.append ([
+                                implicit_conversion_schema,
+                                implicit_conversion_url,
+                                [
+                                    [ source_name, source_type,
+                                      predicate, edge_direction,
+                                      conv_type, conv_type ]
+                                ]])
+                            plan.append ([ schema_name, sub_schema_url, [
+                                [ conv_type, conv_type,
+                                  predicate, edge_direction,
+                                  target_name, target_type ]
+                            ]])
+    
+    def plan (self, query):
+        """
+        Plan a query over the configured sources and their associated schemas.
+        Build a structure like this:
+           source_type
+              target_type
+                 source
+                 transition
+        Start with: Linear paths; no predicates.
+        """
+        print (query)
+        plan = []
+        #plan = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        for index, element_name in enumerate(query.order):
+            if index == len(query.order) - 1:
+                """ There's another concept to transition to. """
+                continue
+            self.get_edge (
+                plan=plan,
+                source_name = element_name,
+                source_type=query.concepts[element_name].name,
+                target_name = query.order[index+1],
+                target_type=query.concepts[query.order[index+1]].name,
+                predicate=query.arrows[index].predicate,
+                edge_direction=query.arrows[index].direction)
+        print (f"----------> {json.dumps(plan, indent=2)}")
+        return plan
     
     def get_node (self, node_id, attrs={}):
         """ Get a node if it exists; create one if it doesn't.
         :param node_id: Unique id of the node.
         :return: Return the node designated by this identifier.
         """
-        return self.knet.nodes [node_id] if node_id in self.knet.nodes else \
-            self.knet.add_node (node_id, attr_dict=attrs)
-
-    def get_kg_network (self, message):
-        """ Answer to networkx.
-        :param message: Get a knowledge graph as a network.
-        :return: Return a network.
-        """
-        kg = message['knowledge_graph']
-        nodes = kg['nodes']
-        edges = kg['edges']
-        g = nx.MultiDiGraph()
-        for n in nodes:
-            g.add_node(n['id'], attr_dict=n)
-        for e in edges:
-            g.add_edge (e['source_id'], e['target_id'], attr_dict=e)
-        return g
+        #return self.knet.nodes [node_id] if node_id in self.knet.nodes else \
+        #    self.knet.add_node (node_id, attr_dict=attrs)
+        return self.schema_graph.get_node (node_id, attrs) if \
+            self.schema_graph.has_node (node_id) else \
+            self.schema_graph.add_node (
+                label="thing",
+                identifier=node_id,
+                properties=attrs)
 
     def validate_edge (self, source_type, target_type):
         """
@@ -96,11 +210,8 @@ class Schema:
         :param source_type: A source type.
         :param target_type: A target type.
         """
-        valid = False
-        for e in self.knet.edges:
-            if e[0] == source_type and e[1] == target_type:
-                valid = True
-        if not valid:
+        edge = self.schema_graph.get_edge (start=source_type, end=target_type)
+        if not edge:
             raise TranQLException (f"Invalid transition: {source_type}->{target_type}")
         
     def validate_question (self, message):
@@ -122,6 +233,19 @@ def get_test_kg (file_name):
     print (url)
     return requests.get (url).json ()
 
+
+def main ():
+    """ Process arguments. """
+    arg_parser = argparse.ArgumentParser(
+        description='TranQL Schema',
+        formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(
+            prog,
+            max_help_position=180))
+    arg_parser.add_argument('-s', '--create-schema', help="Create the schema.", action="store_true")
+    args = arg_parser.parse_args ()
+    if args.create_schema:
+        print ('yeah')
+    
 test_question = {
   "question_graph": {
     "edges": [
@@ -180,8 +304,13 @@ test_question = {
   ],
   "options": {}
 }
+'''
 requests_cache.install_cache('meta_cache')
 m = Schema ()
 m.validate_question (test_question)
+'''
+
 #m.validate_question (get_test_kg ("albuterol_wf5_results.json"))
 #m.validate_question (get_test_kg ("albuterol_wf5_results_gamma.json"))
+# cornerstone
+# slicer

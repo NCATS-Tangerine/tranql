@@ -1,7 +1,7 @@
 """
 Provide a standard protocol for asking graph oriented questions of Translator data sources.
 """
-
+import copy
 import argparse
 import json
 import os
@@ -17,7 +17,7 @@ import networkx as nx
 from ndex2 import create_nice_cx_from_networkx
 from ndex2.client import Ndex2
 from tranql.util import JSONKit
-
+from tranql.concept import BiolinkModelWalker
 from iceesclient import ICEES
 
 app = Flask(__name__)
@@ -70,11 +70,16 @@ class StandardAPIResource(Resource):
             abort(Response(str(error), 400))
     def get_opt (self, request, opt):
         return request.get('option', {}).get (opt)
+    def normalize_message (self, message):
+        if 'answers' in message:
+            message['knowledge_map'] = message['answers']
+        return message
     
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
 
     def __init__(self):
+        super().__init__()
         self.cluster_args = ICEESClusterArgs ()
         
     def post(self):
@@ -120,9 +125,34 @@ class ICEESClusterQuery(StandardAPIResource):
             max_p_val=self.cluster_args.max_p_val,
             cohort_id=cohort_id)
         request.json['knowledge_graph'] = icees.parse_1_x_N (correlation)
+        self.gen_cluster_answers (request.json)
         print (json.dumps(request.json, indent=2))
-        return request.json
+        return self.normalize_message (request.json)
 
+    def gen_cluster_answers (self, message):
+        """ We probably want a more robust reasoner-like ability to answer 
+        general questions. For now, write bindings specific to this question. """
+        question = message['question_graph']
+        question_nodes = question['nodes']
+        question_edges = question['edges']        
+        kg = message['knowledge_graph']
+        nodes = kg['nodes']
+        edges = kg['edges']
+        message['answers'] = []
+        bindings = message['answers']
+        for node in nodes:
+            """ Type must match icees response. 
+            Change this when icees returns drug_exposure. """
+            if node['type'] == 'chemical_substance': #'drug_exposure':
+                node_bindings = {
+                    question_nodes[1]['id'] : node['id']
+                }
+                edge_bindings = [ e['id'] for e in edges if e['target_id'] == node['id'] ]
+                bindings.append ({
+                    "node_bindings" : node_bindings,
+                    "edge_bindings" : edge_bindings
+                })
+        
     def parse_options (self, options):
         for k in options.keys ():
             if hasattr(self.cluster_args, k):
@@ -155,7 +185,9 @@ class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
 #######################################################
 class PublishToNDEx(StandardAPIResource):
     """ Publish a graph to NDEx. """
-
+    def __init__(self):
+        super().__init__()
+        
     def post(self):
         """
         query
@@ -202,8 +234,9 @@ class PublishToNDEx(StandardAPIResource):
 #######################################################
 class GammaResource(StandardAPIResource):
     def __init__(self):
-        self.robokop_url = 'http://robokopdb2.renci.org'
-        #self.robokop_url = 'http://robokop.renci.org'
+        super().__init__()
+        #self.robokop_url = 'http://robokopdb2.renci.org'
+        self.robokop_url = 'http://robokop.renci.org'
         #self.robokop_url = 'http://robokop.renci.org'
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
         self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
@@ -212,6 +245,8 @@ class GammaResource(StandardAPIResource):
 
 class GammaQuery(GammaResource):
     """ Generic graph query to Gamma. """
+    def __init__(self):
+        super().__init__()
     def post(self):
         """
         Visualize
@@ -251,11 +286,12 @@ class GammaQuery(GammaResource):
             print(response.text)
             raise Exception("Bad Gamma quick response.")
         print (json.dumps(response.json (), indent=2))
-        return response.json ()
-
+        return self.normalize_message (response.json ())
 
 class RTXQuery(StandardAPIResource):
     """ Generic graph query to RTX. """
+    def __init__(self):
+        super().__init__()
     def post(self):
         """
         Visualize
@@ -344,10 +380,12 @@ class RTXQuery(StandardAPIResource):
             print(response.text)
             raise Exception("Bad RTX query response.")
         print (json.dumps(response.json (), indent=2))
-        return response.json ()
+        return self.normalize_message (response.json ())
 
 class PublishToGamma(GammaResource):
     """ Publish a graph to Gamma. """
+    def __init__(self):
+        super().__init__()
     def post(self):
         """
         Visualize
@@ -390,6 +428,71 @@ class PublishToGamma(GammaResource):
         print(f"view-post-response: {view_post_response}")
         print(f"view-url: {self.view_url(uid)}")
 
+class BiolinkModelWalkerService(StandardAPIResource):
+    """ Biolink Model Walk Resource. """
+    def __init__(self):
+        super().__init__()
+
+    def post(self):
+        """
+        biolink-model conversions.
+        ---
+        tag: validation
+        description: Convert biolink model types.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        self.validate (request)
+        question = request.json['question_graph']
+        question_nodes = question['nodes']
+        source_node = question_nodes[0]
+        target_node = question_nodes[1]
+        target_type = target_node['type']
+        response = copy.deepcopy (request.json)
+        if len(question_nodes) == 2:
+            biolink_model_walker = BiolinkModelWalker ()
+            conversion = biolink_model_walker.translate (
+                node=source_node,
+                target_type=target_type)
+            if conversion is not None:
+                response['knowledge_graph'] = {
+                    "nodes" : [ conversion ],
+                    "edges" : []
+                }
+                response['answers'] = [
+                    {
+                        'node_bindings' : {
+                            target_type : conversion['id']
+                        }
+                    }
+                ]
+            else:
+                raise ValueError (f"Unable to convert {source_node} to {target_type}")
+            print (json.dumps(response, indent=2))
+        if not 'answers' in response:
+            response['answers'] = []
+        return self.normalize_message (response)
+
 ###############################################################################################
 #
 # Define routes.
@@ -399,6 +502,7 @@ class PublishToGamma(GammaResource):
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
 api.add_resource(RTXQuery, '/graph/rtx/query')
+api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
