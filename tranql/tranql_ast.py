@@ -228,7 +228,7 @@ class SelectStatement(Statement):
                     result.append (obj['chebi']['id'])
         logger.debug (f"name resolution result: {name} => {result}")
         return result
-    
+
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
         value = concept.nodes[0] if len(concept.nodes) > 0 else None
