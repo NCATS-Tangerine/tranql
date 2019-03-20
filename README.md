@@ -106,7 +106,7 @@ The program ends by publishing the answer set to both services.
 
 ![image](https://user-images.githubusercontent.com/306971/52904079-c5185c00-31f4-11e9-88bc-54e745c0c216.png)
 
-Here's a [link to the Gamma visualization for the answer](http://robokop.renci.org/simple/view/918894c4-e21d-4901-a0c9-a2fa291ba381).
+Here's a [link to the Gamma visualization for the answer](http://robokop.renci.org/simple/view/fba34f9d-2254-4bcc-818c-fd77736eee2b).
 
 ## Status
 
