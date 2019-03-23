@@ -85,7 +85,7 @@ question_graph_expression = question_graph_element + ZeroOrMore(arrow + question
 whereExpression = Forward()
 and_, or_, in_ = map(CaselessKeyword, "and or in".split())
 
-binop = oneOf("= != < > >= <= eq ne lt le gt ge", caseless=True)
+binop = oneOf("= != =~ !=~ < > >= <= eq ne lt le gt ge", caseless=True)
 realNum = ppc.real()
 intNum = ppc.signed_integer()
 
@@ -173,9 +173,12 @@ class TranQL:
             result = self.parse (stream.read ())
         return result
     
-    def execute (self, program):
+    def execute (self, program, cache=False):
         """ Execute a program - a list of statements. """
         ast = None
+        if cache:
+            requests_cache.install_cache('demo_cache',
+                                         allowable_methods=('GET', 'POST', ))
         if isinstance(program, str):
             ast = self.parse (program)
         if not ast:

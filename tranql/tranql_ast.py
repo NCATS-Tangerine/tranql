@@ -86,7 +86,7 @@ class Statement:
             """ Check status and handle response. """
             if http_response.status_code == 200 or http_response.status_code == 202:
                 response = http_response.json ()
-                logging.debug (f"{json.dumps(response, indent=2)}")
+                #logging.debug (f"{json.dumps(response, indent=2)}")
             else:
                 logger.error (f"error {http_response.status_code} processing request: {message}")
                 logger.error (http_response.text)
@@ -155,9 +155,9 @@ class CreateGraphStatement(Statement):
         logger.debug (f"------- {type(graph).__name__}")
         logger.debug (f"--- create graph {self.service} graph-> {json.dumps(graph, indent=2)}")
         response = None
-        #with requests_cache.disabled ():
-        response = self.request (url=self.service,
-                                 message=graph)
+        with requests_cache.disabled ():
+            response = self.request (url=self.service,
+                                     message=graph)
         interpreter.context.set (self.name, response)
         return response
     
@@ -240,10 +240,10 @@ class SelectStatement(Statement):
                 if value == None:
                     raise UndefinedVariableError (f"Undefined variable: {varname}")
                 elif isinstance (value, str):
-                    concept.nodes = [ value ]
+                    concept.set_nodes ([ value ])
                 elif isinstance(value, list):
                     """ Binding multiple values to a node. """
-                    concept.nodes = value
+                    concept.set_nodes (value)
                 else:
                     raise TranQLException (
                         f"Internal failure: object of unhandled type {type(value)}.")
@@ -255,7 +255,7 @@ class SelectStatement(Statement):
                     This is frowned upon. While it *may* be useful for prototyping and,
                     interactive exploration, it will probably be removed. """
                     logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    concept.nodes = self.resolve_name (value, concept.type_name)
+                    concept.set_nodes (self.resolve_name (value, concept.type_name))
                     logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
                 else:
                     """ This is a single curie. Bind it to the node. """
@@ -289,7 +289,7 @@ class SelectStatement(Statement):
                         constraint_copy = copy.deepcopy (constraint)
                         constraint_copy[0] = name.replace (prefix, "")
                         statement.where.append (constraint_copy)
-        self.query = Query ()
+        self.query.disable = True # = Query ()
         return statements
         
     def generate_questions (self, interpreter):
@@ -303,28 +303,30 @@ class SelectStatement(Statement):
             if len(concept.nodes) > 0:
                 self.expand_nodes (interpreter, concept)
                 logger.debug (f"concept--nodes: {concept.nodes}")
-                concept.nodes = [
+                concept.set_nodes ([
                     self.node (
                         index = name, #index,
                         type_name = concept.type_name,
                         value = self.val(v, field='curie'))
                     for v in concept.nodes
-                ]
+                ])
                 filters = interpreter.context.resolve_arg ('$id_filters')
                 if filters:
                     filters = [ f.lower () for f in filters.split(",") ]
-                    concept.nodes = [
+                    concept.set_nodes ([
                         n for n in concept.nodes
                         if not n['curie'].split(':')[0].lower () in filters
-                    ]
+                    ])
             else:
                 """ There are no values - it's just a template for a model type. """
-                concept.nodes = [ self.node (
+                concept.set_nodes ([ self.node (
                     index = name, #index,
-                    type_name = concept.type_name) ]
+                    type_name = concept.type_name) ])
             
         options = {}
         for constraint in self.where:
+            """ This is where we pass constraints to a service. We do this only for constraints
+            which do not refer to elements in the query. """
             logger.debug (f"manage constraint: {constraint}")
             name, op, value = constraint
             value = interpreter.context.resolve_arg (value)
@@ -417,13 +419,13 @@ class SelectStatement(Statement):
             for q in questions:
                 logger.debug (f"executing question {json.dumps(q, indent=2)}")
                 response = self.request (service, q)
-                logger.debug (f"response: {json.dumps(response, indent=2)}")
+                #logger.debug (f"response: {json.dumps(response, indent=2)}")
                 responses.append (response)
                 
             if len(responses) == 0:
                 raise ServiceInvocationError (f"No responses received from {service}")
             result = self.merge_results (responses, service)
-        
+        interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
             logger.debug (f"{set_statement}")
@@ -450,13 +452,16 @@ class SelectStatement(Statement):
                 #name = statement.query.order[-1]
                 values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
-                first_concept.nodes = values
+                first_concept.set_nodes (values)
                 if len(values) == 0:
                     raise ServiceInvocationError (
                         f"No valid results from service {statement.service} executing " +
                         f"query {statement.query}. Unable to continue query. Exiting.")
-        return self.merge_results (responses, self.service)
-    
+        merged = self.merge_results (responses, self.service)
+        questions = self.generate_questions (interpreter)
+        merged['question_graph'] = questions[0]['question_graph']
+        return merged
+        
     def merge_results (self, responses, service):
         """ Merge results. """
         result = responses[0] if len(responses) > 0 else None
@@ -546,8 +551,13 @@ class TranQL_AST:
                         if isinstance(condition, list) and len(condition) == 3:
                             select.where.append (condition)
                             var, op, val = condition
-                            if var in select.query and op == '=':
-                                select.query[var].nodes.append (val)
+                            if var in select.query:
+                                if op == '=':
+                                    select.query[var].set_nodes ([ val ])
+                                elif op == '=~':
+                                    select.query[var].include_patterns.append (val)
+                                elif op == '!=~':
+                                    select.query[var].exclude_patterns.append (val)                                    
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':
@@ -595,6 +605,7 @@ class Query:
         self.order = []
         self.arrows = []
         self.concepts = {}
+        self.disable = False
         
     def add(self, key):
         """ Add a token in the question graph to this query object. """
@@ -717,10 +728,16 @@ class QueryPlanStrategy:
                             plan.append ([
                                 implicit_conversion_schema,
                                 implicit_conversion_url, [
-                                    [ source, predicate, Concept(name=conv_type, type_name=conv_type) ]
+                                    [ source, predicate, Concept(name=conv_type,
+                                                                 type_name=conv_type,
+                                                                 include_patterns=target.include_patterns,
+                                                                 exclude_patterns=target.exclude_patterns) ]
                                 ]])
                             plan.append ([ schema_name, sub_schema_url, [
-                                [ Concept(name=conv_type, type_name=conv_type), predicate, target ]
+                                [ Concept(name=conv_type,
+                                          type_name=conv_type,
+                                          include_patterns=source.include_patterns,
+                                          exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
     
     

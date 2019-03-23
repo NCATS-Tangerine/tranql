@@ -1,0 +1,92 @@
+.App {
+    text-align: center;
+     position : absolute;
+     height : 100%;
+     width : 100%;
+ }
+#splitpane {
+    position: relative;
+    height : 80%;
+    width : 100%;
+}
+#graph {
+    position: relative;
+    width : 100%;
+    height : 100%;
+}
+#browser {
+    position: relative;
+    height : 100%;
+    width : 100%;
+}
+#info {
+    position: absolute; 
+    background-color: white;
+    text-align: left;
+    bottom: 0px;
+    width: 100%;
+    height: 100px;
+    color: aliceblue;
+    border-top: 2px solid lightblue;
+}
+.react-json-view {
+    position: absolute;
+    overflow: scroll;
+    height: 100px;
+ }
+.App-logo {
+     animation: App-logo-spin infinite 20s linear;
+     height: 4vmin;
+     pointer-events: none;
+ }
+
+.App-header {
+    background-color: #282c34;
+     padding: 9px;
+     min-height: 8vh;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     justify-content: center;
+     color: white;
+     font-size: calc(9px + 2vmin);
+     font-style: italic;
+     font-weight : bold;
+ }
+#navModeButton {
+    position: absolute;
+    right: 80px;
+}
+#runButton {
+    position: absolute;
+    right: 18px;
+ }
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.CodeMirror-scroll {
+    height: 40%;
+ }
+.CodeMirror {
+    text-align: left!important;
+    padding: 5px;
+    font-size : 16px;
+    font-weight : bold;
+    width: 100%;
+    height: 50%!important;
+    border-color: lightgray 1px solid;
+ }
+.rv-force {
+    border: 1px solid gray;
+ }

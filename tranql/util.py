@@ -241,13 +241,42 @@ class Context:
         #return result
     
 class Concept:
-    def __init__(self, name, type_name):
+    def __init__(self, name, type_name, include_patterns = [], exclude_patterns = []):
         self.name = name
         self.type_name = type_name
         self.nodes = []
+        self.include_patterns = include_patterns
+        self.exclude_patterns = exclude_patterns
     def __repr__(self):
         return f"{self.name}:{self.nodes}"
-
+    def set_exclude_patterns (self, patterns):
+        self.exclude_patterns = patterns
+    def filter_nodes (self, nodes):
+        final_list = []
+        for n in nodes:
+            exclude = False
+            for pat in self.exclude_patterns:
+                identifier = n if isinstance(n, str) else n['id']
+                matches = re.search (pat, identifier, re.IGNORECASE)
+                if matches is not None:
+                    exclude = True
+                    break
+            include = not len(self.include_patterns) > 0 
+            for pat in self.include_patterns:
+                identifier = n if isinstance(n, str) else n['id']
+                matches = re.search (pat, identifier, re.IGNORECASE)
+                if matches is not None:
+                    include = True
+                    break
+            if include and not exclude:
+                final_list.append (n)
+        return final_list
+    def set_nodes (self, nodes):
+        self.nodes = self.filter_nodes (nodes)
+    def apply_filters (self):
+        nodes = self.filter_nodes (self.nodes)
+        self.nodes = nodes
+        
 def generate_gene_vocab ():
     gene_map = {}
     with open('genes.txt', 'r') as stream:

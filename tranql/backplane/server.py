@@ -13,6 +13,7 @@ from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
 from tranql.lib.ndex import NDEx
+from tranql.main import TranQL
 import networkx as nx
 from ndex2 import create_nice_cx_from_networkx
 from ndex2.client import Ndex2
@@ -74,6 +75,54 @@ class StandardAPIResource(Resource):
         if 'answers' in message:
             message['knowledge_map'] = message['answers']
         return message
+
+class TranQLQuery(StandardAPIResource):
+    """ TranQL Resource. """
+
+    def __init__(self):
+        super().__init__()
+        
+    def post(self):
+        """
+        query
+        ---
+        tag: validation
+        description: TranQL Query
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            query:
+                                type: string
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        #self.validate (request)
+        tranql = TranQL ()
+        print (request.json)
+        query = request.json['query']
+        print (f"----------> query: {query}")
+        context = tranql.execute (query, cache=True)
+        result = context.mem.get ('result', {})
+        print (result)
+        return self.normalize_message (result)
     
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
@@ -144,6 +193,7 @@ class ICEESClusterQuery(StandardAPIResource):
             """ Type must match icees response. 
             Change this when icees returns drug_exposure. """
             if node['type'] == 'chemical_substance': #'drug_exposure':
+                print (f"{json.dumps(question_nodes, indent=2)}")
                 node_bindings = {
                     question_nodes[1]['id'] : node['id']
                 }
@@ -417,6 +467,14 @@ class PublishToGamma(GammaResource):
 
         """ This is just a pass-through to simplify workflows. """
         self.validate (request)
+        '''
+        with open ("gamma_vis.json", "w") as stream:
+            json.dump (request.json, stream, indent=2)
+        return {}
+        '''
+        if 'knowledge_map' in request.json:
+            request.json['answers'] = request.json['knowledge_map']
+            del request.json['knowledge_map']
         print (f"{json.dumps(request.json, indent=2)}")
         view_post_response = requests.post(
             self.view_post_url,
@@ -498,6 +556,8 @@ class BiolinkModelWalkerService(StandardAPIResource):
 # Define routes.
 #
 ###############################################################################################
+
+api.add_resource(TranQLQuery, '/graph/tranql')
 
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
