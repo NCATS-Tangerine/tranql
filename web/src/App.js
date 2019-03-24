@@ -13,22 +13,30 @@ require('codemirror/mode/sql/sql');
 var CodeMirror = require('react-codemirror');
 
 class App extends Component {
+  /**
+   * A TranQL web app.
+   */
   constructor(props) {
+    /* Create state elements and initialize configuration. */
     super(props);
     this.tranqlURL = "http://localhost:8099/graph/tranql"
     this.codeAutoComplete = this.codeAutoComplete.bind(this);
     this.state = {
       date: new Date(),
-      code : "select chemical_substance->gene->disease from \"/graph/gamma/quick\" where disease=\"asthma\"",      
+      code : "select chemical_substance->gene->disease from \"/graph/gamma/quick\" where disease=\"asthma\"",
+
+      // The graph; populated when a query's executed.
       graph : {
         nodes : [],
         links : []
       },
-      kgraph : {},
-      
+
+      // Manage node selection and navigation.
       selectMode: true,
       selectedNode : {},
+      selectedLink : {},
       navigateMode: true,
+      
       // Set up CodeMirror settings.
       codeMirrorOptions : {        
         lineNumbers: true,
@@ -39,7 +47,8 @@ class App extends Component {
           'Ctrl-Space': this.codeAutoComplete
         }
       },
-      // Set up the 3d vis.
+
+      // Configure the 3d force directed graph visualization.
       forceGraph3DOpts : {
         nodeRelSize : 7,
         enableNodeDrag : true
@@ -47,13 +56,13 @@ class App extends Component {
     };
     this.executeQuery = this.executeQuery.bind(this);
     this.setNavMode = this.setNavMode.bind(this);
-
-    this._handleNodeHover = this._handleNodeHover.bind(this);
-    this._handleClick = this._handleClick.bind(this);
+    this._handleLinkClick = this._handleLinkClick.bind(this);
+    this._handleNodeClick = this._handleNodeClick.bind(this);
     this.render = this.render.bind(this);
     this.codemirror = React.createRef ();
   }
   codeAutoComplete (cm) {
+    // https://github.com/JedWatson/react-codemirror/issues/52
     var codeMirror = this.codemirror.current.getCodeMirrorInstance ();
     
     // hint options for specific plugin & general show-hint
@@ -97,6 +106,7 @@ class App extends Component {
     }).then(res => res.json())
       .then(
         (result) => {
+          /* Convert the knowledge graph to a renderable form. */
           var graph = { nodes : [], links : [] }
           var kgraph = result;
           if (kgraph != null && kgraph.hasOwnProperty ('knowledge_graph')) {
@@ -107,7 +117,7 @@ class App extends Component {
                   type : node.type,
                   radius: 9,
                   name: node.name,
-                  origin: node
+                  origin: node        // keep the orgin node.
                 };
               }),
               links : kgraph.knowledge_graph.edges.map(function (edge, index) {
@@ -117,7 +127,8 @@ class App extends Component {
                   target: edge.target_id,
                   type : edge.type,
                   name : edge.type + " [" + weight + "]",
-                  linkOpacity: (100 - (weight * 100)) / 100
+                  linkOpacity: weight,
+                  origin : edge
                 };
               })
             }
@@ -137,9 +148,22 @@ class App extends Component {
         }
       )
   }
-  _handleNodeHover (node) {
+  _handleLinkClick (link) {
+    console.log ("-------   select link");
+    if (link !== null &&
+        this.state.selectedLink !== null &&
+//        this.state.selectedLink.source !== link.source_id &&
+//        this.state.selectedLink.target !== link.target_id &&
+        this.state.selectMode)
+    {
+      console.log ("-------   select link");
+      // Select the node.
+      this.setState ((prevState, props) => ({
+        selectedNode : { link : link.origin }
+      }));
+    }
   }
-  _handleClick (node) {
+  _handleNodeClick (node) {
     if (this.state.navigateMode) {
       // Navigate camera to selected node.
       // Aim at node from outside it
@@ -162,30 +186,6 @@ class App extends Component {
     }
   }
   render() {
-    
-    const options = {
-      lineNumbers: true,
-      mode: 'text/x-pgsql',
-      tabSize: 2,
-      readOnly: false,
-      extraKeys: {
-        'Ctrl-Space': this.codeAutoComplete
-      }
-    };
-    // this.state.codeMirrorOptions}
-    /*
-    // Set up CodeMirror settings.
-    var codeMirrorOptions = {
-      lineNumbers: true,
-      mode: 'sql',
-      hintOptions: { hint: this.codeAutoComplete }
-    };
-    */
-    // Set up the 3d vis.
-    var forceGraph3DOpts = {
-      nodeRelSize : 7,
-      enableNodeDrag : true
-    };
     // Render it.
     console.log (this.state);
     return (
@@ -211,7 +211,7 @@ class App extends Component {
                       value={this.state.code}
                       onChange={this.updateCode}
                       onKeyUp={this.handleKeyUpEvent} 
-      options={this.state.codeMirrorOptions}
+                      options={this.state.codeMirrorOptions}
                       autoFocus={true} />
             <ForceGraph3D id="forceGraph3D"
                           ref={el => { this.fg = el; }}
@@ -221,11 +221,11 @@ class App extends Component {
                           linkAutoColorBy="type"
                           d3AlphaDecay={0.2}
                           strokeWidth={2}
-                          linkWidth={2} 
+                          linkWidth={2}
                           nodeRelSize={this.state.forceGraph3DOpts.nodeRelSize}
                           enableNodeDrag={this.state.forceGraph3DOpts.enableNodeDrag} 
-                          onNodeHover={this._handleNodeHover}
-                          onNodeClick={this._handleClick} />
+                          onLinkClick={this._handleLinkClick}
+                          onNodeClick={this._handleNodeClick} />
             <div id="graph"></div>
             <div id="info">
               <ReactJson src={this.state.selectedNode} />
