@@ -1,65 +1,82 @@
 import React, { Component } from 'react';
 import { Button } from 'reactstrap';
-//import { ForceGraph, ForceGraphNode, ForceGraphLink } from 'react-vis-force';
 import { ForceGraph3D } from 'react-force-graph';
 import ReactJson from 'react-json-view'
-import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-var CodeMirror = require('react-codemirror');
+import 'codemirror/addon/hint/show-hint';
+import 'codemirror/addon/hint/sql-hint';
+import 'codemirror/addon/hint/show-hint.css'; // without this css hints won't show
+import './App.css';
+require('create-react-class');
 require('codemirror/lib/codemirror.css');
 require('codemirror/mode/sql/sql');
-
-var comp = [
-  ["here", "hither"],
-  ["asynchronous", "nonsynchronous"],
-  ["completion", "achievement", "conclusion", "culmination", "expirations"],
-  ["hinting", "advive", "broach", "imply"],
-  ["function","action"],
-  ["provide", "add", "bring", "give"],
-  ["synonyms", "equivalents"],
-  ["words", "token"],
-  ["each", "every"],
-]
-
-function synonyms(cm, option) {
-  return new Promise(function(accept) {
-    setTimeout(function() {
-      var cursor = cm.getCursor(), line = cm.getLine(cursor.line)
-      var start = cursor.ch, end = cursor.ch
-      while (start && /\w/.test(line.charAt(start - 1))) --start
-      while (end < line.length && /\w/.test(line.charAt(end))) ++end
-      var word = line.slice(start, end).toLowerCase()
-      for (var i = 0; i < comp.length; i++) if (comp[i].indexOf(word) !== -1)
-        return accept({list: comp[i],
-                       from: CodeMirror.Pos(cursor.line, start),
-                       to: CodeMirror.Pos(cursor.line, end)})
-      return accept(null)
-    }, 100)
-  })
-}
+var CodeMirror = require('react-codemirror');
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.tranqlURL = "http://localhost:8099/graph/tranql"
+    this.codeAutoComplete = this.codeAutoComplete.bind(this);
     this.state = {
       date: new Date(),
-      code : "select chemical_substance->gene->disease from \"/graph/gamma/quick\" where disease=\"asthma\"",
+      code : "select chemical_substance->gene->disease from \"/graph/gamma/quick\" where disease=\"asthma\"",      
       graph : {
         nodes : [],
         links : []
       },
       kgraph : {},
+      
       selectMode: true,
       selectedNode : {},
-      navigateMode: true
+      navigateMode: true,
+      // Set up CodeMirror settings.
+      codeMirrorOptions : {        
+        lineNumbers: true,
+        mode: 'text/x-pgsql', //'text/x-pgsql',
+        tabSize: 2,
+        readOnly: false,
+        extraKeys: {
+          'Ctrl-Space': this.codeAutoComplete
+        }
+      },
+      // Set up the 3d vis.
+      forceGraph3DOpts : {
+        nodeRelSize : 7,
+        enableNodeDrag : true
+      }
     };
-    this.executeQuery = this.executeQuery.bind(this)
-    this._handleNodeHover = this._handleNodeHover.bind(this)
-    this._handleClick = this._handleClick.bind(this)
-    this.render = this.render.bind(this)
-    this.setNavMode = this.setNavMode.bind(this)
+    this.executeQuery = this.executeQuery.bind(this);
+    this.setNavMode = this.setNavMode.bind(this);
+
+    this._handleNodeHover = this._handleNodeHover.bind(this);
+    this._handleClick = this._handleClick.bind(this);
+    this.render = this.render.bind(this);
+    this.codemirror = React.createRef ();
+  }
+  codeAutoComplete (cm) {
+    var codeMirror = this.codemirror.current.getCodeMirrorInstance ();
+    
+    // hint options for specific plugin & general show-hint
+    // 'tables' is sql-hint specific
+    // 'disableKeywords' is also sql-hint specific, and undocumented but referenced in sql-hint plugin
+    // Other general hint config, like 'completeSingle' and 'completeOnSingleClick' 
+    // should be specified here and will be honored
+    const hintOptions = {
+      tables: {
+        chemical_substance: ['column1', 'column2', 'column3', 'etc', 'select'],
+        another_table: ['columnA', 'columnB']
+      }, 
+      //disableKeywords: true,
+      completeSingle: false,
+      completeOnSingleClick: false
+    };
+    
+    // codeMirror.hint.sql is defined when importing codemirror/addon/hint/sql-hint
+    // (this is mentioned in codemirror addon documentation)
+    // Reference the hint function imported here when including other hint addons
+    // or supply your own
+    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
+    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
   }
   setNavMode () {
     this.setState ({
@@ -80,8 +97,6 @@ class App extends Component {
     }).then(res => res.json())
       .then(
         (result) => {
-
-
           var graph = { nodes : [], links : [] }
           var kgraph = result;
           if (kgraph != null && kgraph.hasOwnProperty ('knowledge_graph')) {
@@ -125,8 +140,8 @@ class App extends Component {
   _handleNodeHover (node) {
   }
   _handleClick (node) {
-    console.log ('got click on node ' + node.id)
     if (this.state.navigateMode) {
+      // Navigate camera to selected node.
       // Aim at node from outside it
       const distance = 40;
       const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
@@ -140,25 +155,39 @@ class App extends Component {
                this.state.selectedNode.id !== node.id &&
                this.state.selectMode)
     {
-      console.log ('node hover');
+      // Select the node.
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
     }
   }
   render() {
+    
+    const options = {
+      lineNumbers: true,
+      mode: 'text/x-pgsql',
+      tabSize: 2,
+      readOnly: false,
+      extraKeys: {
+        'Ctrl-Space': this.codeAutoComplete
+      }
+    };
+    // this.state.codeMirrorOptions}
+    /*
     // Set up CodeMirror settings.
     var codeMirrorOptions = {
       lineNumbers: true,
       mode: 'sql',
-      hintOptions: { hint: synonyms }
+      hintOptions: { hint: this.codeAutoComplete }
     };
+    */
     // Set up the 3d vis.
     var forceGraph3DOpts = {
       nodeRelSize : 7,
       enableNodeDrag : true
-    }
+    };
     // Render it.
+    console.log (this.state);
     return (
       <div className="App"> 
         <header className="App-header"> 
@@ -178,10 +207,11 @@ class App extends Component {
           </p>
         </header>
         <div>
-      	  <CodeMirror ref="editor"
+      	  <CodeMirror ref={this.codemirror}
                       value={this.state.code}
                       onChange={this.updateCode}
-                      options={codeMirrorOptions}
+                      onKeyUp={this.handleKeyUpEvent} 
+      options={this.state.codeMirrorOptions}
                       autoFocus={true} />
             <ForceGraph3D id="forceGraph3D"
                           ref={el => { this.fg = el; }}
@@ -191,9 +221,9 @@ class App extends Component {
                           linkAutoColorBy="type"
                           d3AlphaDecay={0.2}
                           strokeWidth={2}
-                          linkWidth={2}
-                          nodeRelSize={forceGraph3DOpts.nodeRelSize}
-                          enableNodeDrag={forceGraph3DOpts.enableNodeDrag} 
+                          linkWidth={2} 
+                          nodeRelSize={this.state.forceGraph3DOpts.nodeRelSize}
+                          enableNodeDrag={this.state.forceGraph3DOpts.enableNodeDrag} 
                           onNodeHover={this._handleNodeHover}
                           onNodeClick={this._handleClick} />
             <div id="graph"></div>
