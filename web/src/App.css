@@ -1,5 +1,5 @@
 .App {
-    text-align: center;
+    /*text-align: center;*/
      position : absolute;
      height : 100%;
      width : 100%;
@@ -28,40 +28,60 @@
     height: 100px;
     color: aliceblue;
     border-top: 2px solid lightblue;
+    display: none;
 }
+.tableView {
+    position : absolute;
+    bottom : 0px;
+    width : 100%;
+    height : 200px;
+    border-top: 2px solid lightblue;
+ }
 .react-json-view {
     position: absolute;
     overflow: scroll;
     height: 100px;
  }
 .App-logo {
-     animation: App-logo-spin infinite 20s linear;
-     height: 4vmin;
+    /*animation: App-logo-spin infinite 20s linear; */
+     height: 7vmin;
      pointer-events: none;
+    text-align : left;
+    position : absolute;
+    left : 20px;
+    top : 15px;
  }
 
 .App-header {
     background-color: #282c34;
-     padding: 9px;
+     padding: 5px;
      min-height: 8vh;
      display: flex;
      flex-direction: column;
-     align-items: center;
-     justify-content: center;
+     align-items: left; /* center; */
+     justify-content: left; /*center;*/
      color: white;
      font-size: calc(9px + 2vmin);
      font-style: italic;
      font-weight : bold;
  }
+.App-control {/*
+    float : right;
+    margin-left : 5px;
+    margin-right : 5px;
+              */ }
 #navModeButton {
     position: absolute;
-    right: 80px;
+    right: 105px;
 }
 #runButton {
     position: absolute;
-    right: 18px;
+    right: 41px;
  }
-
+#settings {
+    position: absolute;
+    right : 10px;
+}
 .App-link {
   color: #61dafb;
 }
@@ -74,14 +94,16 @@
     transform: rotate(360deg);
   }
 }
-
+.splitPane {
+    position: relative;
+ }
 .CodeMirror-scroll {
     height: 40%;
  }
 .CodeMirror {
     text-align: left!important;
-    padding: 5px;
-    font-size : 16px;
+    padding: 2px;
+    font-size : 14px;
     font-weight : bold;
     width: 100%;
     height: 50%!important;
@@ -90,3 +112,58 @@
 .rv-force {
     border: 1px solid gray;
  }
+
+
+
+
+
+
+    .Resizer {
+        background: #000;
+        opacity: .2;
+        z-index: 1;
+        -moz-box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        -moz-background-clip: padding;
+        -webkit-background-clip: padding;
+        background-clip: padding-box;
+    }
+
+     .Resizer:hover {
+        -webkit-transition: all 2s ease;
+        transition: all 2s ease;
+    }
+
+     .Resizer.horizontal {
+        height: 11px;
+        margin: -5px 0;
+        border-top: 5px solid rgba(255, 255, 255, 0);
+        border-bottom: 5px solid rgba(255, 255, 255, 0);
+        cursor: row-resize;
+        width: 100%;
+    }
+
+    .Resizer.horizontal:hover {
+        border-top: 5px solid rgba(0, 0, 0, 0.5);
+        border-bottom: 5px solid rgba(0, 0, 0, 0.5);
+    }
+
+    .Resizer.vertical {
+        width: 11px;
+        margin: 0 -5px;
+        border-left: 5px solid rgba(255, 255, 255, 0);
+        border-right: 5px solid rgba(255, 255, 255, 0);
+        cursor: col-resize;
+    }
+
+    .Resizer.vertical:hover {
+        border-left: 5px solid rgba(0, 0, 0, 0.5);
+        border-right: 5px solid rgba(0, 0, 0, 0.5);
+    }
+    .Resizer.disabled {
+      cursor: not-allowed;
+    }
+    .Resizer.disabled:hover {
+      border-color: transparent;
+    }

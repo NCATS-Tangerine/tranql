@@ -179,6 +179,9 @@ class TranQL:
         if cache:
             requests_cache.install_cache('demo_cache',
                                          allowable_methods=('GET', 'POST', ))
+        else:
+            requests_cache.disabled()
+            
         if isinstance(program, str):
             ast = self.parse (program)
         if not ast:
