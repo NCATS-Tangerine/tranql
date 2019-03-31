@@ -4,12 +4,16 @@ import { Modal } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
-import { IoIosSettings, IoIosPlayCircle, IoIosNavigate } from 'react-icons/io';
+//import { IoIosSettings, IoIosPlayCircle, IoIosNavigate } from 'react-icons/io';
+import { IoIosSettings } from 'react-icons/io';
 import ReactTable from "react-table";
 import Tooltip from 'rc-tooltip';
 import Slider, { Range } from 'rc-slider';
 import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
+import Actor from './Actor.js';
+import Chain from './Chain.js';
+import { RenderInit, LinkFilter, NodeFilter } from './Render.js';
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -42,8 +46,7 @@ const handle = (props) => {
       overlay={value}
       visible={dragging}
       placement="top"
-      key={index}
-    >
+      key={index} >
       <Handle value={value} {...restProps} />
     </Tooltip>
   );
@@ -52,7 +55,11 @@ function openInNewTab(url) {
   var win = window.open(url, '_blank');
   win.focus();
 }
-
+/** 
+ * @desc The main TranQL application class.
+ * Integrates the query editor, query executor, rendering pipeline, and visualization.
+ * @author Steve Cox scox@renci.org
+ */
 class App extends Component {
   /**
    * A TranQL web app.
@@ -69,6 +76,7 @@ class App extends Component {
     this._codeAutoComplete = this._codeAutoComplete.bind(this);
     this._updateCode = this._updateCode.bind (this);
     this._executeQuery = this._executeQuery.bind(this);
+    this._configureMessage = this._configureMessage.bind (this);
     this._translateGraph = this._translateGraph.bind (this);
 
     // The visualization
@@ -79,15 +87,17 @@ class App extends Component {
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
 
+    // Visualization filter state values
+    this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
+    this._onNodeDegreeRangeChange = this._onNodeDegreeRangeChange.bind (this);
+
     // Settings management
     this._handleShowModal = this._handleShowModal.bind (this);
     this._handleCloseModal = this._handleCloseModal.bind (this);    
     this._handleUpdateSettings = this._handleUpdateSettings.bind (this);
     this._hydrateState = this._hydrateState.bind (this);
-    this._onMinLinkWeightChange = this._onMinLinkWeightChange.bind (this);
-    this._onMinLinkWeightAfterChange = this._onMinLinkWeightAfterChange.bind (this);
+
     this._analyzeAnswer = this._analyzeAnswer.bind (this);
-    this._renderTable = this._renderTable.bind (this);    
     this._cacheRead = this._cacheRead.bind (this);
 
     // Component rendering.
@@ -98,7 +108,7 @@ class App extends Component {
 
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
-    
+
     // Configure initial state.
     this.state = {
       code : "select chemical_substance->gene->disease\n  from \"/graph/gamma/quick\"\n where disease=\"asthma\"",
@@ -108,11 +118,14 @@ class App extends Component {
       modelRelations : [],
       
       // The graph; populated when a query's executed.
+      message : null,
       graph : {
         nodes : [],
         links : []
       },
-      minLinkWeight : 0,
+      linkWeightRange : [0, 100],
+      nodeDegreeMax : 0,
+      nodeDegreeRange : [0, 1000],
       
       // Manage node selection and navigation.
       selectMode: true,
@@ -147,15 +160,21 @@ class App extends Component {
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
+
+    /**
+     * Create the rendering pipeline, a chain of responsibility.
+     */
+    this._renderChain = new Chain ([
+      new RenderInit (),
+      new LinkFilter (),
+      new NodeFilter ()
+    ]);
   }
-  _onMinLinkWeightChange (value) {
-    this.setState({ minLinkWeight : value});
-    localStorage.setItem ("minLinkWeight", JSON.stringify (value));
-  }
-  _onMinLinkWeightAfterChange (value) {
-    console.log("--after update", value);
-    //this.props.update(this.state); //    this.setState({ minLinkWeight : value});
-  }
+  /**
+   * Restore component state from persistent storage on initialization.
+   *
+   * @private
+   */
   _hydrateState () {
     // for all items in state
     for (let key in this.state) {
@@ -176,6 +195,12 @@ class App extends Component {
       }
     }
   }
+  /**
+   * Read an object from the cache.
+   *
+   * @param {string} key - The object's unique key.
+   * @private
+   */
   _cacheRead (key) {
     var result = null;
     if (localStorage.hasOwnProperty(key)) {
@@ -192,6 +217,9 @@ class App extends Component {
   }
   /**
    * Callback for the query editor to set the value of the code.
+   *
+   * @param {string} newCode - New value of the query in the editor.
+   * @private
    */
   _updateCode (newCode) {
     this.setState({
@@ -200,6 +228,9 @@ class App extends Component {
   }
   /**
    * Callback for handling autocompletion within the query editor.
+   *
+   * @param {object} cm - The CodeMirror object.
+   * @private
    */
   _codeAutoComplete (cm) {
     // https://github.com/JedWatson/react-codemirror/issues/52
@@ -231,14 +262,23 @@ class App extends Component {
   }
   /**
    * Set the navigation / selection mode.
+   *
+   * @private
    */
   _setNavMode () {
+    if (! this.state.navigateMode) {
+      // Turn off the object viewer if we're going into navigate.
+      document.getElementById ('info').style.display = 'none';
+    }
     this.setState ({
       navigateMode: ! this.state.navigateMode
     });
   }
   /**
-   * In depth analysis of an answer.
+   * Render interface for depth analysis of an answer.
+   *
+   * @param {message} - A KGS message object to analyze.
+   * @private
    */
   _analyzeAnswer (message) {
     // We didn't find it in the cache. Run the query.
@@ -268,6 +308,12 @@ class App extends Component {
   }
   /**
    * Execute a TranQL query.
+   * Checks for the requested object in cache.
+   * If not present, executes query and receives a KGS message object.
+   *    Passes the message to the rendering pipeline.
+   *    Writes the messge to cache.
+   *
+   * @private
    */
   _executeQuery () {
     console.log ("--query: ", this.state.code);
@@ -275,10 +321,10 @@ class App extends Component {
     var cachePromise = this._cache.read (this.state.code);
     cachePromise.then (
       function success (result) {
-        console.log ("---- cache hit.", result);
         if (result.length > 0) {
           // Translate the knowledge graph given current settings.
           this._translateGraph (result[0].data)
+          this._configureMessage (result[0].data)
         } else {
           // We didn't find it in the cache. Run the query.
           fetch(this.tranqlURL + '/tranql/query', {
@@ -295,6 +341,7 @@ class App extends Component {
               (result) => {
                 /* Convert the knowledge graph to a renderable form. */
                 this._translateGraph (result);
+                this._configureMessage (result);
                 this._cache.write (this.state.code, result);
                 this._analyzeAnswer (result);
                 console.log ("new tab: " + result);
@@ -314,66 +361,34 @@ class App extends Component {
         console.log ("-- error", result);
       });
   }
-  _translateGraph (kgraph) {    
-    var graph = { nodes : [], links : [] }
-    if (kgraph != null && kgraph.hasOwnProperty ('knowledge_graph')) {
-      graph = {
-        nodes : kgraph.knowledge_graph.nodes.map(function (node, index) {
-          return {
-            id: node.id,
-            type : node.type,
-            radius: 9,
-            name: node.name,
-            origin: node        // keep the orgin node.
-          };
-        }),
-        links : kgraph.knowledge_graph.edges.map(function (edge, index) {
-          var weight = Math.round (edge.weight * 100) / 100;
-          return {
-            source: edge.source_id,
-            target: edge.target_id,
-            type : edge.type,
-            weight : weight,
-            name : edge.type + " [" + weight + "]",
-            linkOpacity: weight, //(100 - ( weight * 100 )) / 100, //weight
-            origin : edge
-          };
-        })
-      }
-
-
-      // Make a chain of responsibility:
-      // Filter links:
-      var links = [];
-      var node_ref = [];
-      var threshold = this.state.minLinkWeight / 100;
-      for (var c = 0; c < graph.links.length; c++) {
-        var link = graph.links[c];
-        if (link.weight >= threshold) {
-          links.push (link);
-          if (! node_ref.includes (link.source)) {
-            node_ref.push (link.source);
-          }
-          if (! node_ref.includes (link.target)) {
-            node_ref.push (link.target);
-          }
-        }
-      }
-      graph.links = links;
-      var nodes = [];
-      for (var c = 0; c < graph.nodes.length; c++) {
-        if (node_ref.includes (graph.nodes[c].id)) {
-          nodes.push (graph.nodes[c]);
-        }
-      }
-      graph.nodes = nodes;      
-    }
+  _configureMessage (message) {
+    var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
+      return message.knowledge_graph.edges.reduce ((acc, cur) => {
+        return cur.target_id == node.id ? acc + 1 : acc;
+      }, 1);
+    }).sort ((a,b) => a - b).reverse();
     this.setState({
-      graph: graph
+      message : message,
+      nodeDegreeMax : nodeDegrees[0], //message.graph.nodes.length,
+      nodeDegreeRange : [ 0, nodeDegrees[0] ] //message.graph.nodes.length ]
     });
   }
   /**
-   * Get the concept model.
+   * Render the graph via the rendering pipeline.
+   *
+   * @param {message} - A KGS message object.
+   * @private
+   */
+  _translateGraph (message) {
+    this._renderChain.handle (message, this.state);
+    this.setState({
+      graph: message.graph
+    });
+  }
+  /**
+   * Get the concept model and stores as state.
+   *
+   * @private
    */
   _getModelConcepts () {
     fetch(this.tranqlURL + '/tranql/model/concepts', {
@@ -403,7 +418,7 @@ class App extends Component {
       )
   }
   /**
-   * Get the concept model relations.
+   * Get the concept model relations and stores as state.
    */
   _getModelRelations () {
     fetch(this.tranqlURL + '/tranql/model/relations', {
@@ -432,6 +447,12 @@ class App extends Component {
         }
       )
   }
+  /**
+   * Handle a click on a graph link.
+   *
+   * @param {object} - A link in the force directed graph visualization.
+   * @private
+   */
   _handleLinkClick (link) {
     if (link !== null &&
         this.state.selectedLink !== null &&
@@ -446,6 +467,12 @@ class App extends Component {
       document.getElementById ('info').style.display = 'block';
     }
   }
+  /**
+   * Handle a click on a graph node.
+   *
+   * @param {object} - A node in the force directed graph visualization.
+   * @private
+   */
   _handleNodeClick (node) {
     if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
@@ -469,11 +496,21 @@ class App extends Component {
       document.getElementById ('info').style.display = 'block';
     }
   }
+  /**
+   * Render the force directed graph in either 2D or 3D rendering modes.
+   *
+   * @private
+   */
   _renderForceGraph () {
     return this.state.visMode === '3D' ?
       this._renderForceGraph3D () :
       this._renderForceGraph2D ()
   }
+  /**
+   * Render in 3D
+   *
+   * @private
+   */
   _renderForceGraph3D () {
       return <ForceGraph3D id="forceGraph3D"
                            ref={el => { this.fg = el; }}
@@ -490,6 +527,11 @@ class App extends Component {
                            onLinkClick={this._handleLinkClick}
                            onNodeClick={this._handleNodeClick} />
   }
+  /**
+   * Render in 3D
+   *
+   * @private
+   */
   _renderForceGraph2D () {
       return <ForceGraph2D id="forceGraph3D"
                            ref={el => { this.fg = el; }}
@@ -506,25 +548,71 @@ class App extends Component {
                            onLinkClick={this._handleLinkClick}
                            onNodeClick={this._handleNodeClick} />
   }
+  /**
+   * Show the modal settings dialog.
+   *
+   * @private
+   */
   _handleShowModal () {
     this.setState ({ showModal : true });
   }
+  /**
+   * Take appropriate actions on the closing of the modal settings dialog.
+   *
+   * @private
+   */
   _handleCloseModal () {
     this.setState ({ showModal : false });
-    this.setState ({ minLinkWeight : this.state.minLinkWeight });
+    //this.setState ({ linkWeightRange : this.state.linkWeightRange});
   }
+  /**
+   * Handle updated settings from the modal settings dialog.
+   *
+   * @param {object} - An update event. Its currentTarget element designates the selected component.
+   * @private
+   */
   _handleUpdateSettings (e) {
     var targetName = e.currentTarget.name;
     if (targetName === 'useCache') {
+      // Specifies if the cache should be engaged or not.
       var useCache = e.currentTarget.checked;
       console.log (useCache);
       this.setState ({ useCache : useCache });
       localStorage.setItem (targetName, JSON.stringify (useCache));
     } else if (targetName === 'visMode') {
+      // Toggle between 2D and 3D visualizations.
       this.setState ({ visMode : e.currentTarget.value });
       localStorage.setItem (targetName, JSON.stringify(e.currentTarget.value));
     }
   }
+  /**
+   * Respond to changing range of link weights.
+   *
+   * @param {number} value - The new link weight range.
+   * @private
+   */
+  _onLinkWeightRangeChange (value) {
+    this.setState({ linkWeightRange : value});
+    console.log (value);
+    localStorage.setItem ("linkWeightRange", JSON.stringify (value));
+    this._translateGraph (this.state.message);
+  }
+  /**
+   * Respond to changing the node degree range.
+   *
+   * @param {object} value - New range.
+   * @private
+   */
+  _onNodeDegreeRangeChange (value) {
+    this.setState({ nodeDegreeRange : value});
+    this._translateGraph (this.state.message);
+    localStorage.setItem ("minNodeDegree", JSON.stringify (value));
+  }
+  /**
+   * Render the modal settings dialog.
+   *
+   * @private
+   */
   _renderModal () {
     return (
       <>
@@ -533,23 +621,35 @@ class App extends Component {
             <Modal.Title>Settings</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <b>Visualization Mode</b> <br/>        
+            <b>Visualization Mode</b> <br/>
+        
             <input type="radio" name="visMode" 
                    value="3D"
                    checked={this.state.visMode === "3D"} 
-                   onChange={this._handleUpdateSettings} />3D  <br/>        
+                   onChange={this._handleUpdateSettings} />3D  <br/>
+        
             <input type="radio" name="visMode" 
                    value="2D"
                    checked={this.state.visMode === "2D"} 
                    onChange={this._handleUpdateSettings} />2D <br/><br/>
+        
             <b>Use Cache</b> <br/>
             <input type="checkbox" name="useCache"
                    checked={this.state.useCache}
                    onChange={this._handleUpdateSettings} /> Cache responses to queries. <br/><br/>
-        <b>Minimum Link Weight</b> Current value: [{this.state.minLinkWeight / 100}]<br/>
-            Include only links with a weight greater than this threshold.
-            <Slider min={0} max={100} value={this.state.minLinkWeight} onChange={this._onMinLinkWeightChange} onAfterChange={this._onMinLinkWeightAfterChange} handle={handle} />
         
+            <b>Link Weight Range</b> Min [{this.state.linkWeightRange[0] / 100} Max: [{this.state.linkWeightRange[1] / 100}]<br/>
+            Include only links with a weight in this range.
+            <Range allowCross={false} defaultValue={this.state.linkWeightRange} onChange={this._onLinkWeightRangeChange} handle={handle} />
+
+            <b>Node Degree Range</b> Min: [{this.state.nodeDegreeRange[0]}] Max: [{this.state.nodeDegreeRange[1]}] <br/>
+            Include only nodes with an in-degree in this range.
+            This range will be reset each time a query is run since it is graph dependent.
+            <Range allowCross={false}
+                   defaultValue={this.state.nodeDegreeRange}
+                   onChange={this._onNodeDegreeRangeChange}
+                   max={this.state.nodeDegreeMax}/>
+
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this._handleCloseModal}>
@@ -562,120 +662,11 @@ class App extends Component {
   }
   /**
    * Handle events that can only occur once the component is mounted.
+   *
+   * @private
    */
   componentDidMount() {
     this._hydrateState ();
-  }
-  _renderTable () {
-    var columns = [
-      {
-        Header: "Name",
-        columns: [
-          {
-            Header: "First Name",
-            accessor: "firstName"
-          },
-          {
-          Header: "Last Name",
-            id: "lastName",
-            accessor: d => d.lastName
-          }
-        ]
-      },
-      {
-        Header: "Info",
-        columns: [
-          {
-            Header: "Age",
-            accessor: "age"
-          },
-          {
-            Header: "Status",
-            accessor: "status"
-          }
-        ]
-      },
-      {
-        Header: 'Stats',
-        columns: [
-          {
-            Header: "Visits",
-            accessor: "visits"
-          }
-        ]
-      }
-    ];
-    var data = [
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" },
-      { firstName : "Bob", lastName : "Smith", age : 10, status : "great" }
-    ];
-    return (
-      <div className="tableView">
-        <ReactTable
-          data={data}
-          columns={columns}
-          defaultPageSize={10}
-          className="-striped -highlight"
-        />
-      </div>
-    );
-  }
-  /**
-   * Render the component.
-   */
-  render0() {
-    // Render it.
-    return (
-      <div className="App" id="AppElement">
-
-      
-      <SplitPane class="splitPane" split="horizontal">
-        <div style={{ height : "80%" }}>
-
-      
-        <header className="App-header" style={{ height : "100%" }}> 
-          <p>
-            TranQL {this._renderModal () }
-            <Button id="navModeButton"
-                    outline className="App-control"
-                    color="primary" onClick={this._setNavMode}>
-              { this.state.navigateMode && this.state.visMode === '3D' ? "Navigate" : "Select" }
-            </Button>
-            <Button id="runButton"
-                    outline className="App-control"
-                    color="success" onClick={this._executeQuery}>
-              Run
-            </Button>
-            <IoIosSettings id="settings" className="App-control" onClick={this._handleShowModal} />
-        </p>
-        </header>
-      	  <CodeMirror ref={this._codemirror}
-                      value={this.state.code}
-                      onChange={this._updateCode}
-                      onKeyUp={this.handleKeyUpEvent} 
-                      options={this.state.codeMirrorOptions}
-                      autoFocus={true} />
-          { this._renderForceGraph () }
-
-      
-        </div>
-        <div style={{ height: "20%" }}>
-
-      
-              { this._renderTable () }
-              <div id="graph"></div>      
-              <ReactJson id="info"
-                 src={this.state.selectedNode}
-                 theme="monokai" />
-        </div>
-      </SplitPane>
-      </div>
-    );
   }
   
   render() {
