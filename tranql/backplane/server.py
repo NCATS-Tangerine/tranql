@@ -15,8 +15,6 @@ from flask_cors import CORS
 from tranql.lib.ndex import NDEx
 from tranql.main import TranQL
 import networkx as nx
-from ndex2 import create_nice_cx_from_networkx
-from ndex2.client import Ndex2
 from tranql.util import JSONKit
 from tranql.concept import BiolinkModelWalker
 from iceesclient import ICEES

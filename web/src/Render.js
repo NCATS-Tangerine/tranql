@@ -15,13 +15,14 @@ class RenderInit extends Actor {
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
           var weight = Math.round (edge.weight * 100) / 100;
+          var opacity = (100 - (100 * weight) ) / 100;
           return {
             source: edge.source_id,
             target: edge.target_id,
             type : edge.type,
             weight : weight,
             name : edge.type + " (w=" + weight + ")",
-            linkOpacity: weight,
+            linkOpacity: opacity,
             origin : edge
           }; })
       }

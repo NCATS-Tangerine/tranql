@@ -14,6 +14,8 @@ import Cache from './Cache.js';
 import Actor from './Actor.js';
 import Chain from './Chain.js';
 import { RenderInit, LinkFilter, NodeFilter } from './Render.js';
+import { Menu, Item, Separator, Submenu, MenuProvider, contextMenu } from 'react-contexify';
+import 'react-contexify/dist/ReactContexify.min.css';
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -26,31 +28,33 @@ require('codemirror/lib/codemirror.css');
 require('codemirror/mode/sql/sql');
 var CodeMirror = require('react-codemirror');
 
-const sliderStyles = {
-  root: {
-    display: 'flex',
-    height: 300,
-  },
-  slider: {
-    padding: '0px 22px',
-  },
-};
- 
-const createSliderWithTooltip = Slider.createSliderWithTooltip;
-const Handle = Slider.Handle;
-const handle = (props) => {
-  const { value, dragging, index, ...restProps } = props;
-  return (
-    <Tooltip
-      prefixCls="rc-slider-tooltip"
-      overlay={value}
-      visible={dragging}
-      placement="top"
-      key={index} >
-      <Handle value={value} {...restProps} />
-    </Tooltip>
-  );
-};
+class ContextMenu extends Component {
+  constructor(props) {
+    /* Create state elements and initialize configuration. */
+    super(props);
+    this._handleClick = this._handleClick.bind (this);
+    this._menu = React.createRef ();
+  }
+  _handleClick = (e) => {
+    console.log(e);
+  }
+  render () {
+    return (
+        <Menu id={this.props.id}>
+          <Item>Copy</Item>
+          <Separator />
+          <Item>Paste</Item>
+          <Item>Cut</Item>
+          <Separator />
+          <Submenu label="Foobar">
+            <Item onClick={this._handleClick}>Foo</Item>
+            <Item onClick={this._handleClick}>Bar</Item>
+          </Submenu>
+        </Menu>
+    );
+  }
+}
+
 function openInNewTab(url) {
   var win = window.open(url, '_blank');
   win.focus();
@@ -69,6 +73,7 @@ class App extends Component {
     super(props);
     this.tranqlURL = "http://localhost:8100";
     this.robokop_url = "http://robokop.renci.org";
+    this.contextMenuId = "contextMenuId";
     
     // Query editor support.
     this._getModelConcepts = this._getModelConcepts.bind (this);
@@ -85,7 +90,9 @@ class App extends Component {
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
+    this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
+    this._handleContextMenu = this._handleContextMenu.bind(this);
 
     // Visualization filter state values
     this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
@@ -105,7 +112,8 @@ class App extends Component {
 
     // Create code mirror reference.
     this._codemirror = React.createRef ();
-
+    this._contextMenu = React.createRef ();
+    
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
 
@@ -131,6 +139,7 @@ class App extends Component {
       selectMode: true,
       selectedNode : {},
       selectedLink : {},
+      contextNode : null,
       navigateMode: true,
 
       // Set up CodeMirror settings.
@@ -364,7 +373,7 @@ class App extends Component {
   _configureMessage (message) {
     var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
       return message.knowledge_graph.edges.reduce ((acc, cur) => {
-        return cur.target_id == node.id ? acc + 1 : acc;
+        return cur.target_id === node.id ? acc + 1 : acc;
       }, 1);
     }).sort ((a,b) => a - b).reverse();
     this.setState({
@@ -467,6 +476,24 @@ class App extends Component {
       document.getElementById ('info').style.display = 'block';
     }
   }
+  _handleNodeRightClick (node) {
+    console.log(node);
+    this.setState ({
+      contextNode : node
+    });
+  }
+  _handleContextMenu (e) {    
+    e.preventDefault();
+    console.log(e);
+    contextMenu.show({
+      id: this._contextMenuId,
+      event: e,
+      props: {
+        foo: 'bar'
+      }
+    });
+  }
+
   /**
    * Handle a click on a graph node.
    *
@@ -474,6 +501,7 @@ class App extends Component {
    * @private
    */
   _handleNodeClick (node) {
+    console.log (node);
     if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
       // Aim at node from outside it
@@ -525,6 +553,7 @@ class App extends Component {
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
                            enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
                            onLinkClick={this._handleLinkClick}
+                           onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
   }
   /**
@@ -546,6 +575,7 @@ class App extends Component {
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
                            enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
                            onLinkClick={this._handleLinkClick}
+                           onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
   }
   /**
@@ -640,11 +670,11 @@ class App extends Component {
         
             <b>Link Weight Range</b> Min [{this.state.linkWeightRange[0] / 100} Max: [{this.state.linkWeightRange[1] / 100}]<br/>
             Include only links with a weight in this range.
-            <Range allowCross={false} defaultValue={this.state.linkWeightRange} onChange={this._onLinkWeightRangeChange} handle={handle} />
+            <Range allowCross={false} defaultValue={this.state.linkWeightRange} onChange={this._onLinkWeightRangeChange} />
 
             <b>Node Degree Range</b> Min: [{this.state.nodeDegreeRange[0]}] Max: [{this.state.nodeDegreeRange[1]}] <br/>
             Include only nodes with an in-degree in this range.
-            This range will be reset each time a query is run since it is graph dependent.
+            Values will be reset each time a query is run since it is graph dependent.
             <Range allowCross={false}
                    defaultValue={this.state.nodeDegreeRange}
                    onChange={this._onNodeDegreeRangeChange}
@@ -696,8 +726,10 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent} 
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          { this._renderForceGraph () }
-          {/* this._renderTable () */}
+          <div onContextMenu={this._handleContextMenu}>
+            { this._renderForceGraph () }
+            <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+          </div>
           <div id="graph"></div>
           <div id="info">
             <ReactJson
@@ -705,9 +737,11 @@ class App extends Component {
               theme="monokai" />
           </div>
         </div>
+        <div id='next'/>
       </div>
     );
   }
+    
 }
 
 export default App;
