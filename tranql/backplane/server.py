@@ -17,7 +17,7 @@ from tranql.main import TranQL
 import networkx as nx
 from tranql.util import JSONKit
 from tranql.concept import BiolinkModelWalker
-from iceesclient import ICEES
+from tranql.backplane.iceesclient import ICEES
 
 app = Flask(__name__)
 
