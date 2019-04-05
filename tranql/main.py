@@ -37,6 +37,7 @@ import os
 import requests_cache
 import sys
 import traceback
+from tranql.config import Config
 from tranql.util import Context
 from tranql.util import JSONKit
 from tranql.util import Concept
@@ -161,6 +162,17 @@ class TranQL:
         """ Initialize the interpreter. """
         self.parser = TranQLParser ()
         self.context = Context ()
+        config_path = os.path.join (os.path.dirname (__file__), "conf.yml")
+        self.config = Config (config_path)
+
+        t = os.path.join (os.path.dirname (__file__), "conf.test")
+        with open(t, "w") as stream:
+            stream.write (f" --- backplane: {self.config['BACKPLANE']}")
+
+        env_backplane = self.config['BACKPLANE']
+        if env_backplane:
+            backplane = env_backplane
+
         self.context.set ("backplane", backplane)
         
     def parse (self, program):

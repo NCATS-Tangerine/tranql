@@ -26,7 +26,7 @@ CORS(app)
 
 """ https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI """
 filename = 'translator_interchange.yaml'
-filename = 'translator_interchange_0.9.0.yaml'
+filename = os.path.join (os.path.dirname (__file__), 'translator_interchange_0.9.0.yaml')
 with open(filename, 'r') as file_obj:
     template = yaml.load(file_obj)
 app.config['SWAGGER'] = {
@@ -571,9 +571,8 @@ api.add_resource(ICEESEdVisitsClusterQuery, '/flow/5/mod_1_4/icees/by_ed_visits'
 api.add_resource(PublishToGamma, '/visualize/gamma')
 api.add_resource(PublishToNDEx, '/visualize/ndex')
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Short sample app')
+    parser = argparse.ArgumentParser(description='TranQL Backplane')
     parser.add_argument('-port', action="store", dest="port", default=8099, type=int)
     args = parser.parse_args()
 
@@ -586,3 +585,4 @@ if __name__ == "__main__":
         debug=False,
         use_reloader=True
     )
+

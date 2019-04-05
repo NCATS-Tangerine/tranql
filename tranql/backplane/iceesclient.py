@@ -221,13 +221,13 @@ class GetDictionary():
 # You can use the work below to treat this module as a CLI utility. Currently, it is configured to accept inputs for and
 # return values from the simplest input, "DefineCohort"... feel free to copy/fork and customize for your own purposes!
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-ftr", "--feature", help="feature name")
-parser.add_argument("-v", "--value", help="feature value")
-parser.add_argument("-op", "--operator", help="feature operator")
-args = parser.parse_args()
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-ftr", "--feature", help="feature name")
+    parser.add_argument("-v", "--value", help="feature value")
+    parser.add_argument("-op", "--operator", help="feature operator")
+    args = parser.parse_args()
+
     import sys
     if len(sys.argv) > 3:
         icees_define_cohort = DefineCohort()

@@ -92,7 +92,8 @@ class Statement:
                 logger.error (http_response.text)
         except:
             logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
-            traceback.print_exc ()
+            #traceback.print_exc ()
+            logger.error (traceback.format_exc ())
         return response
     
 class SetStatement(Statement):

@@ -28,6 +28,8 @@ require('codemirror/lib/codemirror.css');
 require('codemirror/mode/sql/sql');
 var CodeMirror = require('react-codemirror');
 
+String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
+
 class ContextMenu extends Component {
   constructor(props) {
     /* Create state elements and initialize configuration. */
@@ -71,11 +73,12 @@ class App extends Component {
   constructor(props) {
     /* Create state elements and initialize configuration. */
     super(props);
-    this.tranqlURL = "http://localhost:8100";
+    this.tranqlURL = window.location.origin; 
     this.robokop_url = "http://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
     
     // Query editor support.
+    this._getConfiguration = this._getConfiguration.bind (this);
     this._getModelConcepts = this._getModelConcepts.bind (this);
     this._getModelRelations = this._getModelRelations.bind (this);
     this._codeAutoComplete = this._codeAutoComplete.bind(this);
@@ -291,7 +294,7 @@ class App extends Component {
    */
   _analyzeAnswer (message) {
     // We didn't find it in the cache. Run the query.
-    fetch(this.robokop_url + '/api/simple/view/', {
+    fetch(this.robokop_url + '/api/simple/view', {
       method: "POST",
       headers: {
         'Accept': 'application/json',
@@ -302,8 +305,11 @@ class App extends Component {
       .then(
         (result) => {
           /* Convert the knowledge graph to a renderable form. */
-          console.log (result);
-          openInNewTab (result);
+          var url = "http://robokop.renci.org/simple/view/" + result.unquoted ();
+          console.log ("--simple view url: ", url);
+          openInNewTab (url);
+          message.viewURL = url;
+          //this._cache.write (this.state.code, message);
         },
         // Note: it's important to handle errors here
         // instead of a catch() block so that we don't swallow
@@ -349,11 +355,15 @@ class App extends Component {
             .then(
               (result) => {
                 /* Convert the knowledge graph to a renderable form. */
+                if (result.answers) {
+                  // answers is not kgs 0.9 compliant.
+                  delete result.answers;
+                }
+                //this._analyzeAnswer (result);
                 this._translateGraph (result);
                 this._configureMessage (result);
                 this._cache.write (this.state.code, result);
-                this._analyzeAnswer (result);
-                console.log ("new tab: " + result);
+                //console.log ("new tab: " + result); 
               },
               // Note: it's important to handle errors here
               // instead of a catch() block so that we don't swallow
@@ -370,17 +380,31 @@ class App extends Component {
         console.log ("-- error", result);
       });
   }
+
+/*
+
+select chemical_substance->gene->disease
+  from "/graph/gamma/quick"
+ where disease="MONDO:0010940"
+
+  select disease->chemical_substance
+  from "/graph/gamma/quick"
+  where disease="MONDO:0005180"
+*/
+  
   _configureMessage (message) {
-    var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
-      return message.knowledge_graph.edges.reduce ((acc, cur) => {
-        return cur.target_id === node.id ? acc + 1 : acc;
-      }, 1);
-    }).sort ((a,b) => a - b).reverse();
-    this.setState({
-      message : message,
-      nodeDegreeMax : nodeDegrees[0], //message.graph.nodes.length,
-      nodeDegreeRange : [ 0, nodeDegrees[0] ] //message.graph.nodes.length ]
-    });
+    if (message && message.knowledge_graph) {
+      var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
+        return message.knowledge_graph.edges.reduce ((acc, cur) => {
+          return cur.target_id === node.id ? acc + 1 : acc;
+        }, 1);
+      }).sort ((a,b) => a - b).reverse();
+      this.setState({
+        message : message,
+        nodeDegreeMax : nodeDegrees[0], //message.graph.nodes.length,
+        nodeDegreeRange : [ 0, nodeDegrees[0] ] //message.graph.nodes.length ]
+      });
+    }
   }
   /**
    * Render the graph via the rendering pipeline.
@@ -393,6 +417,37 @@ class App extends Component {
     this.setState({
       graph: message.graph
     });
+  }
+  /**
+   * Get the configuration for this deployment.
+   *
+   * @private
+   */
+  _getConfiguration () {
+    fetch(this.tranqlURL + '/tranql/configuration', {
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify ({
+      })
+    }).then(res => res.json())
+      .then(
+        (result) => {
+          this.setState({
+            configuration : result
+          });
+        },
+        // Note: it's important to handle errors here
+        // instead of a catch() block so that we don't swallow
+        // exceptions from actual bugs in components.
+        (error) => {
+          this.setState({
+            error
+          });
+        }
+      )
   }
   /**
    * Get the concept model and stores as state.

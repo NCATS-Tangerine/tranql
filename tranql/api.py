@@ -4,6 +4,7 @@ Provide a standard protocol for asking graph oriented questions of Translator da
 import copy
 import argparse
 import json
+import logging
 import os
 import yaml
 import jsonschema
@@ -17,21 +18,18 @@ from tranql.main import TranQL
 import networkx as nx
 from tranql.util import JSONKit
 from tranql.concept import BiolinkModelWalker
-import flask_monitoringdashboard as dashboard
+#import flask_monitoringdashboard as dashboard
 
-web_app_root = "web/build"
+logger = logging.getLogger (__name__)
+
+web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
 
 app = Flask(__name__, static_folder=web_app_root)
-dashboard.bind(app)
+#dashboard.bind(app)
 
 api = Api(app)
 CORS(app)
 
-""" https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI """
-#filename = 'translator_interchange.yaml'
-filename = os.path.join ("backplane", 'translator_interchange_0.9.0.yaml')
-with open(filename, 'r') as file_obj:
-    template = yaml.load(file_obj)
 app.config['SWAGGER'] = {
     'title': 'TranQL API',
     'description': 'Translator Query Language (TranQL) API',
@@ -49,9 +47,97 @@ class StandardAPIResource(Resource):
         try:
             jsonschema.validate(request.json, to_validate)
         except jsonschema.exceptions.ValidationError as error:
-            print (f"ERROR: {str(error)}")
+            logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
-    
+
+class WebAppRoot(Resource):
+    def get(self):
+        """
+        webapp root
+        ---
+        consumes': [ 'text/plain' ]
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        return send_from_directory(web_app_root, 'index.html')
+api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
+
+class WebAppPath(Resource):
+    def get(self, path):
+        """
+        webapp
+        ---
+        parameters:
+            - in: path
+              name: path
+              type: string
+              required: true
+              description: Resource path.
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        resource_path = os.path.join (os.path.dirname (__file__), os.path.sep, path)
+        logger.debug (f"--path: {resource_path}")
+        if path != "" and os.path.exists(web_app_root + "/" + path):
+            return send_from_directory(web_app_root, path)
+        else:
+            abort (404)
+api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
+
+
+class Configuration(StandardAPIResource):
+    """ Configuration """
+    def get(self):
+        """
+        configuration
+        ---
+        tag: validation
+        description: TranQL Query
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        return {
+            "api_url" : config['API_URL'],
+            "robokop_url" : config['ROBOKOP_URL']
+        }
+
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """
 
@@ -92,11 +178,12 @@ class TranQLQuery(StandardAPIResource):
         """
         #self.validate (request)
         tranql = TranQL ()
-        print (request.json)
+        logging.debug (request.json)
         query = request.json['query'] if 'query' in request.json else ''
-        print (f"----------> query: {query}")
+        logging.debug (f"----------> query: {query}")
         context = tranql.execute (query) #, cache=True)
         result = context.mem.get ('result', {})
+        logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
         return result
 
 class ModelConceptsQuery(StandardAPIResource):
@@ -137,16 +224,9 @@ class ModelConceptsQuery(StandardAPIResource):
                             type: string
 
         """
-        #self.validate (request)
-        '''
-        print (f"----> request -> {json.dumps(request.json, indent=2)}")
-        print (request.json)
-        query = request.json['query'] if 'query' in request.json else ''
-        print (f"----------> query: {query}")
-        '''
         concept_model = ConceptModel ("biolink-model")
         concepts = sorted (list(concept_model.by_name.keys ()))
-        print (concepts)
+        logging.debug (concepts)
         return concepts
 
 
@@ -188,15 +268,9 @@ class ModelRelationsQuery(StandardAPIResource):
                             type: string
 
         """
-        #self.validate (request)
-        '''
-        print (f"----> request -> {json.dumps(request.json, indent=2)}")
-        query = request.json['query'] if 'query' in request.json else ''
-        print (f"----------> query: {query}")
-        '''
         concept_model = ConceptModel ("biolink-model")
         relations = sorted (list(concept_model.relations_by_name.keys ()))
-        print (relations)
+        logging.debug (relations)
         return relations
 
 ###############################################################################################
@@ -211,7 +285,7 @@ api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')
-    parser.add_argument('-port', action="store", dest="port", default=8100, type=int)
+    parser.add_argument('-port', action="store", dest="port", default=8001, type=int)
     args = parser.parse_args()
     server_host = '0.0.0.0'
     server_port = args.port
