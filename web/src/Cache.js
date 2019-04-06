@@ -17,25 +17,20 @@ class Cache extends Component {
   }
   async write (key, data) {
     // Write cache.
-    var with_put = true;
-    if (! with_put) {
-      return await this.db.cache.add({
-        key : key,
-        data : data
-      });
-    } else {
-      return await this.db.cache.put ({
-        key  : key,
-        data : data
-      });
-    }
+    return await this.db.cache.put ({
+      key  : key,
+      data : data
+    });
   }
   async read (key) {
     return await this.db.cache 
     .where('key')
     .equals (key)
     .toArray();
-  }  
+  }
+  async clear () {
+    return await this.db.cache.clear ();
+  }
 }
 
 export default Cache;

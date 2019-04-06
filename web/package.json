@@ -20,11 +20,14 @@
     "react-json-view": "^1.19.1",
     "react-modal": "^3.8.1",
     "react-scripts": "^2.1.8",
+    "react-spinner": "^0.2.7",
+    "react-spinners": "^0.5.3",
     "react-split-pane": "^0.1.87",
     "react-table": "^6.9.2",
     "react-vis-force": "^0.3.1",
     "reactstrap": "^7.1.0",
-    "storybook": "^1.0.0"
+    "storybook": "^1.0.0",
+    "uninstall": "0.0.0"
   },
   "scripts": {
     "start": "react-scripts start",

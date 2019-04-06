@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
+import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal } from 'react-bootstrap';
-import { ForceGraph3D, ForceGraph2D } from 'react-force-graph';
+import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 //import { IoIosSettings, IoIosPlayCircle, IoIosNavigate } from 'react-icons/io';
@@ -9,11 +10,12 @@ import { IoIosSettings } from 'react-icons/io';
 import ReactTable from "react-table";
 import Tooltip from 'rc-tooltip';
 import Slider, { Range } from 'rc-slider';
+import { GridLoader } from 'react-spinners';
 import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import Chain from './Chain.js';
-import { RenderInit, LinkFilter, NodeFilter } from './Render.js';
+import { RenderInit, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
 import { Menu, Item, Separator, Submenu, MenuProvider, contextMenu } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.min.css';
 import 'rc-slider/assets/index.css';
@@ -29,6 +31,11 @@ require('codemirror/mode/sql/sql');
 var CodeMirror = require('react-codemirror');
 
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
+Array.prototype.unique = function() {
+  return this.filter(function (value, index, self) { 
+    return self.indexOf(value) === index;
+  });
+};
 
 class ContextMenu extends Component {
   constructor(props) {
@@ -61,6 +68,16 @@ function openInNewTab(url) {
   var win = window.open(url, '_blank');
   win.focus();
 }
+
+const spinnerStyleOverride = css`
+    display: block;
+    margin: 4 auto;
+    border-color: red;
+    position: absolute;
+    right: 186px;
+    top: 9px;
+`;
+
 /** 
  * @desc The main TranQL application class.
  * Integrates the query editor, query executor, rendering pipeline, and visualization.
@@ -74,6 +91,7 @@ class App extends Component {
     /* Create state elements and initialize configuration. */
     super(props);
     this.tranqlURL = window.location.origin; 
+    this.tranqlURL = "http://localhost:8001";
     this.robokop_url = "http://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
     
@@ -92,6 +110,7 @@ class App extends Component {
     this._renderForceGraph = this._renderForceGraph.bind (this);
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
+    this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
@@ -105,10 +124,13 @@ class App extends Component {
     this._handleShowModal = this._handleShowModal.bind (this);
     this._handleCloseModal = this._handleCloseModal.bind (this);    
     this._handleUpdateSettings = this._handleUpdateSettings.bind (this);
+    this._toggleCheckbox = this._toggleCheckbox.bind (this);
+    this._renderCheckboxes = this._renderCheckboxes.bind (this);
     this._hydrateState = this._hydrateState.bind (this);
 
     this._analyzeAnswer = this._analyzeAnswer.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
+    this._clearCache = this._clearCache.bind (this);
 
     // Component rendering.
     this.render = this.render.bind(this);
@@ -129,14 +151,17 @@ class App extends Component {
       modelRelations : [],
       
       // The graph; populated when a query's executed.
+      loading: false,
       message : null,
       graph : {
         nodes : [],
         links : []
       },
+      // Filters.
       linkWeightRange : [0, 100],
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
+      dataSources : [],
       
       // Manage node selection and navigation.
       selectMode: true,
@@ -179,7 +204,8 @@ class App extends Component {
     this._renderChain = new Chain ([
       new RenderInit (),
       new LinkFilter (),
-      new NodeFilter ()
+      new NodeFilter (),
+      new SourceDatabaseFilter ()
     ]);
   }
   /**
@@ -226,6 +252,14 @@ class App extends Component {
       }
     }
     return result;
+  }
+  /**
+   * Clear the cache.
+   *
+   * @private
+   */
+  _clearCache () {
+    this._cache.clear ();
   }
   /**
    * Callback for the query editor to set the value of the code.
@@ -333,7 +367,8 @@ class App extends Component {
   _executeQuery () {
     console.log ("--query: ", this.state.code);
     // First check if it's in the cache.
-    var cachePromise = this._cache.read (this.state.code);
+    //var cachePromise = this._cache.read (this.state.code);
+    var cachePromise = this.state.useCache ? this._cache.read (this.state.code) : Promise.resolve ([]);
     cachePromise.then (
       function success (result) {
         if (result.length > 0) {
@@ -342,6 +377,9 @@ class App extends Component {
           this._configureMessage (result[0].data)
         } else {
           // We didn't find it in the cache. Run the query.
+          this.setState ({
+            loading : true
+          });
           fetch(this.tranqlURL + '/tranql/query', {
             method: "POST",
             headers: {
@@ -363,12 +401,18 @@ class App extends Component {
                 this._translateGraph (result);
                 this._configureMessage (result);
                 this._cache.write (this.state.code, result);
-                //console.log ("new tab: " + result); 
+                //console.log ("new tab: " + result);
+                this.setState ({
+                  loading : false
+                });
               },
               // Note: it's important to handle errors here
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
+                this.setState ({
+                  loading : false
+                });
                 this.setState({
                   error
                 });
@@ -394,12 +438,28 @@ select chemical_substance->gene->disease
   
   _configureMessage (message) {
     if (message && message.knowledge_graph) {
+      // Configure node degree range.
       var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
         return message.knowledge_graph.edges.reduce ((acc, cur) => {
           return cur.target_id === node.id ? acc + 1 : acc;
         }, 1);
       }).sort ((a,b) => a - b).reverse();
+      // Configure data sources
+      var dataSources = message.knowledge_graph.edges.flatMap ((edge, index) => {
+        return edge.source_database;
+      }).unique ().flatMap ((source, index) => {
+        var result = [];
+        if (typeof source == "string") {
+          result.push ({ checked : true, label : source });
+        } else if (typeof source == "array") {
+          result = source.map ((s, index) => {           
+            return { checked : true, label : s };
+          });
+        }
+        return result;
+      });
       this.setState({
+        dataSources : dataSources,
         message : message,
         nodeDegreeMax : nodeDegrees[0], //message.graph.nodes.length,
         nodeDegreeRange : [ 0, nodeDegrees[0] ] //message.graph.nodes.length ]
@@ -532,14 +592,12 @@ select chemical_substance->gene->disease
     }
   }
   _handleNodeRightClick (node) {
-    console.log(node);
     this.setState ({
       contextNode : node
     });
   }
   _handleContextMenu (e) {    
     e.preventDefault();
-    console.log(e);
     contextMenu.show({
       id: this._contextMenuId,
       event: e,
@@ -585,9 +643,17 @@ select chemical_substance->gene->disease
    * @private
    */
   _renderForceGraph () {
-    return this.state.visMode === '3D' ?
-      this._renderForceGraph3D () :
-      this._renderForceGraph2D ()
+    var result = null;
+    if (this.state.visMode === '3D') {
+      result = this._renderForceGraph3D ();
+    } else if (this.state.visMode === '2D') {
+      result = this._renderForceGraph2D ();
+    } else if (this.state.visMode === 'VR') {
+      result = this._renderForceGraphVR ();
+    } else {
+      throw "Unrecognized rendering mode: " + this.state.visMode;
+    }
+    return result;
   }
   /**
    * Render in 3D
@@ -633,6 +699,29 @@ select chemical_substance->gene->disease
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
   }
+
+  /**
+   * Render in VR
+   *
+   * @private
+   */
+  _renderForceGraphVR () {
+      return <ForceGraphVR id="forceGraphVR"
+                           ref={el => { this.fg = el; }}
+                           graphData={this.state.graph}
+                           width={window.innerWidth}
+                           height={window.innerHeight * (85 / 100)}
+                           nodeAutoColorBy="type"
+                           linkAutoColorBy="type"
+                           d3AlphaDecay={0.2}
+                           strokeWidth={2}
+                           linkWidth={2}
+                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           onLinkClick={this._handleLinkClick}
+                           onNodeRightClick={this._handleNodeRightClick}
+                           onNodeClick={this._handleNodeClick} />
+  }
   /**
    * Show the modal settings dialog.
    *
@@ -658,6 +747,7 @@ select chemical_substance->gene->disease
    */
   _handleUpdateSettings (e) {
     var targetName = e.currentTarget.name;
+    console.log ("--update settings: " + targetName);
     if (targetName === 'useCache') {
       // Specifies if the cache should be engaged or not.
       var useCache = e.currentTarget.checked;
@@ -670,6 +760,29 @@ select chemical_substance->gene->disease
       localStorage.setItem (targetName, JSON.stringify(e.currentTarget.value));
     }
   }
+  _toggleCheckbox(index) {
+    const checkboxes = this.state.dataSources;    
+    checkboxes[index].checked = !checkboxes[index].checked;
+    this.setState({
+      checkboxes : checkboxes
+    });
+    this._translateGraph (this.state.message);
+  }
+  _renderCheckboxes() {
+    const checkboxes = this.state.dataSources;
+    return checkboxes.map((checkbox, index) =>
+            <div key={index}>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={checkbox.checked}
+                        onChange={this._toggleCheckbox.bind(this, index)}
+                    />
+                    {checkbox.label}
+                </label>
+            </div>
+        );
+  }
   /**
    * Respond to changing range of link weights.
    *
@@ -678,7 +791,6 @@ select chemical_substance->gene->disease
    */
   _onLinkWeightRangeChange (value) {
     this.setState({ linkWeightRange : value});
-    console.log (value);
     localStorage.setItem ("linkWeightRange", JSON.stringify (value));
     this._translateGraph (this.state.message);
   }
@@ -707,34 +819,52 @@ select chemical_substance->gene->disease
           </Modal.Header>
           <Modal.Body>
             <b>Visualization Mode</b> <br/>
-        
-            <input type="radio" name="visMode" 
+         
+            <input type="radio" name="visMode"
                    value="3D"
                    checked={this.state.visMode === "3D"} 
-                   onChange={this._handleUpdateSettings} />3D  <br/>
-        
+                   onChange={this._handleUpdateSettings} />3D &nbsp;
             <input type="radio" name="visMode" 
                    value="2D"
                    checked={this.state.visMode === "2D"} 
-                   onChange={this._handleUpdateSettings} />2D <br/><br/>
+                   onChange={this._handleUpdateSettings} />2D &nbsp;
+            <input type="radio" name="visMode" 
+                   value="VR"
+                   checked={this.state.visMode === "VR"} 
+                   onChange={this._handleUpdateSettings} />VR
+            <br/>
+            <div className={"divider"}/>
+            <br/>
         
             <b>Use Cache</b> <br/>
             <input type="checkbox" name="useCache"
                    checked={this.state.useCache}
-                   onChange={this._handleUpdateSettings} /> Cache responses to queries. <br/><br/>
-        
+                   onChange={this._handleUpdateSettings} /> Use cached responses.
+            <Button id="clearCache"
+                    outline className="App-control"
+                    color="primary" onClick={this._clearCache}>
+              Clear the cache
+            </Button>
+            <br/>
+            <br/>
+            <div className={"divider"}/>
+            <br/>
             <b>Link Weight Range</b> Min [{this.state.linkWeightRange[0] / 100} Max: [{this.state.linkWeightRange[1] / 100}]<br/>
             Include only links with a weight in this range.
             <Range allowCross={false} defaultValue={this.state.linkWeightRange} onChange={this._onLinkWeightRangeChange} />
 
-            <b>Node Degree Range</b> Min: [{this.state.nodeDegreeRange[0]}] Max: [{this.state.nodeDegreeRange[1]}] <br/>
-            Include only nodes with an in-degree in this range.
-            Values will be reset each time a query is run since it is graph dependent.
+            <b>Node Connectivity</b> Min: [{this.state.nodeDegreeRange[0]}] Max: [{this.state.nodeDegreeRange[1]}] (reset on load)<br/>
+            Include only nodes with a number of connections in this range.
             <Range allowCross={false}
                    defaultValue={this.state.nodeDegreeRange}
                    onChange={this._onNodeDegreeRangeChange}
                    max={this.state.nodeDegreeMax}/>
-
+            <br/>
+            <div className={"divider"}/>
+            <br/>
+            <b>Sources</b> Filter graph edges by source database. Deselecting a database will delete all associations from that source.
+            {this._renderCheckboxes()}
+                                          
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this._handleCloseModal}>
@@ -759,8 +889,15 @@ select chemical_substance->gene->disease
     return (
       <div className="App" id="AppElement">
         <header className="App-header" > 
-          <p>
+          <div>
             TranQL {this._renderModal () }
+            <GridLoader
+              css={spinnerStyleOverride}
+              id={"spinner"}
+              sizeUnit={"px"}
+              size={6}
+              color={'#2cbc12'}
+              loading={this.state.loading} />
             <Button id="navModeButton"
                     outline className="App-control"
                     color="primary" onClick={this._setNavMode}>
@@ -772,7 +909,7 @@ select chemical_substance->gene->disease
               Run
             </Button>
             <IoIosSettings id="settings" className="App-control" onClick={this._handleShowModal} />
-          </p>
+          </div>
         </header>
         <div>
       	  <CodeMirror ref={this._codemirror}

@@ -96,8 +96,50 @@ class NodeFilter extends Actor {
   }
 }
 
+class SourceDatabaseFilter extends Actor {
+  handle (message, context) {
+    // Filter edges by source database:
+    var dataSources = context.dataSources;
+    var node_ref = [];
+    message.graph = {
+      links: message.graph.links.reduce (function (result, link) {
+        var source_db = link.origin.source_database;
+        if (typeof source_db === "string") {
+          source_db = [ source_db ];
+          link.origin.source_database = source_db;
+        }
+        var keep_it = true;
+        for (var c = 0; c < dataSources.length; c++) {
+          if (source_db.includes (dataSources[c].label)) {
+            if (! dataSources[c].checked) {
+              keep_it = false;
+              break;
+            }
+          }
+        }
+        if (keep_it) {
+          result.push (link);
+          if (! node_ref.includes (link.source)) {
+            node_ref.push (link.source);
+          }
+          if (! node_ref.includes (link.target)) {
+            node_ref.push (link.target);
+          }
+        }
+        return result;
+      }, []),
+      nodes: message.graph.nodes.reduce (function (result, node) {
+        if (node_ref.includes (node.id)) {
+          result.push (node);
+        }
+        return result;
+      }, [])
+    }
+  }
+}
 export {
   RenderInit,
   LinkFilter,
   NodeFilter,
+  SourceDatabaseFilter,
 }

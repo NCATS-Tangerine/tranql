@@ -4,6 +4,10 @@
      height : 100%;
      width : 100%;
  }
+.divider {
+     width: 100%;
+     border: 1px solid lightgray;
+}
 #splitpane {
     position: relative;
     height : 80%;
@@ -70,6 +74,14 @@
     margin-left : 5px;
     margin-right : 5px;
               */ }
+#spinner {
+    position : absolute;
+    right : 200px;
+    top : 20px;
+}
+#clearCache {
+    float: right;
+}
 #navModeButton {
     position: absolute;
     right: 105px;
