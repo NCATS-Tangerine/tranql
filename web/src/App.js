@@ -74,7 +74,7 @@ const spinnerStyleOverride = css`
     margin: 4 auto;
     border-color: red;
     position: absolute;
-    right: 186px;
+    right: 207px;
     top: 9px;
 `;
 
