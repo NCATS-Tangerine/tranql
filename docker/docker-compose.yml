@@ -1,0 +1,19 @@
+version: "3"
+services:
+  backplane:
+    image: greentranslator/tranql-base
+    entrypoint: /usr/local/bin/gunicorn --workers=2 --bind=0.0.0.0:$BACKPLANE_PORT --name=backplane --timeout=600 tranql.backplane.server:app 
+    ports:
+      - "${BACKPLANE_PORT}:${BACKPLANE_PORT}"
+  tranql:
+    image: greentranslator/tranql-app
+    environment:
+      - BACKPLANE=http://backplane:8099
+      - APP_PORT
+    entrypoint: /usr/local/bin/gunicorn --workers=2 --bind=0.0.0.0:$APP_PORT --name=tranql --timeout=600 tranql.api:app 
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+networks:
+  default:
+    external:
+      name: ${COMPOSE_PROJECT_NAME}_default

@@ -327,7 +327,7 @@ class GammaQuery(GammaResource):
         """ This is just a pass-through to simplify workflow syntax. """
         
         self.validate (request)
-        print (json.dumps(request.json, indent=2))
+        #print (json.dumps(request.json, indent=2))
         response = requests.post (self.quick_url, json=request.json)
         if response.status_code >= 300:
             print(response)
