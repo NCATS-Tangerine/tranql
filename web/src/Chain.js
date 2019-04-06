@@ -9,8 +9,10 @@ class Chain {
     this._chain.push (actor);
   }
   handle (message, context) {
-    for (var c = 0; c < this._chain.length; c++) {
-      this._chain[c].handle (message, context);
+    if (message) {
+      for (var c = 0; c < this._chain.length; c++) {
+        this._chain[c].handle (message, context);
+      }
     }
     return message;
   }  

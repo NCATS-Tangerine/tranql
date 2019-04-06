@@ -119,7 +119,7 @@ class TranQLQuery(StandardAPIResource):
         print (f"----------> query: {query}")
         context = tranql.execute (query, cache=True)
         result = context.mem.get ('result', {})
-        print (result)
+        #print (result)
         return self.normalize_message (result)
     
 class ICEESClusterQuery(StandardAPIResource):
@@ -173,7 +173,7 @@ class ICEESClusterQuery(StandardAPIResource):
             cohort_id=cohort_id)
         request.json['knowledge_graph'] = icees.parse_1_x_N (correlation)
         self.gen_cluster_answers (request.json)
-        print (json.dumps(request.json, indent=2))
+        #print (json.dumps(request.json, indent=2))
         return self.normalize_message (request.json)
 
     def gen_cluster_answers (self, message):
@@ -191,7 +191,7 @@ class ICEESClusterQuery(StandardAPIResource):
             """ Type must match icees response. 
             Change this when icees returns drug_exposure. """
             if node['type'] == 'chemical_substance': #'drug_exposure':
-                print (f"{json.dumps(question_nodes, indent=2)}")
+                #print (f"{json.dumps(question_nodes, indent=2)}")
                 node_bindings = {
                     question_nodes[1]['id'] : node['id']
                 }
@@ -333,7 +333,7 @@ class GammaQuery(GammaResource):
             print(response)
             print(response.text)
             raise Exception("Bad Gamma quick response.")
-        print (json.dumps(response.json (), indent=2))
+        #print (json.dumps(response.json (), indent=2))
         return self.normalize_message (response.json ())
 
 class RTXQuery(StandardAPIResource):
