@@ -91,7 +91,7 @@ class App extends Component {
     /* Create state elements and initialize configuration. */
     super(props);
     this.tranqlURL = window.location.origin; 
-    this.tranqlURL = "http://localhost:8001";
+    //this.tranqlURL = "http://localhost:8001";
     this.robokop_url = "http://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
     
