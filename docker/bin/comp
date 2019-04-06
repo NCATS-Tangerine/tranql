@@ -1,0 +1,44 @@
+#!/bin/bash
+
+build () {
+    local mod=$1
+    if [ -z "$mod" ]; then
+        echo module name required
+    fi
+    docker build --no-cache $mod -t greentranslator/$mod
+}
+push () {
+    local mod=$1
+    if [ -z "$mod" ]; then
+        echo module name required
+    fi
+    docker push greentranslator/$mod
+}
+clean () {
+    images () {
+        for i in $(sudo docker images | awk '{ print $3 }' | grep -vi image); do echo $i; sudo docker rmi -f $i; done
+    }
+    $*
+}
+all () {
+    build tranql-base
+    push tranql-base
+    build tranql-app
+    push tranql-app
+}
+kill () {
+    local mod=$1
+    if [ -z "$mod" ]; then
+        echo module name required
+    fi
+    docker kill -s 9 $mod
+}
+shell () {
+        local mod=$1
+    if [ -z "$mod" ]; then
+        echo module name required
+    fi
+    docker exec -it $mod bash
+}
+
+$*
