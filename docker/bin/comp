@@ -16,7 +16,12 @@ push () {
 }
 clean () {
     images () {
-        for i in $(sudo docker images | awk '{ print $3 }' | grep -vi image); do echo $i; sudo docker rmi -f $i; done
+        pat=$1
+        if [ -z "$pat" ]; then
+            pat=tranql
+        fi
+        echo $pat
+        for i in $(sudo docker images | grep $pat | awk '{ print $3 }' | grep -vi image ); do echo $i; sudo docker rmi -f $i; done
     }
     $*
 }

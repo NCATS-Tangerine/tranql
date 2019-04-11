@@ -15,18 +15,18 @@ class Cache extends Component {
     });
     this.write = this.write.bind (this);
   }
-  async write (key, data) {
+  async write (data) {//key, data) {
     // Write cache.
-    return await this.db.cache.put ({
-      key  : key,
-      data : data
-    });
+    return await this.db.cache.put (data);
   }
   async read (key) {
     return await this.db.cache 
     .where('key')
     .equals (key)
     .toArray();
+  }
+  async get (id, callback) {
+    return await this.db.cache.get (id, callback);
   }
   async clear () {
     return await this.db.cache.clear ();

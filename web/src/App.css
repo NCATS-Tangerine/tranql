@@ -3,6 +3,7 @@
      position : absolute;
      height : 100%;
      width : 100%;
+     background: black;
  }
 .divider {
      width: 100%;
@@ -122,12 +123,12 @@
 #settings {
     position: absolute;
     right : 3px;
-    top : 1px;
+    top : 11px;
 }
 #answerViewer {
     position: absolute;
     right : 3px;
-    top: 22px;
+    top: 40px;
 }
 .App-link {
   color: #61dafb;

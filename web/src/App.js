@@ -62,7 +62,7 @@ class App extends Component {
     /* Create state elements and initialize configuration. */
     super(props);
     this.tranqlURL = window.location.origin; 
-    //this.tranqlURL = "http://localhost:8001";
+    //this.tranqlURL = "http://localhost:8001"; // dev only
     this.robokop_url = "http://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
     
@@ -101,6 +101,7 @@ class App extends Component {
 
     this._handleShowAnswerViewer = this._handleShowAnswerViewer.bind (this);
     this._analyzeAnswer = this._analyzeAnswer.bind (this);
+    this._cacheWrite = this._cacheWrite.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
     this._clearCache = this._clearCache.bind (this);
     
@@ -125,7 +126,9 @@ class App extends Component {
       
       // The graph; populated when a query's executed.
       loading: false,
+      record : null,
       message : null,
+      messageRecord : null,
       graph : {
         nodes : [],
         links : []
@@ -168,7 +171,16 @@ class App extends Component {
       answerUrl : null
       //showAnswerViewer : true
     };
-
+    this._cache.read (this.state.code).
+      then ((result) => {
+        console.log ("-----------> ",result);
+        if (result.length > 0) {
+          this.setState ({
+            record : result[0]
+          });
+        }
+      });
+    
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
@@ -208,6 +220,7 @@ class App extends Component {
         console.log (" set " + this.state[key]);
       }
     }
+    this._updateCode (this.state.code);
   }
   /**
    * Read an object from the cache.
@@ -304,11 +317,16 @@ class App extends Component {
    */
   _analyzeAnswer (message) {
     // If we've already created the answer, use that.
-    if (message.hasOwnProperty ("viewUrl")) {
+ 
+    if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
+      var url = this.state.record.data.viewURL;
       this.setState ({
-        answerUrl : message.viewUrl
+        answerUrl : url
       });
-      this._answerViewer.current.handleShow (message.viewUrl);
+      console.log ('--cached-view-url: ' + url);
+      //this._answerViewer.current.handleShow (message.viewURL);
+      var win = window.open (url, 'answerViewer');
+      win.focus ();
       return;
     }
     // Get it.
@@ -324,15 +342,16 @@ class App extends Component {
         (result) => {
           /* Convert the knowledge graph to a renderable form. */
           result = result.replace(/"/g, '');
-          var url = "http://robokop.renci.org/simple/view/" + result;
+          var url = this.robokop_url + "/simple/view/" + result;
           this.setState ({
             answerUrl : url
           });
-          this._answerViewer.current.handleShow (url);
-
-          this._answerViewer.current.handleShow ();
+          console.log ('--new ' + url);
           message.viewURL = url;
-          //this._cache.write (this.state.code, message);
+          this._cacheWrite (message);
+          //this._answerViewer.current.handleShow (url);
+          var win = window.open (message.viewURL, 'answerViewer');
+          win.focus ();
         },
         // Note: it's important to handle errors here
         // instead of a catch() block so that we don't swallow
@@ -355,7 +374,7 @@ class App extends Component {
    */
   _executeQuery () {
     console.log ("--query: ", this.state.code);
-    localStorage.setItem ("code", JSON.stringify (this.state.code));
+    //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
     var cachePromise = this.state.useCache ? this._cache.read (this.state.code) : Promise.resolve ([]);
@@ -382,28 +401,30 @@ class App extends Component {
           }).then(res => res.json())
             .then(
               (result) => {
-                /* Convert the knowledge graph to a renderable form. */
-                if (result.answers) {
-                  // answers is not kgs 0.9 compliant. ... longer story.
-                  delete result.answers;
+                if (result.message) {
+                  console.log ("--error: " + result.message);
+                  this.setState ({
+                    loading : false,
+                    error : result.message
+                  });
+                } else {
+                  /* Convert the knowledge graph to a renderable form. */
+                  if (result.answers) {
+                    // answers is not kgs 0.9 compliant. ... longer story.
+                    delete result.answers;
+                  }
+                  this._translateGraph (result);
+                  this._configureMessage (result);
+                  this._cacheWrite (result);
                 }
-                this._translateGraph (result);
-                this._configureMessage (result);
-                this._cache.write (this.state.code, result);
-                //console.log ("new tab: " + result);
-                this.setState ({
-                  loading : false
-                });
               },
               // Note: it's important to handle errors here
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
                 this.setState ({
-                  loading : false
-                });
-                this.setState({
-                  error
+                  loading : false,
+                  error : error
                 });
               }
             );
@@ -413,7 +434,32 @@ class App extends Component {
         console.log ("-- error", result);
       });
   }
-
+  _cacheWrite (message) {
+    //this._cache.write (this.state.code, result);
+    var obj = {
+      'key' : this.state.code,
+      'data' : message
+    };
+    if (this.state.record) {
+      obj.id = this.state.record.id;
+    }
+    console.log (obj);
+    var record = this._cache.
+        write (obj).
+        then ((result) => {
+          this._cache.get (result,
+                           (result) => {
+                             this.setState ({
+                               loading : false,
+                               record : result
+                             })
+                           })
+        }).catch ((error) => {
+          this.setState ({
+            error
+          })
+        });
+  }
   _configureMessage (message) {
     if (message && message.knowledge_graph) {
       // Configure node degree range.
@@ -439,8 +485,8 @@ class App extends Component {
       this.setState({
         dataSources : dataSources,
         message : message,
-        nodeDegreeMax : nodeDegrees[0], //message.graph.nodes.length,
-        nodeDegreeRange : [ 0, nodeDegrees[0] ] //message.graph.nodes.length ]
+        nodeDegreeMax : nodeDegrees[0],
+        nodeDegreeRange : [ 0, nodeDegrees[0] ]
       });
     }
   }
@@ -451,6 +497,7 @@ class App extends Component {
    * @private
    */
   _translateGraph (message) {
+    var message = message ? message : this.state.message;
     if (message) {
       this._renderChain.handle (message, this.state);
       this.setState({
@@ -646,7 +693,7 @@ class App extends Component {
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
                            width={window.innerWidth}
-                           height={window.innerHeight * (85 / 100)}
+                           height={window.innerHeight * (84 / 100)} 
                            nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
                            linkAutoColorBy={this.state.colorGraph ? "type" : ""}
                            d3AlphaDecay={0.2}
@@ -714,10 +761,11 @@ class App extends Component {
   _handleShowAnswerViewer () {
     console.log (this._answerViewer);
     if (this.state.message) {
+      var message = this.state.message;
       this._analyzeAnswer({
-        "question_graph"  : this.state.message.question_graph,
-        "knowledge_graph" : this.state.message.knowledge_graph,
-        "answers"         : this.state.message.knowledge_map
+        "question_graph"  : message.question_graph,
+        "knowledge_graph" : message.knowledge_graph,
+        "answers"         : message.knowledge_map
       });
     }
   }
@@ -753,7 +801,7 @@ class App extends Component {
       var colorGraph = e.currentTarget.checked;
       this.setState ({ colorGraph : colorGraph });
       localStorage.setItem (targetName, JSON.stringify (colorGraph));
-      this._translateGraph (this.state.message);
+      this._translateGraph ();
     }
   }
   _toggleCheckbox(index) {
@@ -762,7 +810,7 @@ class App extends Component {
     this.setState({
       checkboxes : checkboxes
     });
-    this._translateGraph (this.state.message);
+    this._translateGraph ();
   }
   _renderCheckboxes() {
     const checkboxes = this.state.dataSources;
@@ -788,7 +836,7 @@ class App extends Component {
   _onLinkWeightRangeChange (value) {
     this.setState({ linkWeightRange : value});
     localStorage.setItem ("linkWeightRange", JSON.stringify (value));
-    this._translateGraph (this.state.message);
+    this._translateGraph ();
   }
   /**
    * Respond to changing the node degree range.
@@ -798,7 +846,7 @@ class App extends Component {
    */
   _onNodeDegreeRangeChange (value) {
     this.setState({ nodeDegreeRange : value});
-    this._translateGraph (this.state.message);
+    this._translateGraph ();
     localStorage.setItem ("minNodeDegree", JSON.stringify (value));
   }
   /**
