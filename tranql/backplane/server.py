@@ -323,18 +323,18 @@ class GammaQuery(GammaResource):
                         schema:
                             type: string
         """
-
-        """ This is just a pass-through to simplify workflow syntax. """
-        
         self.validate (request)
-        #print (json.dumps(request.json, indent=2))
+        result = {}
         response = requests.post (self.quick_url, json=request.json)
         if response.status_code >= 300:
-            print(response)
-            print(response.text)
-            raise Exception("Bad Gamma quick response.")
-        #print (json.dumps(response.json (), indent=2))
-        return self.normalize_message (response.json ())
+            result = {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad Gamma quick response. url: {self.robokop_url} request: {request.json} response: {response.text}."
+            }
+        else:
+            result = self.normalize_message (response.json ())
+        return result
 
 class RTXQuery(StandardAPIResource):
     """ Generic graph query to RTX. """

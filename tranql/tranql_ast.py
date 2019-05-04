@@ -17,9 +17,13 @@ from tranql.exception import UndefinedVariableError
 from tranql.exception import UnableToGenerateQuestionError
 from tranql.exception import MalformedResponseError
 from tranql.exception import IllegalConceptIdentifierError
+from tranql.exception import UnknownServiceError
 
 logger = logging.getLogger (__name__)
 
+def truncate (s, max_length=75):
+    return (s[:max_length] + '..') if len(s) > max_length else s
+    
 class Bionames:
     """ Resolve natural language names to ontology identifiers. """
     def __init__(self):
@@ -71,11 +75,12 @@ class Statement:
             ],
             "options" : options
         }
-    
+
     def request (self, url, message):
         """ Make a web request to a service (url) posting a message. """
-        logger.debug (f"request> {json.dumps(message, indent=2)}")
+        logger.debug (f"request({url})> {json.dumps(message, indent=2)}")
         response = {}
+        unknown_service = False
         try:
             http_response = requests.post (
                 url = url,
@@ -86,14 +91,26 @@ class Statement:
             """ Check status and handle response. """
             if http_response.status_code == 200 or http_response.status_code == 202:
                 response = http_response.json ()
-                #logging.debug (f"{json.dumps(response, indent=2)}")
+                #logger.error (f" response: {json.dumps(response, indent=2)}")
+                status = response.get('status', None)
+                if status == "error":
+                    raise ServiceInvocationError(
+                        message=f"An error occurred invoking service: {url}.",
+                        details=truncate(response['message'], max_length=5000))
+                logging.debug (f"{json.dumps(response, indent=2)}")
+            elif http_response.status_code == 404:
+                unknown_service = True
             else:
                 logger.error (f"error {http_response.status_code} processing request: {message}")
                 logger.error (http_response.text)
-        except:
+        except ServiceInvocationError as e:
+            raise e
+        except Exception as e:
             logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
             #traceback.print_exc ()
             logger.error (traceback.format_exc ())
+        if unknown_service:
+            raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?") 
         return response
     
 class SetStatement(Statement):
@@ -422,9 +439,12 @@ class SelectStatement(Statement):
                 response = self.request (service, q)
                 #logger.debug (f"response: {json.dumps(response, indent=2)}")
                 responses.append (response)
-                
+                 
             if len(responses) == 0:
-                raise ServiceInvocationError (f"No responses received from {service}")
+                raise ServiceInvocationError (
+                    f"No valid results from service {self.service} executing " +
+                    f"query {self.query}. Unable to continue query. Exiting.")
+                #raise ServiceInvocationError (f"No responses received from {service}")
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """

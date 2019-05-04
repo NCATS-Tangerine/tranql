@@ -1,6 +1,7 @@
 class TranQLException(Exception):
-    def __init__(self, message):
+    def __init__(self, message, details=""):
         super().__init__(message)
+        self.details = details
 
 class UndefinedVariableError(TranQLException):
     def __init__(self, message):
@@ -11,8 +12,8 @@ class UnableToGenerateQuestionError(TranQLException):
         super().__init__(message)
         
 class ServiceInvocationError(TranQLException):
-    def __init__(self, message):
-        super().__init__(message)
+    def __init__(self, message, details=""):
+        super().__init__(message, details)
 
 class MalformedResponseError(TranQLException):
     def __init__(self, message):
@@ -21,3 +22,8 @@ class MalformedResponseError(TranQLException):
 class IllegalConceptIdentifierError(TranQLException):
     def __init__(self, message):
         super().__init__(message)
+
+class UnknownServiceError(TranQLException):
+    def __init__(self, message):
+        super().__init__(message)
+        

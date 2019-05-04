@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import traceback
 import yaml
 import jsonschema
 import requests
@@ -177,13 +178,21 @@ class TranQLQuery(StandardAPIResource):
 
         """
         #self.validate (request)
-        tranql = TranQL ()
-        logging.debug (request.json)
-        query = request.json['query'] if 'query' in request.json else ''
-        logging.debug (f"----------> query: {query}")
-        context = tranql.execute (query) #, cache=True)
-        result = context.mem.get ('result', {})
-        logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
+        result = {}
+        try:
+            tranql = TranQL ()
+            logging.debug (request.json)
+            query = request.json['query'] if 'query' in request.json else ''
+            logging.debug (f"----------> query: {query}")
+            context = tranql.execute (query) #, cache=True)
+            result = context.mem.get ('result', {})
+            logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
+        except Exception as e:
+            result = {
+                "status" : "error",
+                "message" : str(e),
+                "details" : e.details
+            }
         return result
 
 class ModelConceptsQuery(StandardAPIResource):

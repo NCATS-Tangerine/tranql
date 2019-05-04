@@ -17,6 +17,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
+import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
 import { RenderInit, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
@@ -100,6 +101,7 @@ class App extends Component {
     this._hydrateState = this._hydrateState.bind (this);
 
     this._handleShowAnswerViewer = this._handleShowAnswerViewer.bind (this);
+    this._handleMessageDialog = this._handleMessageDialog.bind (this);
     this._analyzeAnswer = this._analyzeAnswer.bind (this);
     this._cacheWrite = this._cacheWrite.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
@@ -112,6 +114,7 @@ class App extends Component {
     this._codemirror = React.createRef ();
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
+    this._messageDialog = React.createRef ();
     
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
@@ -168,7 +171,6 @@ class App extends Component {
 
       // Settings modal
       showSettingsModal : false,
-      answerUrl : null
       //showAnswerViewer : true
     };
     this._cache.read (this.state.code).
@@ -320,13 +322,10 @@ class App extends Component {
  
     if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
       var url = this.state.record.data.viewURL;
-      this.setState ({
-        answerUrl : url
-      });
       console.log ('--cached-view-url: ' + url);
-      //this._answerViewer.current.handleShow (message.viewURL);
-      var win = window.open (url, 'answerViewer');
-      win.focus ();
+      this._answerViewer.current.handleShow (url);
+      //var win = window.open (url, 'answerViewer');
+      //win.focus ();
       return;
     }
     // Get it.
@@ -343,15 +342,12 @@ class App extends Component {
           /* Convert the knowledge graph to a renderable form. */
           result = result.replace(/"/g, '');
           var url = this.robokop_url + "/simple/view/" + result;
-          this.setState ({
-            answerUrl : url
-          });
           console.log ('--new ' + url);
           message.viewURL = url;
           this._cacheWrite (message);
-          //this._answerViewer.current.handleShow (url);
-          var win = window.open (message.viewURL, 'answerViewer');
-          win.focus ();
+          this._answerViewer.current.handleShow (url);
+          //var win = window.open (message.viewURL, 'answerViewer');
+          //win.focus ();
         },
         // Note: it's important to handle errors here
         // instead of a catch() block so that we don't swallow
@@ -402,6 +398,7 @@ class App extends Component {
             .then(
               (result) => {
                 if (result.message) {
+                  this._handleMessageDialog ("Error", result.message, result.details);
                   console.log ("--error: " + result.message);
                   this.setState ({
                     loading : false,
@@ -422,6 +419,7 @@ class App extends Component {
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
+                this._handleMessageDialog ("Error", error.message, error.details);
                 this.setState ({
                   loading : false,
                   error : error
@@ -431,7 +429,8 @@ class App extends Component {
         }
       }.bind(this),
       function error (result) {
-        console.log ("-- error", result);
+        this._handleMessageDialog ("Error", result.message, result.details);
+        //console.log ("-- error", result);
       });
   }
   _cacheWrite (message) {
@@ -769,6 +768,9 @@ class App extends Component {
       });
     }
   }
+  _handleMessageDialog (title, message, details) {
+    this._messageDialog.current.handleShow (title, message, details);
+  }
   /**
    * Take appropriate actions on the closing of the modal settings dialog.
    *
@@ -952,6 +954,7 @@ class App extends Component {
           <div>
             TranQL {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
+            <Message show={false} ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}

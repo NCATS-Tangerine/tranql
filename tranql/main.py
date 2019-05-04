@@ -162,7 +162,7 @@ class TranQL:
         """ Initialize the interpreter. """
         self.parser = TranQLParser ()
         self.context = Context ()
-        config_path = os.path.join (os.path.dirname (__file__), "conf.yml")
+        config_path = "conf.yml"
         self.config = Config (config_path)
 
         t = os.path.join (os.path.dirname (__file__), "conf.test")
