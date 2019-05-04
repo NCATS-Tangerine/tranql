@@ -62,7 +62,13 @@ class App extends Component {
   constructor(props) {
     /* Create state elements and initialize configuration. */
     super(props);
-    this.tranqlURL = window.location.origin; 
+    if(process.env.NODE_ENV === 'development') {
+      this.tranqlURL = "http://localhost:8001";
+    }    
+    if(process.env.NODE_ENV === 'production') {
+      this.tranqlURL = window.location.origin;
+    }
+    //this.tranqlURL = window.location.origin; 
     //this.tranqlURL = "http://localhost:8001"; // dev only
     this.robokop_url = "http://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
