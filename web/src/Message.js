@@ -19,12 +19,14 @@ class Message extends Component {
     this.handleShow = this.handleShow.bind (this);
   }
   handleShow (title, message, details) {
-    this.setState({
-      show: true,
-      title : title,
-      message : message.replace ("\n", "<br/>"),
-      details : details.replace ("\n", "<br/>"),
-    });
+    if (message && details) {
+      this.setState({
+        show: true,
+        title : title,
+        message : message.replace ("\n", "<br/>"),
+        details : details.replace ("\n", "<br/>"),
+      });
+    }
   }
   render() {
     return (

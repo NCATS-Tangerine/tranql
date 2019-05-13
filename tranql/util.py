@@ -174,8 +174,14 @@ class Context:
         generate_gene_vocab (self)
         #generate_disease_vocab (self)
         DiseaseVocab (self)
-        
+
+    '''
     def resolve_arg(self, val):
+        return self.mem.get (val[1:], None) if val.startswith ("$") else val
+    '''
+    def resolve_arg(self, val):
+        if isinstance(val, int):
+            return val
         return self.mem.get (val[1:], None) if val.startswith ("$") else val
     
     def set(self, name, val):

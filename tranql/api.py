@@ -19,6 +19,7 @@ from tranql.main import TranQL
 import networkx as nx
 from tranql.util import JSONKit
 from tranql.concept import BiolinkModelWalker
+from tranql.exception import TranQLException
 #import flask_monitoringdashboard as dashboard
 
 logger = logging.getLogger (__name__)
@@ -187,11 +188,18 @@ class TranQLQuery(StandardAPIResource):
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
-        except Exception as e:
+        except TranQLException as e:
             result = {
                 "status" : "error",
                 "message" : str(e),
                 "details" : e.details
+            }
+        except Exception as e:
+            traceback.print_exc (e)
+            result = {
+                "status" : "error",
+                "message" : str(e),
+                "details" : ''
             }
         return result
 

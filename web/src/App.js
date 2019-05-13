@@ -70,7 +70,7 @@ class App extends Component {
     }
     //this.tranqlURL = window.location.origin; 
     //this.tranqlURL = "http://localhost:8001"; // dev only
-    this.robokop_url = "http://robokop.renci.org";
+    this.robokop_url = "https://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
     
     // Query editor support.
@@ -376,6 +376,14 @@ class App extends Component {
    */
   _executeQuery () {
     console.log ("--query: ", this.state.code);
+    // Clear the visualization so it's obvious that data from the last query is gone
+    // and we're fetching new data for the current query. 
+    this.setState ({
+      graph : {
+        nodes : [],
+        links : []
+      }
+    });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);

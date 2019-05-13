@@ -69,58 +69,36 @@ class StandardAPIResource(Resource):
             abort(Response(str(error), 400))
     def get_opt (self, request, opt):
         return request.get('option', {}).get (opt)
+    def rename_key (self, obj, old, new, default=None):
+        if old in obj:
+            obj[new] = obj.pop (old)
+    def rename_key_list (self, node_list, old, new):
+        for n in node_list:
+            self.rename_key (n, old, new)
     def normalize_message (self, message):
         if 'answers' in message:
             message['knowledge_map'] = message['answers']
+
+        ''' downcast 0.9.1 to 0.9 '''
+        ''' alter once tranql AST speaks 0.9.1 '''
+        self.rename_key (message, old='machine_question', new='question_graph')
+        self.rename_key (message, old='query_options', new='options')
+        if not 'knowledge_graph' in message:
+            message['knowledge_graph'] = message.get('return value',{}).get('knowledge_graph', {})
+        ''' SPEC: for icees, it's machine_question going in and question_graph coming out (but in a return value)? '''
+        ''' return value is only an issue for ICEES '''
+        if not 'knowledge_map' in message:
+            message['knowledge_map'] = message.get('return value',{}).get('answers', {})
+        if not 'question_graph' in message:
+            message['question_graph'] = message.get('return value',{}).get('question_graph', {})
+        self.rename_key_list (message.get('question_graph',{}).get('nodes',[]),
+                              old='node_id',
+                              new='id')
+        self.rename_key_list (message.get('question_graph',{}).get('edges',[]),
+                              old='edge_id',
+                              new='id')
+
         return message
-
-class TranQLQuery(StandardAPIResource):
-    """ TranQL Resource. """
-
-    def __init__(self):
-        super().__init__()
-        
-    def post(self):
-        """
-        query
-        ---
-        tag: validation
-        description: TranQL Query
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            query:
-                                type: string
-        responses:
-            '200':
-                description: Success
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-
-        """
-        #self.validate (request)
-        tranql = TranQL ()
-        print (request.json)
-        query = request.json['query']
-        print (f"----------> query: {query}")
-        context = tranql.execute (query, cache=True)
-        result = context.mem.get ('result', {})
-        #print (result)
-        return self.normalize_message (result)
     
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
@@ -212,7 +190,110 @@ class ICEESClusterQuery(StandardAPIResource):
             
     def get_feature (self):
         return "EstResidentialDensity"
+
+class ICEESClusterQuery2(StandardAPIResource):
+    """ ICEES Resource. """
+        
+    def post(self):
+        """
+        query
+        ---
+        tag: validation
+        description: Query the ICEES clinical reasoner for associations between population clusters and chemicals.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        self.validate (request)
+        #print (f"{json.dumps(request.json, indent=2)}")
+        request.json['options'] = self.compile_options (request.json['options'])
+
+        ''' Give ICEES the spec version it wants.
+        We have multiple versions of the spec live at once.
+        Until these stabilize and converge, we adapt between them in various ways.
+        '''
+        request.json['machine_question'] = request.json.pop('question_graph')
+        request.json['query_options'] = request.json.pop('options')
+        for n in request.json['machine_question']['nodes']:
+            n['node_id'] = n.pop ('id')
+        for e in request.json['machine_question']['edges']:
+            e['edge_id'] = e.pop ('id')
+            e['type'] = 'association'
+        del request.json['knowledge_graph']
+        del request.json['knowledge_maps']
+
+        #print (f"{json.dumps(request.json, indent=2)}")
+        result = {}
+
+        ''' Invoke ICEES '''
+        icees_kg_url = "https://icees.renci.org/2.0.0/knowledge_graph"
+        print (f"{json.dumps(request.json, indent=2)}")
+        response = requests.post (icees_kg_url,
+                                  json=request.json,
+                                  verify=False)
+        
+        with open ('icees.out', 'w') as stream:
+            json.dump (response.json (), stream, indent=2)
+        #print (f"{json.dumps(response.json(), indent=2)}")
+        
+        if response.status_code >= 300:
+            result = {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad Gamma quick response. url: {self.robokop_url} request: {request.json} response: {response.text}."
+            }
+        else:
+            result = self.normalize_message (response.json ())
+
+        with open ('icees.out.norm', 'w') as stream:
+            json.dump (result, stream, indent=2)
+            
+        return result
     
+    def compile_options (self, options):
+        """ Compile input options into icees appropriate format. """
+        result = {}
+        for k in options.keys ():
+            val = options[k]
+            if '.' in k:
+                ''' Make a nested structure. '''
+                levels = k.split ('.')
+                obj = result
+                for index, level in enumerate(levels):
+                    if index < len(levels) - 1:
+                        last = obj
+                        obj = {}
+                        last[level] = obj
+                    else:
+                        obj[level] = {
+                            'operator' : val[0],
+                            'value'    : val[1]
+                        }
+            else:                
+                ''' assign directly. '''
+                result[k] = val[1]
+        return result
+
+                
 class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
     """ ICEES Resource. """
     def __init__(self):
@@ -283,9 +364,7 @@ class PublishToNDEx(StandardAPIResource):
 class GammaResource(StandardAPIResource):
     def __init__(self):
         super().__init__()
-        #self.robokop_url = 'http://robokopdb2.renci.org'
-        self.robokop_url = 'http://robokop.renci.org'
-        #self.robokop_url = 'http://robokop.renci.org'
+        self.robokop_url = 'https://robokop.renci.org' # TODO - make a configuration setting.
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
         self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
     def view_url (self, uid):
@@ -325,12 +404,15 @@ class GammaQuery(GammaResource):
         """
         self.validate (request)
         result = {}
+        del request.json['knowledge_graph']
+        del request.json['knowledge_maps']
+        del request.json['options']
         response = requests.post (self.quick_url, json=request.json)
         if response.status_code >= 300:
             result = {
                 "status" : "error",
                 "code"   : "service_invocation_failure",
-                "message" : f"Bad Gamma quick response. url: {self.robokop_url} request: {request.json} response: {response.text}."
+                "message" : f"Bad Gamma quick response. url: {self.robokop_url} \n request: {json.dumps(request.json, indent=2)} response: \n{response.text}."
             }
         else:
             result = self.normalize_message (response.json ())
@@ -555,7 +637,7 @@ class BiolinkModelWalkerService(StandardAPIResource):
 #
 ###############################################################################################
 
-api.add_resource(TranQLQuery, '/graph/tranql')
+#api.add_resource(TranQLQuery, '/graph/tranql')
 
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
@@ -564,7 +646,7 @@ api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
-api.add_resource(ICEESClusterQuery, '/clinical/cohort/disease_to_chemical_exposure')
+api.add_resource(ICEESClusterQuery2, '/clinical/cohort/disease_to_chemical_exposure')
 api.add_resource(ICEESEdVisitsClusterQuery, '/flow/5/mod_1_4/icees/by_ed_visits')
 
 # Visualization
@@ -586,3 +668,4 @@ if __name__ == "__main__":
         use_reloader=True
     )
 
+#/data/manifest-2019-05-13T19-48-31.870584/by-filepath/COPDGene_B19226_COPDGene_B19226/19000101/Series_004-155402-COPDGene_B19226_EXP_SHARP/1.2.840.113619.2.181.33975605383.6975.1287092644887.988.dcm

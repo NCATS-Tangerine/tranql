@@ -434,9 +434,11 @@ class SelectStatement(Statement):
             service = interpreter.context.resolve_arg (self.service)
             """ Invoke the service and store the response. """
             responses = []
-            for q in questions:
+            for index, q in enumerate(questions):
                 logger.debug (f"executing question {json.dumps(q, indent=2)}")
                 response = self.request (service, q)
+                #if index > 4: # TODO - add a parameter to limit service invocations?
+                #    break
                 #logger.debug (f"response: {json.dumps(response, indent=2)}")
                 responses.append (response)
                  
@@ -471,7 +473,8 @@ class SelectStatement(Statement):
                 next_statement = statements[index+1]
                 name = next_statement.query.order [0]
                 #name = statement.query.order[-1]
-                values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
+                #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
+                values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
                 first_concept.set_nodes (values)
                 if len(values) == 0:
@@ -493,8 +496,14 @@ class SelectStatement(Statement):
         kg = result['knowledge_graph']
         #answers = result['answers']
         answers = result['knowledge_map']
+        if not 'nodes' in kg:
+            logger.error (f"Malformed knowledge graph element: {json.dumps(kg, indent=2)}")
+            logger.error (f"Malformed message element: {json.dumps(result, indent=2)}")
+            kg['nodes'] = []
+            kg['edges'] = []
         node_map = { n['id'] : n for n in kg['nodes'] }
         for response in responses[1:]:
+            logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
             # their ids are equal. Consider merging provenance/properties.
             # Edges, we may keep distinct and whole or merge to some tbd extent.
@@ -503,7 +512,7 @@ class SelectStatement(Statement):
                 kg['edges'] += rkg['edges'] if 'edges' in rkg else []
                 #result['answers'] += response['answers']
                 result['knowledge_map'] += response['knowledge_map']
-                other_nodes = rkg['nodes']
+                other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
                     if not n['id'] in node_map:
                         node_map[n['id']] = n
