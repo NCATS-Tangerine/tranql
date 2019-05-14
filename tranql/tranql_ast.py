@@ -498,14 +498,16 @@ class SelectStatement(Statement):
         kg = result['knowledge_graph']
         #answers = result['answers']
         answers = result['knowledge_map']
+        '''
         if not 'nodes' in kg:
             logger.error (f"Malformed knowledge graph element: {json.dumps(kg, indent=2)}")
             logger.error (f"Malformed message element: {json.dumps(result, indent=2)}")
             kg['nodes'] = []
             kg['edges'] = []
+        '''
         node_map = { n['id'] : n for n in kg['nodes'] }
         for response in responses[1:]:
-            logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
+            #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
             # their ids are equal. Consider merging provenance/properties.
             # Edges, we may keep distinct and whole or merge to some tbd extent.
