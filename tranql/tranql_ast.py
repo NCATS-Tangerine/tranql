@@ -437,8 +437,10 @@ class SelectStatement(Statement):
             for index, q in enumerate(questions):
                 logger.debug (f"executing question {json.dumps(q, indent=2)}")
                 response = self.request (service, q)
-                #if index > 4: # TODO - add a parameter to limit service invocations?
-                #    break
+                # TODO - add a parameter to limit service invocations.
+                # Until we parallelize requests, cap the max number we attempt for performance reasons. 
+                if index > 50:
+                    break
                 #logger.debug (f"response: {json.dumps(response, indent=2)}")
                 responses.append (response)
                  
