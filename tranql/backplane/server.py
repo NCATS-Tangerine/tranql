@@ -667,5 +667,3 @@ if __name__ == "__main__":
         debug=False,
         use_reloader=True
     )
-
-#/data/manifest-2019-05-13T19-48-31.870584/by-filepath/COPDGene_B19226_COPDGene_B19226/19000101/Series_004-155402-COPDGene_B19226_EXP_SHARP/1.2.840.113619.2.181.33975605383.6975.1287092644887.988.dcm
