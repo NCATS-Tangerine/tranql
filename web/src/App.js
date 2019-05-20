@@ -999,7 +999,7 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend id="mainLegend" ref={this._legend}/>
+          <Legend graph={this.state.graph} id="mainLegend" render={this.state.colorGraph} ref={this._legend}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Button } from 'reactstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './Legend.css';
 
 // Types
 const NODE = 'node';
@@ -12,7 +13,7 @@ class TypeButton extends Component {
     super(props);
 
     this.state = {
-      active:true,
+      active:this.props.visible,
       type: this.props.type,
       graphElementType: this.props.graphElementType
     };
@@ -34,19 +35,11 @@ class Legend extends Component {
     super(props, context);
 
     this.state = {
-      types:{
-        nodeTypes: [
-          this.nodeButton('testing'),
-          this.nodeButton('test2')
-        ],
-        linkTypes: [
-          this.linkButton('linktest')
-        ]
-      }
     };
   }
 
   typeButton(type, graphElementType) {
+    // Instantiate TypeButton with given Node/Link type and given GraphElementType (Node/Link)
     return (<TypeButton type={type} graphElementType={graphElementType} />);
   }
 
@@ -59,24 +52,46 @@ class Legend extends Component {
   }
 
   render() {
-    return (
-      <div id={this.props.id} className="Legend">
-        <div className="graphElementTypeContainer">
-          {
-            this.state.types.nodeTypes.map(nodeType => {
-              return <div style={{display:'inline-block'}} key={nodeType.uniqueId}>{nodeType}</div>
-            })
-          }
-        </div>
-        <div className="graphElementTypeContainer">
-          {
-            this.state.types.linkTypes.map(linkType => {
-              return <div style={{display:'inline-block'}} key={linkType.uniqueId}>{linkType}</div>
-            })
-          }
-        </div>
-      </div>
-    );
+    let graph = this.props.graph;
+    console.log(graph);
+    if (this.props.render && graph.nodes.length + graph.links.length != 0) {
+      let nodes = graph.nodes;
+      let links = graph.links;
+      let nodeTypes = new Set();
+      let linkTypes = new Set();
+      nodes.forEach(node => {
+        node.type.forEach(type => {
+          nodeTypes.add(type);
+        });
+      });
+      links.forEach(link => {
+        linkTypes.add(link.type);
+      });
+      return (
+        <>
+          <div id={this.props.id} className="Legend">
+            <div className="graphElementTypeContainer">
+              {
+                //How to generate unique id??
+                Array.from(nodeTypes).map((nodeType,i) => {
+                  return <div style={{display:'inline-block'}} key={i}>{this.nodeButton(nodeType)}</div>
+                })
+              }
+            </div>
+            <div className="graphElementTypeContainer">
+              {
+                Array.from(linkTypes).map((linkType,i) => {
+                  return <div style={{display:'inline-block'}} key={i}>{this.linkButton(linkType)}</div>
+                })
+              }
+            </div>
+          </div>
+        </>
+      );
+    }
+    else {
+      return null;
+    }
   }
 }
 
