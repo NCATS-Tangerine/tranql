@@ -1,0 +1,19 @@
+.Legend {
+  width: 100%;
+  background-color:rgb(230,230,230);
+}
+
+.TypeButton {
+  background-color:green !important;
+}
+
+.graphElementTypeContainer {
+  padding:3px;
+}
+.graphElementTypeContainer:first-child {
+  border-bottom:1px solid rgb(200,200,200);
+}
+
+.graphElementTypeContainer > * {
+  padding:3px;
+}

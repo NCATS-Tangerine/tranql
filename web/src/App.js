@@ -17,6 +17,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
+import Legend from './Legend.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
@@ -36,7 +37,7 @@ var CodeMirror = require('react-codemirror');
 
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
 Array.prototype.unique = function() {
-  return this.filter(function (value, index, self) { 
+  return this.filter(function (value, index, self) {
     return self.indexOf(value) === index;
   });
 };
@@ -50,7 +51,7 @@ const spinnerStyleOverride = css`
     top: 9px;
 `;
 
-/** 
+/**
  * @desc The main TranQL application class.
  * Integrates the query editor, query executor, rendering pipeline, and visualization.
  * @author Steve Cox scox@renci.org
@@ -64,15 +65,15 @@ class App extends Component {
     super(props);
     if(process.env.NODE_ENV === 'development') {
       this.tranqlURL = "http://localhost:8001";
-    }    
+    }
     if(process.env.NODE_ENV === 'production') {
       this.tranqlURL = window.location.origin;
     }
-    //this.tranqlURL = window.location.origin; 
+    //this.tranqlURL = window.location.origin;
     //this.tranqlURL = "http://localhost:8001"; // dev only
     this.robokop_url = "https://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
-    
+
     // Query editor support.
     this._getConfiguration = this._getConfiguration.bind (this);
     this._getModelConcepts = this._getModelConcepts.bind (this);
@@ -100,7 +101,7 @@ class App extends Component {
 
     // Settings management
     this._handleShowModal = this._handleShowModal.bind (this);
-    this._handleCloseModal = this._handleCloseModal.bind (this);    
+    this._handleCloseModal = this._handleCloseModal.bind (this);
     this._handleUpdateSettings = this._handleUpdateSettings.bind (this);
     this._toggleCheckbox = this._toggleCheckbox.bind (this);
     this._renderCheckboxes = this._renderCheckboxes.bind (this);
@@ -112,7 +113,7 @@ class App extends Component {
     this._cacheWrite = this._cacheWrite.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
     this._clearCache = this._clearCache.bind (this);
-    
+
     // Component rendering.
     this.render = this.render.bind(this);
 
@@ -121,7 +122,8 @@ class App extends Component {
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
-    
+    this._legend = React.createRef ();
+
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
 
@@ -132,7 +134,7 @@ class App extends Component {
       // Concept model concepts and relations.
       modelConcepts : [],
       modelRelations : [],
-      
+
       // The graph; populated when a query's executed.
       loading: false,
       record : null,
@@ -147,7 +149,7 @@ class App extends Component {
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
       dataSources : [],
-      
+
       // Manage node selection and navigation.
       selectMode: true,
       selectedNode : {},
@@ -156,7 +158,7 @@ class App extends Component {
       navigateMode: true,
 
       // Set up CodeMirror settings.
-      codeMirrorOptions : {        
+      codeMirrorOptions : {
         lineNumbers: true,
         mode: 'text/x-pgsql', //'text/x-pgsql',
         tabSize: 2,
@@ -188,7 +190,7 @@ class App extends Component {
           });
         }
       });
-    
+
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
@@ -278,11 +280,11 @@ class App extends Component {
   _codeAutoComplete (cm) {
     // https://github.com/JedWatson/react-codemirror/issues/52
     var codeMirror = this._codemirror.current.getCodeMirrorInstance ();
-    
+
     // hint options for specific plugin & general show-hint
     // 'tables' is sql-hint specific
     // 'disableKeywords' is also sql-hint specific, and undocumented but referenced in sql-hint plugin
-    // Other general hint config, like 'completeSingle' and 'completeOnSingleClick' 
+    // Other general hint config, like 'completeSingle' and 'completeOnSingleClick'
     // should be specified here and will be honored
     var tables = {};
     for (var c = 0; c < this.state.modelConcepts.length; c++) {
@@ -295,13 +297,13 @@ class App extends Component {
       completeSingle: false,
       completeOnSingleClick: false
     };
-    
+
     // codeMirror.hint.sql is defined when importing codemirror/addon/hint/sql-hint
     // (this is mentioned in codemirror addon documentation)
     // Reference the hint function imported here when including other hint addons
     // or supply your own
-    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
-    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
+    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
+    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
   }
   /**
    * Set the navigation / selection mode.
@@ -325,7 +327,7 @@ class App extends Component {
    */
   _analyzeAnswer (message) {
     // If we've already created the answer, use that.
- 
+
     if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
       var url = this.state.record.data.viewURL;
       console.log ('--cached-view-url: ' + url);
@@ -377,7 +379,7 @@ class App extends Component {
   _executeQuery () {
     console.log ("--query: ", this.state.code);
     // Clear the visualization so it's obvious that data from the last query is gone
-    // and we're fetching new data for the current query. 
+    // and we're fetching new data for the current query.
     this.setState ({
       graph : {
         nodes : [],
@@ -489,7 +491,7 @@ class App extends Component {
         if (typeof source == "string") {
           result.push ({ checked : true, label : source });
         } else if (typeof source == "array") {
-          result = source.map ((s, index) => {           
+          result = source.map ((s, index) => {
             return { checked : true, label : s };
           });
         }
@@ -636,7 +638,7 @@ class App extends Component {
       contextNode : node
     });
   }
-  _handleContextMenu (e) {    
+  _handleContextMenu (e) {
     e.preventDefault();
     contextMenu.show({
       id: this._contextMenuId,
@@ -706,14 +708,14 @@ class App extends Component {
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
                            width={window.innerWidth}
-                           height={window.innerHeight * (84 / 100)} 
+                           height={window.innerHeight * (84 / 100)}
                            nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
                            linkAutoColorBy={this.state.colorGraph ? "type" : ""}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -735,7 +737,7 @@ class App extends Component {
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -758,7 +760,7 @@ class App extends Component {
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -821,7 +823,7 @@ class App extends Component {
     }
   }
   _toggleCheckbox(index) {
-    const checkboxes = this.state.dataSources;    
+    const checkboxes = this.state.dataSources;
     checkboxes[index].checked = !checkboxes[index].checked;
     this.setState({
       checkboxes : checkboxes
@@ -887,18 +889,18 @@ class App extends Component {
               </TabList>
               <TabPanel>
             <b>Visualization Mode and Graph Colorization</b> <br/>
-         
+
             <input type="radio" name="visMode"
                    value="3D"
-                   checked={this.state.visMode === "3D"} 
+                   checked={this.state.visMode === "3D"}
                    onChange={this._handleUpdateSettings} />3D &nbsp;
-            <input type="radio" name="visMode" 
+            <input type="radio" name="visMode"
                    value="2D"
-                   checked={this.state.visMode === "2D"} 
+                   checked={this.state.visMode === "2D"}
                    onChange={this._handleUpdateSettings} />2D &nbsp;
-            <input type="radio" name="visMode" 
+            <input type="radio" name="visMode"
                    value="VR"
-                   checked={this.state.visMode === "VR"} 
+                   checked={this.state.visMode === "VR"}
                    onChange={this._handleUpdateSettings} />VR &nbsp;&nbsp;
             <input type="checkbox" name="colorGraph"
                    checked={this.state.colorGraph}
@@ -906,7 +908,7 @@ class App extends Component {
             <br/>
             <div className={"divider"}/>
             <br/>
-        
+
             <b>Use Cache</b> <br/>
             <input type="checkbox" name="useCache"
                    checked={this.state.useCache}
@@ -939,7 +941,7 @@ class App extends Component {
             <b>Sources</b> Filter graph edges by source database. Deselecting a database deletes all associations from that source.
             {this._renderCheckboxes()}
               </TabPanel>
-            </Tabs>          
+            </Tabs>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this._handleCloseModal}>
@@ -964,7 +966,7 @@ class App extends Component {
     return (
       <div className="App" id="AppElement">
         <ReactTooltip place="left"/>
-        <header className="App-header" > 
+        <header className="App-header" >
           <div>
             TranQL {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
@@ -977,12 +979,12 @@ class App extends Component {
               color={'#2cbc12'}
               loading={this.state.loading} />
             <Button id="navModeButton"
-                    outline 
+                    outline
                     color="primary" onClick={this._setNavMode}>
               { this.state.navigateMode && this.state.visMode === '3D' ? "Navigate" : "Select" }
             </Button>
             <Button id="runButton"
-                    outline 
+                    outline
                     color="success" onClick={this._executeQuery}>
               Run
             </Button>
@@ -994,9 +996,10 @@ class App extends Component {
       	  <CodeMirror ref={this._codemirror}
                       value={this.state.code}
                       onChange={this._updateCode}
-                      onKeyUp={this.handleKeyUpEvent} 
+                      onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
+          <Legend id="mainLegend" ref={this._legend}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
@@ -1012,7 +1015,7 @@ class App extends Component {
       </div>
     );
   }
-    
+
 }
 
 export default App;
