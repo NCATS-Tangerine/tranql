@@ -3,16 +3,59 @@
   background-color:rgb(230,230,230);
 }
 
-.TypeButton {
+/* Default = flexbox, but this prevents the ButtonGroup from being multiple lines, which is the default behavior. */
+.btn-group {
+  display:block;
 }
 
-.graphElementTypeContainer {
-  padding:3px;
+.TypeButton {
+  border-color:rgb(40,40,40);
+  margin:7.5px;
+  color:black;
+  /* box-shadow: */
 }
-.graphElementTypeContainer:first-child {
-  border-bottom:1px solid rgb(200,200,200);
+
+.TypeButton:hover {
+  border-color:rgb(100,100,100);
+}
+
+/* Setting --highlight-color in the inline style property, which can later be accessed and used when focused */
+.TypeButton.focus, .TypeButton:focus {
+  box-shadow: 0 0 0 0.2rem var(--highlight-color) !important;
+}
+
+/* Since the default behavior of a ButtonGroup is one line, the buttons contained must be stripped of the style that ends up looking strange on multiple lines */
+.TypeButton:first-child {
+  margin-left:0;
+  border-radius:0;
+}
+.TypeButton:last-child {
+  margin-right:0;
+  border-radius:0;
+}
+
+/* Change the 'border-like' color of an active TypeButton */
+/* .TypeButton:not(:disabled):not(.disabled).active,
+.TypeButton:not(:disabled):not(.disabled):active,
+.show>.TypeButton.dropdown-toggle{
+  color: black !important;
+  background-color: black !important;
+  border-color: black !important;
+} */
+
+
+.graphElementTypeContainer {
+  padding:4px;
 }
 
 .graphElementTypeContainer > * {
-  padding:3px;
+  padding:4px;
+}
+
+/* Rules to adjust for if containers are empty */
+.graphElementTypeContainer:last-child:not(:empty) {
+  border-top:1px solid rgb(200,200,200);
+}
+.graphElementTypeContainer:last-child:empty {
+  padding:0;
 }

@@ -122,7 +122,6 @@ class App extends Component {
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
-    this._legend = React.createRef ();
 
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
@@ -999,7 +998,7 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend graph={this.state.graph} id="mainLegend" render={this.state.colorGraph} ref={this._legend}/>
+          <Legend graph={this.state.graph} id="mainLegend" render={this.state.colorGraph}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
