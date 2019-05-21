@@ -90,6 +90,7 @@ class App extends Component {
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
+    this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
@@ -649,6 +650,17 @@ class App extends Component {
   }
 
   /**
+   * Handle Legend callback on toggling of element type
+   *
+   * @param {string} type - Type of element (e.g. "gene" or "affects_response_to")
+   * @param {Object[]} elements - Array of element objects (nodes/links) from the graph
+   * @param {boolean} visibility - Determines the new visibility of the elements
+   * @private
+   */
+  _updateGraphElementVisibility(type,elements,visibility) {
+  }
+
+  /**
    * Handle a click on a graph node.
    *
    * @param {object} - A node in the force directed graph visualization.
@@ -998,7 +1010,7 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend graph={this.state.graph} id="mainLegend" render={this.state.colorGraph}/>
+          <Legend graph={this.state.graph} callback={this._updateGraphElementVisibility} id="mainLegend" render={this.state.colorGraph}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>

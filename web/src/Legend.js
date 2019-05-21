@@ -27,15 +27,84 @@ function shadeColor(color, percent) {
     return "#"+RR+GG+BB;
 }
 
-//Legend button component
+// Legend button group component (TypeButton wrapper)
+class TypeButtonGroup extends React.Component {
+  constructor(props,context) {
+    super(props,context);
+
+    this._handleChange = this._handleChange.bind(this);
+
+    this.state = {
+      value:[...Object.keys(this.props.elementData).map((elementType,index) => {
+        return {
+          type:elementType,
+          id:index,
+          callback:this.props.elementData[elementType].callback
+        };
+      })]
+    }
+  }
+
+  _handleChange(value,event) {
+    // This is likely a poor method of going about this, but I could find no documentation on how to accomplish this simple task.
+    // It probably shouldn't be this ridiculously complicated to do such a simple thing.
+    let newValue = value[value.length-1];
+    let newState = this.state.value.slice();
+    let turnedOn = false;
+    this.state.value.forEach((value,i) => {
+      let num = value.id;
+      if (num === newValue.id) {
+        newState.splice(i,1);
+      }
+    });
+    if (newState.length === this.state.value.length) {
+      newState.push(newValue);
+      turnedOn = true;
+    }
+    typeof newValue.callback === "function" && newValue.callback(newValue.type,newValue.elements,turnedOn); //call the callback and pass on/off to it
+    this.setState({ value: newState });
+  }
+
+  render() {
+    return (
+      <ToggleButtonGroup
+        type="checkbox"
+        value={this.state.value}
+        onChange={this._handleChange}
+      >
+        {
+          Object.keys(this.props.elementData).map((elementType,n) => {
+            // How to generate unique id??
+            let checked = this.state.value.some(val => val.id === n);
+            let data = {
+              type: elementType,
+              elements: this.props.elementData[elementType].elements
+            };
+            return <TypeButton value={{type:data.type,elements:data.elements,id:n,callback:this.props.elementData[elementType].callback}} active={checked} data={data} key={n} />
+          })
+        }
+      </ToggleButtonGroup>
+    );
+  }
+}
+
+// Legend button component
 class TypeButton extends Component {
   constructor(props) {
     super(props);
     this.state = {
       elements:this.props.data.elements,
       color:null,
-      type: this.props.data.type
+      type: TypeButton.adjustTitle(this.props.data.type)
     };
+  }
+
+  static adjustTitle(title) {
+    // NOTE: This method of splitting by underscore will lead to adverse effects if types can have natural underscores in them
+    // (Can they?)
+    let newTitle = title.split('_').join(' ');
+    let capitalizedTitle = newTitle.charAt(0).toUpperCase() + newTitle.slice(1);
+    return capitalizedTitle;
   }
 
   componentDidMount() {
@@ -70,7 +139,7 @@ class TypeButton extends Component {
     //so that it is only applied when active
     let style = {
       backgroundColor:this.state.color,
-      '--highlight-color':shadeColor(this.state.color === null ? "#000000" : this.state.color,-20)
+      '--highlight-color':shadeColor(this.state.color === null ? "#000000" : this.state.color,-15)
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
 
@@ -81,7 +150,7 @@ class TypeButton extends Component {
         name={this.props.name}
         type={this.props.type}
         onChange={this.props.onChange}
-        checked={this.props.checked}
+        checked={this.props.active}
         value={this.props.value}
         size="sm"
         className="TypeButton">
@@ -136,20 +205,26 @@ class Legend extends Component {
     nodes.forEach(node => {
       node.type.forEach(type => {
         if (type in nodeData) {
-          nodeData[type].push(node);
+          nodeData[type].elements.push(node);
         }
         else {
-          nodeData[type] = [node];
+          nodeData[type] = {
+            callback:this.props.callback,
+            elements:[node]
+          }
         }
       });
     });
     links.forEach(link => {
       let type = link.type;
       if (type in linkData) {
-        linkData[type].push(link);
+        linkData[type].elements.push(link);
       }
       else {
-        linkData[type] = [link]
+        linkData[type] = {
+          callback:this.props.callback,
+          elements:[link]
+        }
       }
     });
     return [
@@ -167,11 +242,12 @@ class Legend extends Component {
   /*
   TODO:
     (very high) if you press the run button a second time before it loads the first graph it crashes the site when the legend exists
-    (high) check to see if the naming scheme matters [not much that I can think of can rememdy it]
     (high) decrease size
 
     (medium) make it so that it actually acts as a filter
+      (low) => similar to reference legend, maybe add an option for each element type (node, link) to hide all (text would be something like '*' and the total amount of that element overall)
 
+    (low) add visibility toggle widget
     (low) check if it needs optimization - if so, optimize
     (low) fully document
     (low) fix how it reacts when one container is empty
@@ -191,6 +267,18 @@ class Legend extends Component {
     let length = 0;
     data.forEach(info => length += Object.keys(info.dataSet).length);
 
+
+    // <ToggleButtonGroup type="checkbox" defaultValue={[...Array(Object.keys(elementData).length+1).keys()]}>
+    //   {
+    //     Object.keys(elementData).map((elementType,n) => {
+    //       let color = elementData[elementType].color;
+    //       // How to generate unique id??
+    //       return <TypeButton value={n} data={{type: elementType, elements: elementData[elementType]}} key={n} />
+    //     })
+    //   }
+    // </ToggleButtonGroup>
+
+
     if (this.props.render && length > 0) {
       return (
         <>
@@ -200,19 +288,10 @@ class Legend extends Component {
                 let elementData = elementInfo.dataSet;
                 return (
                   // How to generate unique id??
-                  <div className="graphElementTypeContainer" key={i}>
-                  <h5 style={{marginBottom:"0px",padding:"6px"}}>{elementInfo.name}</h5>
-                  <ButtonToolbar>
-                    <ToggleButtonGroup type="checkbox">
-                      {
-                        Object.keys(elementData).map((elementType,n) => {
-                          let color = elementData[elementType].color;
-                          // How to generate unique id??
-                          // return <ToggleButton value={n} data={{type: elementType, elements: elementData[elementType]}} key={n}>foo</ToggleButton>
-                          return <TypeButton value={n} data={{type: elementType, elements: elementData[elementType]}} key={n} />
-                        })
-                      }
-                    </ToggleButtonGroup>
+                  <div className="graph-element-type-container" key={i}>
+                  <h5 className="graph-element-header">{elementInfo.name}</h5>
+                  <ButtonToolbar className="graph-element-content">
+                    <TypeButtonGroup elementData={elementData} />
                   </ButtonToolbar>
                   </div>
                 )

@@ -12,16 +12,23 @@
   border-color:rgb(40,40,40);
   margin:7.5px;
   color:black;
-  /* box-shadow: */
+  /* Make buttons smaller */
+  padding:3px;
 }
 
 .TypeButton:hover {
   border-color:rgb(100,100,100);
 }
 
-/* Setting --highlight-color in the inline style property, which can later be accessed and used when focused */
 .TypeButton.focus, .TypeButton:focus {
-  box-shadow: 0 0 0 0.2rem var(--highlight-color) !important;
+  box-shadow:none;
+}
+
+/* Setting --highlight-color in the inline style property, which can later be accessed and used when focused */
+.TypeButton.active {
+  box-shadow: 0 0 0 0.12rem var(--highlight-color) !important;
+  border-color:var(--highlight-color) !important;
+  color:black !important;
 }
 
 /* Since the default behavior of a ButtonGroup is one line, the buttons contained must be stripped of the style that ends up looking strange on multiple lines */
@@ -44,18 +51,19 @@
 } */
 
 
-.graphElementTypeContainer {
-  padding:4px;
+.graph-element-type-container {
+  padding:5px 5px 5px 7.5px;
 }
 
-.graphElementTypeContainer > * {
-  padding:4px;
+.graph-element-header {
+  margin-bottom:0px;
+}
+
+.graph-element-content {
+
 }
 
 /* Rules to adjust for if containers are empty */
-.graphElementTypeContainer:last-child:not(:empty) {
-  border-top:1px solid rgb(200,200,200);
-}
-.graphElementTypeContainer:last-child:empty {
-  padding:0;
+.graph-element-type-container:not(:empty) {
+  /* border-bottom:1px solid rgb(200,200,200); */
 }
