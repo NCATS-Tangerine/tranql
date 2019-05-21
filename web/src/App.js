@@ -743,8 +743,6 @@ class App extends Component {
                            height={window.innerHeight * (84 / 100)}
                            nodeColor={(node) => node.color}
                            linkColor={(link) => link.color}
-                           nodeAutoColorBy="type"
-                           linkAutoColorBy="type"
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}

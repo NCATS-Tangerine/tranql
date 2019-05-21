@@ -70,7 +70,6 @@ class TypeButtonGroup extends React.Component {
           Object.keys(this.props.types).map((type,n) => {
             // How to generate unique id??
             if (this.props.types[type].color === null || this.props.types[type].color === undefined) return null;
-            console.log(this.props.types[type].color);
             let checked = !(this.state.value.some(val => val.id === n));
             let data = {
               type: type,
@@ -191,6 +190,7 @@ class Legend extends Component {
     (high) fix colors - should not be random
 
     (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
+    (medium) on nodes which color should be rendered since they have multiple types? blending doesnt seem like a good idea for a legend
 
     (medium) make it so that it actually acts as a filter
       (low) => similar to reference legend, maybe add an option for each element type (node, link) to hide all (text would be something like '*' and the total amount of that element overall)
