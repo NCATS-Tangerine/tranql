@@ -16,8 +16,9 @@
   padding:3px;
 }
 
-.TypeButton:hover {
+.TypeButton:hover.active {
   border-color:rgb(100,100,100);
+  color:white !important;
 }
 
 .TypeButton.focus, .TypeButton:focus {

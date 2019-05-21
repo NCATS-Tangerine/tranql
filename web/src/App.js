@@ -21,7 +21,7 @@ import Legend from './Legend.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
+import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -124,6 +124,7 @@ class App extends Component {
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
 
+
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
 
@@ -143,6 +144,11 @@ class App extends Component {
       graph : {
         nodes : [],
         links : []
+      },
+      // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
+      typeMappings : {
+        nodeTypes : [],
+        linkTypes : []
       },
       // Filters.
       linkWeightRange : [0, 100],
@@ -177,6 +183,9 @@ class App extends Component {
         enableNodeDrag : true
       },
 
+      // Legend component
+      hiddenTypes: [],
+
       // Settings modal
       showSettingsModal : false,
       //showAnswerViewer : true
@@ -202,7 +211,8 @@ class App extends Component {
       new RenderInit (),
       new LinkFilter (),
       new NodeFilter (),
-      new SourceDatabaseFilter ()
+      new SourceDatabaseFilter (),
+      new LegendFilter ()
     ]);
   }
   /**
@@ -516,7 +526,8 @@ class App extends Component {
     if (message) {
       this._renderChain.handle (message, this.state);
       this.setState({
-        graph: message.graph
+        graph: message.graph,
+        typeMappings: message.typeMappings
       });
     }
   }
@@ -649,15 +660,25 @@ class App extends Component {
     });
   }
 
+
+
   /**
    * Handle Legend callback on toggling of element type
    *
    * @param {string} type - Type of element (e.g. "gene" or "affects_response_to")
-   * @param {Object[]} elements - Array of element objects (nodes/links) from the graph
    * @param {boolean} visibility - Determines the new visibility of the elements
    * @private
    */
-  _updateGraphElementVisibility(type,elements,visibility) {
+  _updateGraphElementVisibility(type,visibility) {
+    this.setState(prevState => {
+      let newHiddenTypes = prevState.hiddenTypes.slice();
+      visibility ? newHiddenTypes.push(type) : newHiddenTypes.splice(newHiddenTypes.indexOf(type),1);
+      return {
+        hiddenTypes : newHiddenTypes
+      }
+    },() => {
+      this._translateGraph ();
+    });
   }
 
   /**
@@ -720,8 +741,10 @@ class App extends Component {
                            graphData={this.state.graph}
                            width={window.innerWidth}
                            height={window.innerHeight * (84 / 100)}
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
+                           nodeAutoColorBy="type"
+                           linkAutoColorBy="type"
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -742,8 +765,8 @@ class App extends Component {
                            graphData={this.state.graph}
                            width={window.innerWidth}
                            height={window.innerHeight * (85 / 100)}
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -765,8 +788,8 @@ class App extends Component {
                            graphData={this.state.graph}
                            width={window.innerWidth}
                            height={window.innerHeight * (85 / 100)}
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -1010,7 +1033,7 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend graph={this.state.graph} callback={this._updateGraphElementVisibility} id="mainLegend" render={this.state.colorGraph}/>
+          <Legend typeMappings={this.state.typeMappings} callback={this._updateGraphElementVisibility} id="mainLegend" render={this.state.colorGraph}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>

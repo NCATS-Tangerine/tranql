@@ -35,13 +35,7 @@ class TypeButtonGroup extends React.Component {
     this._handleChange = this._handleChange.bind(this);
 
     this.state = {
-      value:[...Object.keys(this.props.elementData).map((elementType,index) => {
-        return {
-          type:elementType,
-          id:index,
-          callback:this.props.elementData[elementType].callback
-        };
-      })]
+      value:[]
     }
   }
 
@@ -61,7 +55,7 @@ class TypeButtonGroup extends React.Component {
       newState.push(newValue);
       turnedOn = true;
     }
-    typeof newValue.callback === "function" && newValue.callback(newValue.type,newValue.elements,turnedOn); //call the callback and pass on/off to it
+    typeof this.props.callback === "function" && this.props.callback(newValue.type,turnedOn); //call the callback and pass on/off to it
     this.setState({ value: newState });
   }
 
@@ -73,14 +67,17 @@ class TypeButtonGroup extends React.Component {
         onChange={this._handleChange}
       >
         {
-          Object.keys(this.props.elementData).map((elementType,n) => {
+          Object.keys(this.props.types).map((type,n) => {
             // How to generate unique id??
-            let checked = this.state.value.some(val => val.id === n);
+            if (this.props.types[type].color === null || this.props.types[type].color === undefined) return null;
+            console.log(this.props.types[type].color);
+            let checked = !(this.state.value.some(val => val.id === n));
             let data = {
-              type: elementType,
-              elements: this.props.elementData[elementType].elements
+              type: type,
+              count: this.props.types[type].count,
+              color: this.props.types[type].color
             };
-            return <TypeButton value={{type:data.type,elements:data.elements,id:n,callback:this.props.elementData[elementType].callback}} active={checked} data={data} key={n} />
+            return <TypeButton value={{type:data.type,count:data.count,id:n}} active={checked} data={data} key={n} />
           })
         }
       </ToggleButtonGroup>
@@ -93,8 +90,8 @@ class TypeButton extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      elements:this.props.data.elements,
-      color:null,
+      count:this.props.data.count,
+      color:this.props.data.color,
       type: TypeButton.adjustTitle(this.props.data.type)
     };
   }
@@ -114,23 +111,24 @@ class TypeButton extends Component {
     //HACK: ANY SUGGESTIONS WELCOME
     //  Spent a couple of hours attempting to find the best way to wait for the "color" property to be set by the ReactForceGraph, considering it does not provide any way to detect it;
     //  Could not find any better way than to simply brute force it by waiting.
-    let int = setInterval(() => {
-      let color = this.state.color;
-      while (color === undefined || color === null) {
-        let elements = this.state.elements;
-        for (let i=0;i<elements.length;i++) {
-          let element = elements[i];
-          if (element.color !== undefined && element.color !== null) {
-            // Color is now defined
-            color = element.color;
-            this.setState({color: color});
-            clearInterval(int);
-            break;
-          }
-        }
-      }
-
-    },50);
+    // let int = setInterval(() => {
+    //   let color = this.state.color;
+    //   while (color === undefined || color === null) {
+    //     let elements = this.state.elements;
+    //     for (let i=0;i<elements.length;i++) {
+    //       let element = elements[i];
+    //       if (element.color !== undefined && element.color !== null) {
+    //         // Color is now defined
+    //         color = element.color;
+    //         this.setState({color: color});
+    //         clearInterval(int);
+    //         break;
+    //       }
+    //     }
+    //   }
+    //
+    // },50);
+    //
   }
 
   render() {
@@ -139,7 +137,7 @@ class TypeButton extends Component {
     //so that it is only applied when active
     let style = {
       backgroundColor:this.state.color,
-      '--highlight-color':shadeColor(this.state.color === null ? "#000000" : this.state.color,-15)
+      '--highlight-color':shadeColor(this.state.color,-25)
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
 
@@ -154,7 +152,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        ({this.state.elements.length}) {this.state.type}
+        ({this.state.count}) {this.state.type}
       </ToggleButton>
     );
   }
@@ -168,131 +166,70 @@ class Legend extends Component {
   /**
    * Constructs React.Component with arguments `props` and `context`
    * @param {Object} props - React component properties
-   * @param {Boolean} props.render -
-   * @param {Object} props.graph - Object containing elements of the graph
-   * @param {Object[]} props.graph.nodes - Array of Node objects (containing relevant information such as types and color)
-   * @param {Object[]} props.graph.links - Array of Link objects (containing relevant information such as type and color)
-   * @param {Object} context - ?? (I included it for consistency but have no idea what it is and could not figure it out)
+   * @param {Boolean} props.render - If false, component will return null in `render` method
+   * @param {Object} props.typeMappings - Type mappings of each graph element type (nodes/links)
+   * @param {Object[]} props.nodes - Mappings of `type => number of nodes of type`
+   * @param {Object[]} props.links - Mappings of `type => number of link of type`
+   *
    */
-  constructor(props, context) {
-    super(props, context);
+  constructor(props) {
+    super(props);
 
-    this.state = {
-    };
+    this.state = {};
 
   }
 
-  /**
-   * Formats the data in the graph by grouping all types
-   * @private
-   * @return {Object[]} - Formatted data
-   */
-  _getData(graph) {
-    let nodes = graph.nodes;
-    let links = graph.links;
-
-    let nodeData = {};
-    let linkData = {};
-    /*
-    Structure:
-      {
-      type: {
-          elements: [...],
-          color:"..."
-        }
-      }
-    */
-    nodes.forEach(node => {
-      node.type.forEach(type => {
-        if (type in nodeData) {
-          nodeData[type].elements.push(node);
-        }
-        else {
-          nodeData[type] = {
-            callback:this.props.callback,
-            elements:[node]
-          }
-        }
-      });
-    });
-    links.forEach(link => {
-      let type = link.type;
-      if (type in linkData) {
-        linkData[type].elements.push(link);
-      }
-      else {
-        linkData[type] = {
-          callback:this.props.callback,
-          elements:[link]
-        }
-      }
-    });
-    return [
-      {
-        name: "Nodes",
-        dataSet:nodeData
-      },
-      {
-        name:"Links",
-        dataSet:linkData
-      }
-    ];
+  componentDidMount() {
+    console.log("DSAFQWFSADFADS");
   }
 
   /*
   TODO:
-    (very high) if you press the run button a second time before it loads the first graph it crashes the site when the legend exists
+    (high critical bug) if you press the run button a second time before it loads the first graph it crashes the site when the legend exists
+    (high bug) reset when new query is run
     (high) decrease size
+    (high) fix colors - should not be random
+
+    (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
 
     (medium) make it so that it actually acts as a filter
       (low) => similar to reference legend, maybe add an option for each element type (node, link) to hide all (text would be something like '*' and the total amount of that element overall)
 
+    (medium) it needs to be more obvious if types are selected or not
+
     (low) add visibility toggle widget
     (low) check if it needs optimization - if so, optimize
+          => Figuring out how to eliminate passing the graph as a property every render would help
     (low) fully document
     (low) fix how it reacts when one container is empty
     (very low) possibly sort the colors somehow
   */
 
   render() {
-
     //Move some of this logic elsewhere? Not really supposed to have any in render, but I don't know where to properly place it
     // + Perhaps add callback in App.js when graph is set to update this graph property
 
-    let graph = this.props.graph;
-    console.log(graph);
-    let data = this._getData(graph);
+
+    let typeMappings = this.props.typeMappings;
 
     // Better method?
-    let length = 0;
-    data.forEach(info => length += Object.keys(info.dataSet).length);
+    let totalTypes = 0;
+    Object.values(typeMappings).forEach(types => totalTypes += Object.keys(types).length);
 
-
-    // <ToggleButtonGroup type="checkbox" defaultValue={[...Array(Object.keys(elementData).length+1).keys()]}>
-    //   {
-    //     Object.keys(elementData).map((elementType,n) => {
-    //       let color = elementData[elementType].color;
-    //       // How to generate unique id??
-    //       return <TypeButton value={n} data={{type: elementType, elements: elementData[elementType]}} key={n} />
-    //     })
-    //   }
-    // </ToggleButtonGroup>
-
-
-    if (this.props.render && length > 0) {
+    if (this.props.render && totalTypes > 0) {
       return (
         <>
           <div id={this.props.id} className="Legend">
             {
-              data.map((elementInfo,i) => {
-                let elementData = elementInfo.dataSet;
+              Object.keys(typeMappings).map((elementType,i) => {
+                let types = typeMappings[elementType];
                 return (
                   // How to generate unique id??
                   <div className="graph-element-type-container" key={i}>
-                  <h5 className="graph-element-header">{elementInfo.name}</h5>
-                  <ButtonToolbar className="graph-element-content">
-                    <TypeButtonGroup elementData={elementData} />
-                  </ButtonToolbar>
+                    <h5 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h5>
+                    <ButtonToolbar className="graph-element-content">
+                      <TypeButtonGroup callback={this.props.callback} types={types} />
+                    </ButtonToolbar>
                   </div>
                 )
               })
