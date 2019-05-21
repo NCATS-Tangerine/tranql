@@ -20,9 +20,9 @@ function shadeColor(color, percent) {
     G = (G<255)?G:255;
     B = (B<255)?B:255;
 
-    var RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
-    var GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
-    var BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+    var RR = ((R.toString(16).length===1)?"0"+R.toString(16):R.toString(16));
+    var GG = ((G.toString(16).length===1)?"0"+G.toString(16):G.toString(16));
+    var BB = ((B.toString(16).length===1)?"0"+B.toString(16):B.toString(16));
 
     return "#"+RR+GG+BB;
 }
@@ -67,16 +67,16 @@ class TypeButtonGroup extends React.Component {
         onChange={this._handleChange}
       >
         {
-          Object.keys(this.props.types).map((type,n) => {
+          this.props.types.map((typeData,n) => {
             // How to generate unique id??
-            if (this.props.types[type].color === null || this.props.types[type].color === undefined) return null;
+            if (typeData.color === null || typeData.color === undefined) return null;
             let checked = !(this.state.value.some(val => val.id === n));
             let data = {
-              type: type,
-              count: this.props.types[type].count,
-              color: this.props.types[type].color
+              type: typeData.type,
+              quantity: typeData.quantity,
+              color: typeData.color
             };
-            return <TypeButton value={{type:data.type,count:data.count,id:n}} active={checked} data={data} key={n} />
+            return <TypeButton value={Object.assign({id:n},data)} active={checked} data={data} key={n} />
           })
         }
       </ToggleButtonGroup>
@@ -89,7 +89,7 @@ class TypeButton extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      count:this.props.data.count,
+      quantity:this.props.data.quantity,
       color:this.props.data.color,
       type: TypeButton.adjustTitle(this.props.data.type)
     };
@@ -151,7 +151,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        ({this.state.count}) {this.state.type}
+        ({this.state.quantity}) {this.state.type}
       </ToggleButton>
     );
   }
@@ -169,6 +169,8 @@ class Legend extends Component {
    * @param {Object} props.typeMappings - Type mappings of each graph element type (nodes/links)
    * @param {Object[]} props.nodes - Mappings of `type => number of nodes of type`
    * @param {Object[]} props.links - Mappings of `type => number of link of type`
+   * @param {int} props.nodeTypeRenderAmount - Amount of node types rendered on the legend
+   * @param {int} props.linkTypeRenderAmount - Amount of link types rendered on the legend
    *
    */
   constructor(props) {
@@ -179,7 +181,43 @@ class Legend extends Component {
   }
 
   componentDidMount() {
-    console.log("DSAFQWFSADFADS");
+  }
+
+  _sortMappings(typeMappings) {
+    let newMappings = {};
+    console.log(typeMappings);
+    for (let graphElementType in typeMappings) {
+      let sortedTypes = Object.entries(typeMappings[graphElementType]).sort((a,b) => b[1].quantity-a[1].quantity);
+      let min = Math.min(graphElementType === "nodes" ? this.props.nodeTypeRenderAmount : this.props.linkTypeRenderAmount, sortedTypes.length);
+      for (let i=0;i<min;i++) {
+        if (!newMappings.hasOwnProperty(graphElementType)) newMappings[graphElementType] = [];
+        newMappings[graphElementType].push(Object.assign({type:sortedTypes[i][0]},sortedTypes[i][1]));
+      }
+    }
+    console.log(newMappings);
+
+    /*
+    Structure:
+      {
+        "nodes": [
+          {
+            type:`type`,
+            color:`color`,
+            quantity:`quantity`
+          },
+          ...
+        ],
+        "links": [
+          {
+            type:`type`,
+            color:`color`,
+            quantity:`quantity`
+          },
+          ...
+        ]
+      }
+    */
+    return newMappings;
   }
 
   /*
@@ -190,7 +228,9 @@ class Legend extends Component {
     (high) fix colors - should not be random
 
     (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
+    (medium) => maybe could be a setting
     (medium) on nodes which color should be rendered since they have multiple types? blending doesnt seem like a good idea for a legend
+    (medium) add setting that controls how many nodes/link buttons are rendered in the legend
 
     (medium) make it so that it actually acts as a filter
       (low) => similar to reference legend, maybe add an option for each element type (node, link) to hide all (text would be something like '*' and the total amount of that element overall)
@@ -216,13 +256,14 @@ class Legend extends Component {
     let totalTypes = 0;
     Object.values(typeMappings).forEach(types => totalTypes += Object.keys(types).length);
 
+    let sortedMappings = this._sortMappings(typeMappings);
     if (this.props.render && totalTypes > 0) {
       return (
         <>
           <div id={this.props.id} className="Legend">
             {
               Object.keys(typeMappings).map((elementType,i) => {
-                let types = typeMappings[elementType];
+                let types = sortedMappings[elementType];
                 return (
                   // How to generate unique id??
                   <div className="graph-element-type-container" key={i}>

@@ -394,6 +394,10 @@ class App extends Component {
       graph : {
         nodes : [],
         links : []
+      },
+      typeMappings : {
+        nodes : [],
+        links : []
       }
     });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
@@ -1031,7 +1035,12 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend typeMappings={this.state.typeMappings} callback={this._updateGraphElementVisibility} id="mainLegend" render={this.state.colorGraph}/>
+          <Legend typeMappings={this.state.typeMappings}
+                  nodeTypeRenderAmount={10}
+                  linkTypeRenderAmount={10}
+                  callback={this._updateGraphElementVisibility}
+                  id="mainLegend"
+                  render={this.state.colorGraph}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>

@@ -162,12 +162,12 @@ class LegendFilter extends Actor {
     message.graph.nodes.forEach(node => {
       node.type.forEach(type => {
         if (message.typeMappings.nodes.hasOwnProperty(type)) {
-          message.typeMappings.nodes[type].count++;
+          message.typeMappings.nodes[type].quantity++;
         }
         else {
           message.typeMappings.nodes[type] = {
             color: null,
-            count: 1
+            quantity: 1
           };
         }
       });
@@ -175,12 +175,12 @@ class LegendFilter extends Actor {
     message.graph.links.forEach(link => {
       let type = link.type;
       if (message.typeMappings.links.hasOwnProperty(type)) {
-        message.typeMappings.links[type].count++;
+        message.typeMappings.links[type].quantity++;
       }
       else {
         message.typeMappings.links[type] = {
           color: null,
-          count: 1
+          quantity: 1
         };
       }
     });
@@ -189,8 +189,8 @@ class LegendFilter extends Actor {
 
     let linkColors = nodeColors.slice()
 
-    //(zip structure ( [type, {count:x}] ))
-    let sortedNodeTypes = Object.entries(message.typeMappings.nodes).sort((a,b) => b[1].count-a[1].count);
+    //(zip structure ( [type, {quantity:x}] ))
+    let sortedNodeTypes = Object.entries(message.typeMappings.nodes).sort((a,b) => b[1].quantity-a[1].quantity);
     for (let i=0;i<Math.min(nodeColors.length, sortedNodeTypes.length);i++) {
       let nodeType = sortedNodeTypes[i][0];
       let color = nodeColors.shift();
@@ -198,7 +198,7 @@ class LegendFilter extends Actor {
       message.typeMappings.nodes[nodeType].color = color;
     }
 
-    let sortedLinkTypes = Object.entries(message.typeMappings.links).sort((a,b) => b[1].count-a[1].count);
+    let sortedLinkTypes = Object.entries(message.typeMappings.links).sort((a,b) => b[1].quantity-a[1].quantity);
     for (let i=0;i<Math.min(linkColors.length, sortedLinkTypes.length);i++) {
       let linkType = sortedLinkTypes[i][0];
       let color = linkColors.shift();
@@ -207,8 +207,6 @@ class LegendFilter extends Actor {
     }
     message.graph.nodes.forEach(node => {node.color = message.typeMappings.nodes[node.type[0]].color});
     message.graph.links.forEach(link => {link.color = message.typeMappings.links[link.type].color});
-
-    console.log(message.typeMappings);
 
 
     // Filter nodes that are hidden (NodeFilter source)
@@ -266,9 +264,6 @@ class LegendFilter extends Actor {
         return result;
       }, [])
     };
-
-    // let nodes = message.graph.nodes.filter(node => node.type.every(type => context.hiddenTypes.indexOf(type) === -1))
-    // let links = message.graph.links.filter(link => context.hiddenTypes.indexOf(link.type) === -1),
   }
 }
 export {
