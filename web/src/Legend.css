@@ -13,22 +13,22 @@
   margin:7.5px;
   color:black;
   /* Make buttons smaller */
-  padding:3px;
+  padding:1.5px;
 }
 
-.TypeButton:hover.active {
+.TypeButton:hover, .TypeButton.active, .TypeButton:hover.active {
   border-color:rgb(100,100,100);
-  color:white !important;
+  color:rgb(245,245,245) !important;
 }
 
 .TypeButton.focus, .TypeButton:focus {
   box-shadow:none;
 }
 
-/* Setting --highlight-color in the inline style property, which can later be accessed and used when focused */
+/* Setting --highlight-box-shadow-color in the inline style property, which can later be accessed and used when focused */
 .TypeButton.active {
-  box-shadow: 0 0 0 0.12rem var(--highlight-color) !important;
-  border-color:var(--highlight-color) !important;
+  box-shadow: 0 0 0 0.12rem var(--highlight-box-shadow-color) !important;
+  border-color:var(--highlight-box-shadow-color) !important;
   color:black !important;
 }
 
@@ -51,9 +51,26 @@
   border-color: black !important;
 } */
 
+.legend-vis-control {
+  /* Using margin for consistency */
+  margin-top:7px;
+  margin-right:5px;
+  font-size:24px;
+  right:0px;
+  position:absolute;
+  /* Since the icon is overlayed over the force graph when collapsed, set z-index to higher than force graph's (auto) */
+  z-index: 1 !important;
+}
 
 .graph-element-type-container {
   padding:5px 5px 5px 7.5px;
+}
+
+.graph-element-type-container:not(:first-child) {
+  border-top:2px solid rgb(200,200,200);
+}
+.graph-element-type-container:not(:last-child) {
+  padding-bottom:7.5px;
 }
 
 .graph-element-header {

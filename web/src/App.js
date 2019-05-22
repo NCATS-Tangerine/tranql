@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
-import { Modal } from 'react-bootstrap';
+import { Modal, Form } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
@@ -99,6 +99,8 @@ class App extends Component {
     // Visualization filter state values
     this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
     this._onNodeDegreeRangeChange = this._onNodeDegreeRangeChange.bind (this);
+    this._onLegendDisplayLimitChange = this._onLegendDisplayLimitChange.bind (this);
+
 
     // Settings management
     this._handleShowModal = this._handleShowModal.bind (this);
@@ -154,6 +156,7 @@ class App extends Component {
       linkWeightRange : [0, 100],
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
+      legendRenderAmount : 10,
       dataSources : [],
 
       // Manage node selection and navigation.
@@ -904,6 +907,15 @@ class App extends Component {
     localStorage.setItem ("minNodeDegree", JSON.stringify (value));
   }
   /**
+   * Respond to changing the value of legend display Limit
+   * @param {number} value - The new legend display Limit
+   * @private
+   */
+  _onLegendDisplayLimitChange (event) {
+    let value = event.target.value;
+    value !== "" && this.setState({ legendRenderAmount : value });
+  }
+  /**
    * Render the modal settings dialog.
    *
    * @private
@@ -970,7 +982,19 @@ class App extends Component {
                    onChange={this._onNodeDegreeRangeChange}
                    max={this.state.nodeDegreeMax}/>
             <br/>
-            <div className={"divider"}/>
+            <b>Legend Display Limit</b><br/>
+            Set number of node and link types that legend displays<br/>
+            <Form>
+              <Form.Control
+              type="number"
+              defaultValue={this.state.legendRenderAmount}
+              onChange={this._onLegendDisplayLimitChange}
+              onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
+              />
+            </Form>
+
+
+            {/*<div className={"divider"}/>*/}
             <br/>
               </TabPanel>
               <TabPanel>
@@ -1036,8 +1060,9 @@ class App extends Component {
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
           <Legend typeMappings={this.state.typeMappings}
-                  nodeTypeRenderAmount={10}
-                  linkTypeRenderAmount={10}
+                  actualGraph={this.state.graph}
+                  nodeTypeRenderAmount={this.state.legendRenderAmount}
+                  linkTypeRenderAmount={this.state.legendRenderAmount}
                   callback={this._updateGraphElementVisibility}
                   id="mainLegend"
                   render={this.state.colorGraph}/>

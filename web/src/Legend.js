@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
+import ReactTooltip from 'react-tooltip'
+import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle } from 'react-icons/io';
 import { ButtonToolbar, ToggleButtonGroup, ToggleButton } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import './Legend.css';
 
 // Method for darkening the shade of a hex string
@@ -39,7 +40,12 @@ class TypeButtonGroup extends React.Component {
     }
   }
 
-  _handleChange(value,event) {
+  /**
+   * Callback invoked when TypeButton child is pressed. Handles its `checked` property and calls its respective callback.
+   *
+   * @param {Array} value - Current value of ToggleButtonGroup (used to detect if the item should be added or removed).
+   */
+  _handleChange(value) {
     // This is likely a poor method of going about this, but I could find no documentation on how to accomplish this simple task.
     // It probably shouldn't be this ridiculously complicated to do such a simple thing.
     let newValue = value[value.length-1];
@@ -95,48 +101,27 @@ class TypeButton extends Component {
     };
   }
 
+  /**
+   * Adjust the title from camel case to title format (e.g "camel_case" => "Camel Case")
+   *
+   * @param {string} title - The string to be converted to title format
+   *
+   * @returns {string} - The string in title format
+   */
   static adjustTitle(title) {
     // NOTE: This method of splitting by underscore will lead to adverse effects if types can have natural underscores in them
     // (Can they?)
-    let newTitle = title.split('_').join(' ');
-    let capitalizedTitle = newTitle.charAt(0).toUpperCase() + newTitle.slice(1);
-    return capitalizedTitle;
-  }
-
-  componentDidMount() {
-    // Wait for color to be defined on this type
-    //  (ForceGraph auto assigns colors to types asynchronously and lacks a callback for its completion)
-
-    //HACK: ANY SUGGESTIONS WELCOME
-    //  Spent a couple of hours attempting to find the best way to wait for the "color" property to be set by the ReactForceGraph, considering it does not provide any way to detect it;
-    //  Could not find any better way than to simply brute force it by waiting.
-    // let int = setInterval(() => {
-    //   let color = this.state.color;
-    //   while (color === undefined || color === null) {
-    //     let elements = this.state.elements;
-    //     for (let i=0;i<elements.length;i++) {
-    //       let element = elements[i];
-    //       if (element.color !== undefined && element.color !== null) {
-    //         // Color is now defined
-    //         color = element.color;
-    //         this.setState({color: color});
-    //         clearInterval(int);
-    //         break;
-    //       }
-    //     }
-    //   }
-    //
-    // },50);
-    //
+    let newTitle = title.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return newTitle;
   }
 
   render() {
     //Bootstrap doesn't like custom coloring schemes, but it is necessary here to deviate from the bootstrap color theme as it is specifically color-coded.
-    //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the property data-highlightColor,
-    //so that it is only applied when active
+    //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the css variable `--highlight-box-shadow-color`,
+    //so that it is only applied when active.
     let style = {
       backgroundColor:this.state.color,
-      '--highlight-color':shadeColor(this.state.color,-25)
+      '--highlight-box-shadow-color':"rgb(50,50,50)"
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
 
@@ -151,7 +136,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        ({this.state.quantity}) {this.state.type}
+        {this.state.type} <b>({this.state.quantity})</b>
       </ToggleButton>
     );
   }
@@ -176,16 +161,26 @@ class Legend extends Component {
   constructor(props) {
     super(props);
 
-    this.state = {};
+    this.state = {
+      collapse : false
+    };
 
   }
 
-  componentDidMount() {
-  }
-
+  /**
+   * Takes input mapping object and converts it to an array of zips sorted by their quantities
+   *
+   * @param {Object} typeMappings - Mappings of types of nodes and links to their quantities and colors
+   * @param {Object} typeMappings.nodes - Node object mappings with structure `type` => {`color`,`quantity`}
+   * @param {Object} typeMappings.links - Link object mappings with structure `type` => {`color`,`quantity`}
+   *
+   * @returns {Object} - New sorted mapping object with zipped structure
+   *   {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
+   * @private
+   */
   _sortMappings(typeMappings) {
     let newMappings = {};
-    console.log(typeMappings);
+    // (object properties in javascript are unordered and therefore cannot be effectively)
     for (let graphElementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[graphElementType]).sort((a,b) => b[1].quantity-a[1].quantity);
       let min = Math.min(graphElementType === "nodes" ? this.props.nodeTypeRenderAmount : this.props.linkTypeRenderAmount, sortedTypes.length);
@@ -194,7 +189,6 @@ class Legend extends Component {
         newMappings[graphElementType].push(Object.assign({type:sortedTypes[i][0]},sortedTypes[i][1]));
       }
     }
-    console.log(newMappings);
 
     /*
     Structure:
@@ -222,61 +216,69 @@ class Legend extends Component {
 
   /*
   TODO:
-    (high critical bug) if you press the run button a second time before it loads the first graph it crashes the site when the legend exists
-    (high bug) reset when new query is run
-    (high) decrease size
-    (high) fix colors - should not be random
 
     (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
-    (medium) => maybe could be a setting
-    (medium) on nodes which color should be rendered since they have multiple types? blending doesnt seem like a good idea for a legend
-    (medium) add setting that controls how many nodes/link buttons are rendered in the legend
 
-    (medium) make it so that it actually acts as a filter
-      (low) => similar to reference legend, maybe add an option for each element type (node, link) to hide all (text would be something like '*' and the total amount of that element overall)
+    (medium-low) maybe adjust it so that it shows the amount of nodes/links currently appearing or something similar to (n out of y nodes)
 
-    (medium) it needs to be more obvious if types are selected or not
-
-    (low) add visibility toggle widget
-    (low) check if it needs optimization - if so, optimize
-          => Figuring out how to eliminate passing the graph as a property every render would help
-    (low) fully document
-    (low) fix how it reacts when one container is empty
-    (very low) possibly sort the colors somehow
   */
 
   render() {
     //Move some of this logic elsewhere? Not really supposed to have any in render, but I don't know where to properly place it
-    // + Perhaps add callback in App.js when graph is set to update this graph property
-
 
     let typeMappings = this.props.typeMappings;
 
-    // Better method?
-    let totalTypes = 0;
-    Object.values(typeMappings).forEach(types => totalTypes += Object.keys(types).length);
-
     let sortedMappings = this._sortMappings(typeMappings);
-    if (this.props.render && totalTypes > 0) {
+
+
+    let render = this.props.render;
+
+    if (Object.keys(sortedMappings).length === 0) {
+      // 0 elements in both nodes and links
+      render = false;
+    }
+    if (this.state.collapse) {
       return (
-        <>
           <div id={this.props.id} className="Legend">
-            {
-              Object.keys(typeMappings).map((elementType,i) => {
-                let types = sortedMappings[elementType];
-                return (
-                  // How to generate unique id??
-                  <div className="graph-element-type-container" key={i}>
-                    <h5 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h5>
-                    <ButtonToolbar className="graph-element-content">
-                      <TypeButtonGroup callback={this.props.callback} types={types} />
-                    </ButtonToolbar>
-                  </div>
-                )
-              })
-            }
+            <IoIosArrowDropdownCircle data-tip="Open legend"
+                                      className="legend-vis-control"
+                                      onClick={(e) => this.setState({ collapse : false })}
+                                      color="rgba(255,255,255,.5)"
+            />
           </div>
-        </>
+      )
+    }
+    else if (render && sortedMappings.nodes.length + sortedMappings.links.length > 0) {
+      // // If implemented, type property should be changed to something such as [type,Enum TypeFlag]
+      // // So that there is no possibility to run into naming conflicts
+      // Object.values(sortedMappings).forEach(elementType => {
+      //   let total = elementType.reduce((acc,val) => acc + val.quantity, 0);
+      //   elementType.push({
+      //     color:"#a6aab5",
+      //     type:"*",
+      //     quantity:total
+      //   });
+      // });
+      return (
+        <div id={this.props.id} className="Legend">
+          <ReactTooltip place="left"/>
+          {/*+2px in margin-top is because of 2px border*/}
+          <IoIosArrowDropupCircle onClick={(e) => this.setState({ collapse : true })} data-tip="Close legend" className="legend-vis-control"/>
+          {
+            Object.keys(typeMappings).map((elementType,i) => {
+              let types = sortedMappings[elementType];
+              return (
+                // How to generate unique id??
+                <div className="graph-element-type-container" key={i}>
+                  <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h6>
+                  <ButtonToolbar className="graph-element-content">
+                    <TypeButtonGroup callback={this.props.callback} types={types} />
+                  </ButtonToolbar>
+                </div>
+              )
+            })
+          }
+        </div>
       );
     }
     else {
