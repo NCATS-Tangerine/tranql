@@ -4,6 +4,7 @@ Provide a standard protocol for asking graph oriented questions of Translator da
 import copy
 import argparse
 import json
+import logging
 import os
 import yaml
 import jsonschema
@@ -18,6 +19,8 @@ import networkx as nx
 from tranql.util import JSONKit
 from tranql.concept import BiolinkModelWalker
 from tranql.backplane.iceesclient import ICEES
+
+logger = logging.getLogger (__name__)
 
 app = Flask(__name__)
 
@@ -77,7 +80,10 @@ class StandardAPIResource(Resource):
             self.rename_key (n, old, new)
     def normalize_message (self, message):
         if 'answers' in message:
-            message['knowledge_map'] = message['answers']
+            #message['knowledge_map'] = message['answers']
+            message['knowledge_map'] = message.pop ('answers')
+
+        #print (f"---- message ------------> {json.dumps(message, indent=2)}")
 
         ''' downcast 0.9.1 to 0.9 '''
         ''' alter once tranql AST speaks 0.9.1 '''
@@ -97,34 +103,22 @@ class StandardAPIResource(Resource):
         self.rename_key_list (message.get('question_graph',{}).get('edges',[]),
                               old='edge_id',
                               new='id')
-
+        #print (f"---- message ------------> {json.dumps(message, indent=2)}")
         return message
-    
-class ICEESClusterQuery(StandardAPIResource):
-    """ ICEES Resource. """
-
+class ICEESSchema(StandardAPIResource):
     def __init__(self):
-        super().__init__()
-        self.cluster_args = ICEESClusterArgs ()
-        
-    def post(self):
+        self.schema_url = "https://icees.renci.org/2.0.0/knowledge_graph/schema"
+    def get(self):
         """
-        query
+        schema
         ---
         tag: validation
         description: Query the ICEES clinical reasoner for associations between population clusters and chemicals.
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/definitions/Message'
         responses:
             '200':
                 description: Success
                 content:
-                    text/plain:
+                    application/json:
                         schema:
                             type: string
                             example: "Successfully validated"
@@ -136,62 +130,11 @@ class ICEESClusterQuery(StandardAPIResource):
                             type: string
 
         """
-        self.validate (request)        
-        icees = ICEES ()
-        correlation = None
-        self.parse_options (request.json['options'])
-        cohort_id = "COHORT:22" \
-                    if self.cluster_args.cohort_id == 'all_patients' \
-                    else self.cluster_args.cohort_id
-        correlation = icees.feature_to_all_features (
-            feature=self.cluster_args.feature_id,
-            value=self.cluster_args.value,
-            operator=self.cluster_args.operator,
-            max_p_val=self.cluster_args.max_p_val,
-            cohort_id=cohort_id)
-        request.json['knowledge_graph'] = icees.parse_1_x_N (correlation)
-        self.gen_cluster_answers (request.json)
-        #print (json.dumps(request.json, indent=2))
-        return self.normalize_message (request.json)
-
-    def gen_cluster_answers (self, message):
-        """ We probably want a more robust reasoner-like ability to answer 
-        general questions. For now, write bindings specific to this question. """
-        question = message['question_graph']
-        question_nodes = question['nodes']
-        question_edges = question['edges']        
-        kg = message['knowledge_graph']
-        nodes = kg['nodes']
-        edges = kg['edges']
-        message['answers'] = []
-        bindings = message['answers']
-        for node in nodes:
-            """ Type must match icees response. 
-            Change this when icees returns drug_exposure. """
-            if node['type'] == 'chemical_substance': #'drug_exposure':
-                #print (f"{json.dumps(question_nodes, indent=2)}")
-                node_bindings = {
-                    question_nodes[1]['id'] : node['id']
-                }
-                edge_bindings = [ e['id'] for e in edges if e['target_id'] == node['id'] ]
-                bindings.append ({
-                    "node_bindings" : node_bindings,
-                    "edge_bindings" : edge_bindings
-                })
-        
-    def parse_options (self, options):
-        for k in options.keys ():
-            if hasattr(self.cluster_args, k):
-                setattr (self.cluster_args, k, options[k])
-        feature = self.get_feature ()
-        if feature in options:
-            self.cluster_args.operator = options[feature][0]
-            self.cluster_args.value = options[feature][1]
-            
-    def get_feature (self):
-        return "EstResidentialDensity"
-
-class ICEESClusterQuery2(StandardAPIResource):
+        return requests.get (
+            self.schema_url,
+            verify=False).json()['return value']
+    
+class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
         
     def post(self):
@@ -231,7 +174,8 @@ class ICEESClusterQuery2(StandardAPIResource):
         We have multiple versions of the spec live at once.
         Until these stabilize and converge, we adapt between them in various ways.
         '''
-        request.json['machine_question'] = request.json.pop('question_graph')
+
+        '''
         request.json['query_options'] = request.json.pop('options')
         for n in request.json['machine_question']['nodes']:
             n['node_id'] = n.pop ('id')
@@ -240,19 +184,25 @@ class ICEESClusterQuery2(StandardAPIResource):
             e['type'] = 'association'
         del request.json['knowledge_graph']
         del request.json['knowledge_maps']
-
+        '''
+        for e in request.json['question_graph']['edges']:
+            e['type'] = 'association'
+        request.json['query_options'] = request.json.pop('options')
+        request.json['machine_question'] = request.json.pop('question_graph')
+        
         #print (f"{json.dumps(request.json, indent=2)}")
         result = {}
 
         ''' Invoke ICEES '''
         icees_kg_url = "https://icees.renci.org/2.0.0/knowledge_graph"
-        print (f"{json.dumps(request.json, indent=2)}")
+        #print (f"--- request.json ----------> {json.dumps(request.json, indent=2)}")
         response = requests.post (icees_kg_url,
                                   json=request.json,
                                   verify=False)
         
         with open ('icees.out', 'w') as stream:
             json.dump (response.json (), stream, indent=2)
+        #print (f"-- response --> {json.dumps(response.json(), indent=2)}")
         #print (f"{json.dumps(response.json(), indent=2)}")
         
         if response.status_code >= 300:
@@ -293,7 +243,7 @@ class ICEESClusterQuery2(StandardAPIResource):
                 result[k] = val[1]
         return result
 
-                
+'''                
 class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
     """ ICEES Resource. """
     def __init__(self):
@@ -306,7 +256,7 @@ class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
             max_p_val="0.1")
     def get_feature (self):
         return "TotalEDInpatientVisits"
-
+'''
 #######################################################
 ##
 ## NDEx - publish a graph to NDEx
@@ -418,100 +368,6 @@ class GammaQuery(GammaResource):
             result = self.normalize_message (response.json ())
         return result
 
-class RTXQuery(StandardAPIResource):
-    """ Generic graph query to RTX. """
-    def __init__(self):
-        super().__init__()
-    def post(self):
-        """
-        Visualize
-        ---
-        tag: validation
-        description: Query RTX, given a question graph.
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/definitions/Message'
-        responses:
-            '200':
-                description: Success
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-        """
-
-        """ This is just a pass-through to simplify workflow syntax. """
-        
-        self.validate (request)
-        url = "https://rtx.ncats.io/beta/api/rtx/v1/query"
-        #request.json['results'] = []
-        del request.json['knowledge_graph']
-        del request.json['knowledge_maps']
-        del request.json['options']
-        edges = request.json['question_graph']['edges']
-        del edges[0]
-        nodes = request.json['question_graph']['nodes']
-        del nodes[0]
-        query = {
-            "bypass_cache": "true",
-            "query_message" : {
-                "query_graph" : request.json['question_graph']
-            }
-        }
-        '''
-            "previous_message_processing_plan" : {
-                "previous_messages" : [
-                    request.json
-                ]
-            }
-        '''
-
-        query = {
-            "bypass_cache": "true",
-            "query_message": {
-                "query_graph": {
-                    "edges": [
-                        {
-                            "edge_id": "e00",
-                            "source_id": "n00",
-                            "target_id": "n01",
-                            "type": "physically_interacts_with"
-                        }
-                    ],
-                    "nodes": [
-                        {
-                            "curie": "CHEMBL.COMPOUND:CHEMBL112",
-                            "node_id": "n00",
-                            "type": "chemical_substance"
-                        },
-                        {
-                            "node_id": "n01",
-                            "type": "protein"
-                        }
-                    ]
-                }
-            }
-        }
-        print (json.dumps(query, indent=2))
-        response = requests.post (url, json=query)
-        if response.status_code >= 300:
-            print(response)
-            print(response.text)
-            raise Exception("Bad RTX query response.")
-        print (json.dumps(response.json (), indent=2))
-        return self.normalize_message (response.json ())
-
 class PublishToGamma(GammaResource):
     """ Publish a graph to Gamma. """
     def __init__(self):
@@ -555,7 +411,7 @@ class PublishToGamma(GammaResource):
         if 'knowledge_map' in request.json:
             request.json['answers'] = request.json['knowledge_map']
             del request.json['knowledge_map']
-        print (f"{json.dumps(request.json, indent=2)}")
+        #print (f"{json.dumps(request.json, indent=2)}")
         view_post_response = requests.post(
             self.view_post_url,
             json=request.json)
@@ -641,13 +497,12 @@ class BiolinkModelWalkerService(StandardAPIResource):
 
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
-api.add_resource(RTXQuery, '/graph/rtx/query')
 api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
-api.add_resource(ICEESClusterQuery2, '/clinical/cohort/disease_to_chemical_exposure')
-api.add_resource(ICEESEdVisitsClusterQuery, '/flow/5/mod_1_4/icees/by_ed_visits')
+api.add_resource(ICEESClusterQuery, '/clinical/cohort/disease_to_chemical_exposure')
+api.add_resource(ICEESSchema, '/clincial/icees/schema')
 
 # Visualization
 api.add_resource(PublishToGamma, '/visualize/gamma')

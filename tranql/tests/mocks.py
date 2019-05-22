@@ -36,6 +36,10 @@ class MockMap(MockHelper):
                 "http://robokop.renci.org:6010/api/predicates" : {
                     "path" : "predicates.json",
                     "method" : "get"
+                },
+                "http://localhost:8099/clincial/icees/schema" : {
+                    "path" : "icees_predicates.json",
+                    "method" : "get"
                 }
             }
         }

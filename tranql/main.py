@@ -143,12 +143,13 @@ program_grammar.ignore (comment)
         
 class TranQLParser:
     """ Defines the language's grammar. """
-    def __init__(self):
+    def __init__(self, backplane):
         self.program = program_grammar
+        self.backplane = backplane
     def parse (self, line):
         """ Parse a program, returning an abstract syntax tree. """
         result = self.program.parseString (line)
-        return TranQL_AST (result.asList ())
+        return TranQL_AST (result.asList (), self.backplane)
         
 class TranQL:
     """
@@ -160,7 +161,6 @@ class TranQL:
     """
     def __init__(self, backplane="http://localhost:8099"):
         """ Initialize the interpreter. """
-        self.parser = TranQLParser ()
         self.context = Context ()
         config_path = "conf.yml"
         self.config = Config (config_path)
@@ -172,8 +172,8 @@ class TranQL:
         env_backplane = self.config['BACKPLANE']
         if env_backplane:
             backplane = env_backplane
-
         self.context.set ("backplane", backplane)
+        self.parser = TranQLParser (backplane)
         
     def parse (self, program):
         """ If we just want the AST. """

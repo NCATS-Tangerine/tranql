@@ -61,7 +61,7 @@ class GraphTranslator:
 class Schema:
     """ A schema for a distributed knowledge network. """
     
-    def __init__(self):
+    def __init__(self, backplane):
         """
         Create a metadata map of the knowledge network.
         """
@@ -75,6 +75,8 @@ class Schema:
         """ Resolve remote schemas. """
         for schema_name, metadata in self.config['schema'].items ():
             schema_data = metadata['schema']
+            if isinstance (schema_data, str) and schema_data.startswith ("/"):
+                schema_data = f"{backplane}{schema_data}"
             metadata['schema'] = requests.get (schema_data).json () \
                                  if isinstance(schema_data, str) and schema_data.startswith('http') \
                                     else schema_data

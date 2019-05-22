@@ -1,0 +1,21 @@
+--
+-- Workflow 5
+--
+--   Modules 1-4: Chemical Exposures by Clinical Clusters
+--      For ICEES cohorts, eg, defined by differential population
+--      density, which chemicals are associated with these
+--      cohorts with a p_value lower than some threshold?
+--
+--   Modules 5-*: Knowledge Graph Phenotypic Associations 
+--      For chemicals produced by steps 1-4, what phenotypes are
+--      associated with exposure to these chemicals?
+--
+
+SELECT population_of_individual_organisms->chemical_substance->gene->biological_process->phenotypic_feature
+  FROM "/schema"
+ WHERE icees.table = 'patient'
+   AND icees.year = 2010
+   AND icees.cohort_features.AgeStudyStart = '0-2'
+   AND icees.feature.EstResidentialDensity < 1
+   AND icees.maximum_p_value = 1
+   AND drug_exposure !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'

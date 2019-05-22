@@ -203,7 +203,7 @@ class SelectStatement(Statement):
         self.where = []
         self.set_statements = []
         self.jsonkit = JSONKit ()
-        self.planner = QueryPlanStrategy ()
+        self.planner = QueryPlanStrategy (ast.backplane)
         
     def __repr__(self):
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
@@ -498,13 +498,7 @@ class SelectStatement(Statement):
         kg = result['knowledge_graph']
         #answers = result['answers']
         answers = result['knowledge_map']
-        '''
-        if not 'nodes' in kg:
-            logger.error (f"Malformed knowledge graph element: {json.dumps(kg, indent=2)}")
-            logger.error (f"Malformed message element: {json.dumps(result, indent=2)}")
-            kg['nodes'] = []
-            kg['edges'] = []
-        '''
+
         node_map = { n['id'] : n for n in kg['nodes'] }
         for response in responses[1:]:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
@@ -526,10 +520,11 @@ class SelectStatement(Statement):
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
     
-    def __init__(self, parse_tree):
+    def __init__(self, parse_tree, backplane):
         logger.debug (f"{json.dumps(parse_tree, indent=2)}")
         """ Create an abstract syntax tree from the parser token stream. """
-        self.schema = Schema ()
+        self.schema = Schema (backplane=backplane)
+        self.backplane = backplane
         self.statements = []
         self.parse_tree = parse_tree
         logger.debug (f"{json.dumps(self.parse_tree, indent=2)}")
@@ -703,9 +698,9 @@ class QueryPlan:
 class QueryPlanStrategy:
     """ A strategy for developing a query plan given a schema. """
 
-    def __init__(self):
+    def __init__(self, backplane):
         """ Construct a query strategy, specifying the schema. """
-        self.schema = Schema ()
+        self.schema = Schema (backplane)
         
     def plan (self, query):
         """

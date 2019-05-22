@@ -11,16 +11,12 @@ schema:
     schema: http://robokop.renci.org:6010/api/predicates
   icees :
     doc: |
-      For now, we provide a simple schema for one endpoint modeling the ICEES clinical
-      reasoners capabilities. It would be good to get an ICEES reasoner endpoint
-      capable of managing general question graphs.
+      We point at the ICEES clinical reasoners schema endpoint, mapping questions it is
+      capable of answering. For backplane URLs, the protocol, host, and port are implicit.
+      The ICEES schema endpoint requires additional formatting and handling which we take care
+      of in the backplane wrapper.
     url: /clinical/cohort/disease_to_chemical_exposure
-    schema:
-      population_of_individual_organisms :
-        drug_exposure :
-          - population_to_drug_exposure
-        chemical_substance :
-          - population_to_drug_exposure
+    schema: /clincial/icees/schema
   implicit_conversion:
     doc: |
       Implicit conversions bridge segments of a query. If one reasoner can return a drug exposure
