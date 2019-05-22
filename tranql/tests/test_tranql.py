@@ -319,7 +319,7 @@ def test_ast_merge_answers (requests_mock):
     # PYTHONPATH=$PWD pytest tranql/tests -k "test_answer_merger" -s
     set_mock(requests_mock, "workflow-5")
     print("test_ast_merge_answers ()")
-    
+
     # print(SelectStatement.merge_results ([mocker.get_obj ("disease_to_chemical_exposure.json")], None))
 
 def test_ast_bidirectional_query (requests_mock):
