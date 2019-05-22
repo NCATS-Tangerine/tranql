@@ -1,6 +1,8 @@
 import json
 import pytest
 import os
+import requests
+import requests_mock as r_mock
 from deepdiff import DeepDiff
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
@@ -39,7 +41,9 @@ def assert_parse_tree (code, expected):
 #
 #####################################################
 
-def test_parse_predicate ():
+def test_parse_predicate (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+
     """ Test parsing a predicate. """
     print (f"test_parse_predicate()")
     assert_parse_tree (
@@ -67,8 +71,16 @@ def test_parse_predicate ():
              ]
             ], [ "" ]
             ]])
+
+def set_mock (requests_mock, name):
+    mock_map = MockMap (requests_mock, "workflow-5")
+    session = requests.Session()
+    adapter = r_mock.Adapter()
+    session.mount('requests_mock', adapter)
+
+def test_parse_set (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     
-def test_parse_set ():
     """ Test parsing set statements. """
     print (f"test_parse_set()")
     assert_parse_tree (
@@ -88,7 +100,8 @@ def test_parse_set ():
             ["set", "gamma.quick", "=", "http://robokop.renci.org:80/api/simple/quick/"]
         ])
 
-def test_parse_set_with_comment ():
+def test_parse_set_with_comment (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Test parsing set statements with comments. """
     print (f"test_parse_set_with_comment()")
     assert_parse_tree (
@@ -99,7 +112,8 @@ def test_parse_set_with_comment ():
             ["set", "disease", "=", "asthma"]
         ])
 
-def test_parse_select_simple ():
+def test_parse_select_simple (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Verify the token stream of a simple select statement. """
     print (f"test_parse_select_simple()")
     assert_parse_tree (
@@ -116,7 +130,8 @@ def test_parse_select_simple ():
              ["set", ["knowledge_graph"]]]
         ])
     
-def test_parse_select_complex ():
+def test_parse_select_complex (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Verify the token stream of a more complex select statement. """
     print (f"test_parse_select_complex()")
     assert_parse_tree (
@@ -141,7 +156,8 @@ def test_parse_select_complex ():
              ["set", ["$.nodes.[*].id", "as", "chemical_exposures"]]]
         ])
 
-def test_parse_query_with_repeated_concept ():
+def test_parse_query_with_repeated_concept (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Verify the parser accepts a grammar allowing concept names to be prefixed by a name
     and a colon. """
     print (f"test_parse_query_with_repeated_concept")
@@ -180,21 +196,24 @@ def test_parse_query_with_repeated_concept ():
 # AST tests. Test abstract syntax tree components.
 #
 #####################################################
-def test_ast_set_variable ():
+def test_ast_set_variable (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Test setting a varaible to an explicit value. """
     print ("test_ast_set_variable ()")
     tranql = TranQL ()
     statement = SetStatement (variable="variable", value="x")
     statement.execute (tranql)
     assert tranql.context.resolve_arg ("$variable") == 'x'
-def test_ast_set_graph ():
+def test_ast_set_graph (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Set a variable to a graph passed as a result. """
     print ("test_ast_set_graph ()")
     tranql = TranQL ()
     statement = SetStatement (variable="variable", value=None, jsonpath_query=None)
     statement.execute (tranql, context={ 'result' : { "a" : 1 } })
     assert tranql.context.resolve_arg ("$variable")['a'] == 1
-def test_ast_set_graph ():
+def test_ast_set_graph (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Set a variable to the value returned by executing a JSONPath query. """
     print ("test_ast_set_graph ()")
     tranql = TranQL ()
@@ -207,7 +226,8 @@ def test_ast_set_graph ():
         }
     })
     assert tranql.context.resolve_arg ("$variable")[0]['id'] == "x:y"
-def test_ast_generate_questions ():
+def test_ast_generate_questions (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Validate that
            -- named query concepts work.
            -- the question graph is build incorporating where clause constraints.
@@ -227,7 +247,8 @@ def test_ast_generate_questions ():
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
-def test_ast_bidirectional_query ():
+def test_ast_bidirectional_query (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     print ("test_ast_bidirectional_query ()")
     app = TranQL ()
@@ -259,7 +280,8 @@ def test_ast_bidirectional_query ():
 # Interpreter tests. Test the interpreter interface.
 #
 #####################################################
-def test_interpreter_set ():
+def test_interpreter_set (requests_mock):
+    set_mock(requests_mock, "workflow-5")
     """ Test set statements by executing a few and checking values after. """
     print ("test_interpreter_set ()")
     tranql = TranQL ()
