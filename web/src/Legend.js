@@ -75,7 +75,6 @@ class TypeButtonGroup extends React.Component {
         {
           this.props.types.map((typeData,n) => {
             // How to generate unique id??
-            if (typeData.color === null || typeData.color === undefined) return null;
             let checked = !(this.state.value.some(val => val.id === n));
             let data = {
               type: typeData.type,
@@ -218,8 +217,6 @@ class Legend extends Component {
   TODO:
 
     (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
-
-    (medium-low) maybe adjust it so that it shows the amount of nodes/links currently appearing or something similar to (n out of y nodes)
 
   */
 

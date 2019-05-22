@@ -194,19 +194,17 @@ class LegendFilter extends Actor {
 
     //(zip structure ( [type, {quantity:x}] ))
     let sortedNodeTypes = Object.entries(message.typeMappings.nodes).sort((a,b) => b[1].quantity-a[1].quantity);
-    let min = Math.min(colors.length, sortedNodeTypes.length);
-    for (let i=0;i<Math.min(colors.length, sortedNodeTypes.length);i++) {
+    for (let i=0;i<sortedNodeTypes.length;i++) {
       let nodeType = sortedNodeTypes[i][0];
-      let color = colors.shift();
+      let color = colors.length > 0 ? colors.shift() : '#ffffff';
       //set colors of each node
       message.typeMappings.nodes[nodeType].color = color;
     }
 
     let sortedLinkTypes = Object.entries(message.typeMappings.links).sort((a,b) => b[1].quantity-a[1].quantity);
-    min = Math.min(colors.length, sortedLinkTypes.length);
-    for (let i=0;i<min;i++) {
+    for (let i=0;i<sortedLinkTypes.length;i++) {
       let linkType = sortedLinkTypes[i][0];
-      let color = colors.shift();
+      let color = colors.length > 0 ? colors.shift() : '#ffffff';
       //set colors of each link
       message.typeMappings.links[linkType].color = color;
     }
