@@ -186,8 +186,8 @@ class LegendFilter extends Actor {
     });
 
     let colors = [
-      "#3cb44b","#ffe119","#008080","#ff009d","#4363d8","#fabebe","#808000","#aaffc3","#d32f2f","#ffc107",
-      "#303f9f","#ff4081","#9c27b0","#cddc39","#800000","#e6beff"
+      "#7ac984","#ffef89","#8ecccc","#f7a8d8","#9bafff","#fabebe","#ffe47c","#aaffc3","#f79b9b","#ffd24c",
+      "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff"
     ];
 
     // Nodes get highest priority over coloring

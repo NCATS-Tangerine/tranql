@@ -9,11 +9,13 @@
 }
 
 .TypeButton {
+  border-radius:20px !important;
+  font-size:14px;
   border-color:rgb(40,40,40);
   margin:7.5px;
   color:black;
   /* Make buttons smaller */
-  padding:1.5px;
+  padding:2px 6px 2px 6px;
 }
 
 .TypeButton:hover, .TypeButton.active, .TypeButton:hover.active {

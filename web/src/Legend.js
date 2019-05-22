@@ -135,7 +135,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.state.type} <b>({this.state.quantity})</b>
+        {this.props.active ? <b>{this.state.type}</b> : this.state.type} <b>({this.state.quantity})</b>
       </ToggleButton>
     );
   }
