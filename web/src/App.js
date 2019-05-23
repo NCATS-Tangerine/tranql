@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
-import { Modal } from 'react-bootstrap';
+import { Modal, Form } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
@@ -17,10 +17,11 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
+import Legend from './Legend.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
+import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -36,7 +37,7 @@ var CodeMirror = require('react-codemirror');
 
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
 Array.prototype.unique = function() {
-  return this.filter(function (value, index, self) { 
+  return this.filter(function (value, index, self) {
     return self.indexOf(value) === index;
   });
 };
@@ -50,7 +51,7 @@ const spinnerStyleOverride = css`
     top: 9px;
 `;
 
-/** 
+/**
  * @desc The main TranQL application class.
  * Integrates the query editor, query executor, rendering pipeline, and visualization.
  * @author Steve Cox scox@renci.org
@@ -64,15 +65,15 @@ class App extends Component {
     super(props);
     if(process.env.NODE_ENV === 'development') {
       this.tranqlURL = "http://localhost:8001";
-    }    
+    }
     if(process.env.NODE_ENV === 'production') {
       this.tranqlURL = window.location.origin;
     }
-    //this.tranqlURL = window.location.origin; 
+    //this.tranqlURL = window.location.origin;
     //this.tranqlURL = "http://localhost:8001"; // dev only
     this.robokop_url = "https://robokop.renci.org";
     this.contextMenuId = "contextMenuId";
-    
+
     // Query editor support.
     this._getConfiguration = this._getConfiguration.bind (this);
     this._getModelConcepts = this._getModelConcepts.bind (this);
@@ -89,6 +90,7 @@ class App extends Component {
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
+    this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
@@ -97,10 +99,12 @@ class App extends Component {
     // Visualization filter state values
     this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
     this._onNodeDegreeRangeChange = this._onNodeDegreeRangeChange.bind (this);
+    this._onLegendDisplayLimitChange = this._onLegendDisplayLimitChange.bind (this);
+
 
     // Settings management
     this._handleShowModal = this._handleShowModal.bind (this);
-    this._handleCloseModal = this._handleCloseModal.bind (this);    
+    this._handleCloseModal = this._handleCloseModal.bind (this);
     this._handleUpdateSettings = this._handleUpdateSettings.bind (this);
     this._toggleCheckbox = this._toggleCheckbox.bind (this);
     this._renderCheckboxes = this._renderCheckboxes.bind (this);
@@ -112,7 +116,7 @@ class App extends Component {
     this._cacheWrite = this._cacheWrite.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
     this._clearCache = this._clearCache.bind (this);
-    
+
     // Component rendering.
     this.render = this.render.bind(this);
 
@@ -121,7 +125,8 @@ class App extends Component {
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
-    
+
+
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
 
@@ -132,7 +137,7 @@ class App extends Component {
       // Concept model concepts and relations.
       modelConcepts : [],
       modelRelations : [],
-      
+
       // The graph; populated when a query's executed.
       loading: false,
       record : null,
@@ -142,12 +147,18 @@ class App extends Component {
         nodes : [],
         links : []
       },
+      // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
+      typeMappings : {
+        nodeTypes : [],
+        linkTypes : []
+      },
       // Filters.
       linkWeightRange : [0, 100],
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
+      legendRenderAmount : 10,
       dataSources : [],
-      
+
       // Manage node selection and navigation.
       selectMode: true,
       selectedNode : {},
@@ -156,7 +167,7 @@ class App extends Component {
       navigateMode: true,
 
       // Set up CodeMirror settings.
-      codeMirrorOptions : {        
+      codeMirrorOptions : {
         lineNumbers: true,
         mode: 'text/x-pgsql', //'text/x-pgsql',
         tabSize: 2,
@@ -175,6 +186,9 @@ class App extends Component {
         enableNodeDrag : true
       },
 
+      // Legend component
+      hiddenTypes: [],
+
       // Settings modal
       showSettingsModal : false,
       //showAnswerViewer : true
@@ -188,7 +202,7 @@ class App extends Component {
           });
         }
       });
-    
+
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
@@ -200,7 +214,8 @@ class App extends Component {
       new RenderInit (),
       new LinkFilter (),
       new NodeFilter (),
-      new SourceDatabaseFilter ()
+      new SourceDatabaseFilter (),
+      new LegendFilter ()
     ]);
   }
   /**
@@ -278,11 +293,11 @@ class App extends Component {
   _codeAutoComplete (cm) {
     // https://github.com/JedWatson/react-codemirror/issues/52
     var codeMirror = this._codemirror.current.getCodeMirrorInstance ();
-    
+
     // hint options for specific plugin & general show-hint
     // 'tables' is sql-hint specific
     // 'disableKeywords' is also sql-hint specific, and undocumented but referenced in sql-hint plugin
-    // Other general hint config, like 'completeSingle' and 'completeOnSingleClick' 
+    // Other general hint config, like 'completeSingle' and 'completeOnSingleClick'
     // should be specified here and will be honored
     var tables = {};
     for (var c = 0; c < this.state.modelConcepts.length; c++) {
@@ -295,13 +310,13 @@ class App extends Component {
       completeSingle: false,
       completeOnSingleClick: false
     };
-    
+
     // codeMirror.hint.sql is defined when importing codemirror/addon/hint/sql-hint
     // (this is mentioned in codemirror addon documentation)
     // Reference the hint function imported here when including other hint addons
     // or supply your own
-    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
-    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions); 
+    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
+    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
   }
   /**
    * Set the navigation / selection mode.
@@ -325,7 +340,7 @@ class App extends Component {
    */
   _analyzeAnswer (message) {
     // If we've already created the answer, use that.
- 
+
     if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
       var url = this.state.record.data.viewURL;
       console.log ('--cached-view-url: ' + url);
@@ -377,12 +392,17 @@ class App extends Component {
   _executeQuery () {
     console.log ("--query: ", this.state.code);
     // Clear the visualization so it's obvious that data from the last query is gone
-    // and we're fetching new data for the current query. 
+    // and we're fetching new data for the current query.
     this.setState ({
       graph : {
         nodes : [],
         links : []
-      }
+      },
+      typeMappings : {
+        nodes : [],
+        links : []
+      },
+      hiddenTypes : []
     });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
@@ -489,7 +509,7 @@ class App extends Component {
         if (typeof source == "string") {
           result.push ({ checked : true, label : source });
         } else if (typeof source == "array") {
-          result = source.map ((s, index) => {           
+          result = source.map ((s, index) => {
             return { checked : true, label : s };
           });
         }
@@ -514,7 +534,8 @@ class App extends Component {
     if (message) {
       this._renderChain.handle (message, this.state);
       this.setState({
-        graph: message.graph
+        graph: message.graph,
+        typeMappings: message.typeMappings
       });
     }
   }
@@ -636,7 +657,7 @@ class App extends Component {
       contextNode : node
     });
   }
-  _handleContextMenu (e) {    
+  _handleContextMenu (e) {
     e.preventDefault();
     contextMenu.show({
       id: this._contextMenuId,
@@ -644,6 +665,27 @@ class App extends Component {
       props: {
         foo: 'bar'
       }
+    });
+  }
+
+
+
+  /**
+   * Handle Legend callback on toggling of element type
+   *
+   * @param {string} type - Type of element (e.g. "gene" or "affects_response_to")
+   * @param {boolean} visibility - Determines the new visibility of the elements
+   * @private
+   */
+  _updateGraphElementVisibility(type,visibility) {
+    this.setState(prevState => {
+      let newHiddenTypes = prevState.hiddenTypes.slice();
+      visibility ? newHiddenTypes.push(type) : newHiddenTypes.splice(newHiddenTypes.indexOf(type),1);
+      return {
+        hiddenTypes : newHiddenTypes
+      }
+    },() => {
+      this._translateGraph ();
     });
   }
 
@@ -706,14 +748,14 @@ class App extends Component {
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
                            width={window.innerWidth}
-                           height={window.innerHeight * (84 / 100)} 
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           height={window.innerHeight * (84 / 100)}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -729,13 +771,13 @@ class App extends Component {
                            graphData={this.state.graph}
                            width={window.innerWidth}
                            height={window.innerHeight * (85 / 100)}
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -752,13 +794,13 @@ class App extends Component {
                            graphData={this.state.graph}
                            width={window.innerWidth}
                            height={window.innerHeight * (85 / 100)}
-                           nodeAutoColorBy={this.state.colorGraph ? "type" : ""}
-                           linkAutoColorBy={this.state.colorGraph ? "type" : ""}
+                           nodeColor={(node) => node.color}
+                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
                            nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag} 
+                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
                            onNodeClick={this._handleNodeClick} />
@@ -821,7 +863,7 @@ class App extends Component {
     }
   }
   _toggleCheckbox(index) {
-    const checkboxes = this.state.dataSources;    
+    const checkboxes = this.state.dataSources;
     checkboxes[index].checked = !checkboxes[index].checked;
     this.setState({
       checkboxes : checkboxes
@@ -866,6 +908,15 @@ class App extends Component {
     localStorage.setItem ("minNodeDegree", JSON.stringify (value));
   }
   /**
+   * Respond to changing the value of legend display Limit
+   * @param {number} value - The new legend display Limit
+   * @private
+   */
+  _onLegendDisplayLimitChange (event) {
+    let value = event.target.value;
+    value !== "" && this.setState({ legendRenderAmount : value });
+  }
+  /**
    * Render the modal settings dialog.
    *
    * @private
@@ -887,18 +938,18 @@ class App extends Component {
               </TabList>
               <TabPanel>
             <b>Visualization Mode and Graph Colorization</b> <br/>
-         
+
             <input type="radio" name="visMode"
                    value="3D"
-                   checked={this.state.visMode === "3D"} 
+                   checked={this.state.visMode === "3D"}
                    onChange={this._handleUpdateSettings} />3D &nbsp;
-            <input type="radio" name="visMode" 
+            <input type="radio" name="visMode"
                    value="2D"
-                   checked={this.state.visMode === "2D"} 
+                   checked={this.state.visMode === "2D"}
                    onChange={this._handleUpdateSettings} />2D &nbsp;
-            <input type="radio" name="visMode" 
+            <input type="radio" name="visMode"
                    value="VR"
-                   checked={this.state.visMode === "VR"} 
+                   checked={this.state.visMode === "VR"}
                    onChange={this._handleUpdateSettings} />VR &nbsp;&nbsp;
             <input type="checkbox" name="colorGraph"
                    checked={this.state.colorGraph}
@@ -906,7 +957,7 @@ class App extends Component {
             <br/>
             <div className={"divider"}/>
             <br/>
-        
+
             <b>Use Cache</b> <br/>
             <input type="checkbox" name="useCache"
                    checked={this.state.useCache}
@@ -932,14 +983,26 @@ class App extends Component {
                    onChange={this._onNodeDegreeRangeChange}
                    max={this.state.nodeDegreeMax}/>
             <br/>
-            <div className={"divider"}/>
+            <b>Legend Display Limit</b><br/>
+            Set number of node and link types that legend displays<br/>
+            <Form>
+              <Form.Control
+              type="number"
+              defaultValue={this.state.legendRenderAmount}
+              onChange={this._onLegendDisplayLimitChange}
+              onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
+              />
+            </Form>
+
+
+            {/*<div className={"divider"}/>*/}
             <br/>
               </TabPanel>
               <TabPanel>
             <b>Sources</b> Filter graph edges by source database. Deselecting a database deletes all associations from that source.
             {this._renderCheckboxes()}
               </TabPanel>
-            </Tabs>          
+            </Tabs>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this._handleCloseModal}>
@@ -964,7 +1027,7 @@ class App extends Component {
     return (
       <div className="App" id="AppElement">
         <ReactTooltip place="left"/>
-        <header className="App-header" > 
+        <header className="App-header" >
           <div>
             TranQL {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
@@ -977,12 +1040,12 @@ class App extends Component {
               color={'#2cbc12'}
               loading={this.state.loading} />
             <Button id="navModeButton"
-                    outline 
+                    outline
                     color="primary" onClick={this._setNavMode}>
               { this.state.navigateMode && this.state.visMode === '3D' ? "Navigate" : "Select" }
             </Button>
             <Button id="runButton"
-                    outline 
+                    outline
                     color="success" onClick={this._executeQuery}>
               Run
             </Button>
@@ -994,9 +1057,16 @@ class App extends Component {
       	  <CodeMirror ref={this._codemirror}
                       value={this.state.code}
                       onChange={this._updateCode}
-                      onKeyUp={this.handleKeyUpEvent} 
+                      onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
+          <Legend typeMappings={this.state.typeMappings}
+                  hiddenTypes={this.state.hiddenTypes}
+                  nodeTypeRenderAmount={this.state.legendRenderAmount}
+                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  callback={this._updateGraphElementVisibility}
+                  id="mainLegend"
+                  render={this.state.colorGraph}/>
           <div onContextMenu={this._handleContextMenu}>
             { this._renderForceGraph () }
             <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
@@ -1012,7 +1082,7 @@ class App extends Component {
       </div>
     );
   }
-    
+
 }
 
 export default App;

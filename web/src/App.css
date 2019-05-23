@@ -25,7 +25,7 @@
     width : 100%;
 }
 #info {
-    position: absolute; 
+    position: absolute;
     background-color: white;
     text-align: left;
     bottom: 0px;
@@ -124,6 +124,10 @@
     position: absolute;
     right : 3px;
     top : 11px;
+}
+#mainLegend {
+  border-top:1px solid rgb(200,200,200);
+  border-bottom:1px solid rgb(200,200,200);
 }
 #answerViewer {
     position: absolute;

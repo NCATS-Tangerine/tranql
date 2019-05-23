@@ -33,7 +33,7 @@ def assert_parse_tree (code, expected):
     assert_lists_equal (
         actual,
         expected)
-    
+
 #####################################################
 #
 # Parser tests. Verify we produce the AST for the
@@ -73,14 +73,14 @@ def test_parse_predicate (requests_mock):
             ]])
 
 def set_mock (requests_mock, name):
-    mock_map = MockMap (requests_mock, "workflow-5")
+    mock_map = MockMap (requests_mock, name)
     session = requests.Session()
     adapter = r_mock.Adapter()
     session.mount('requests_mock', adapter)
 
 def test_parse_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    
+
     """ Test parsing set statements. """
     print (f"test_parse_set()")
     assert_parse_tree (
@@ -129,7 +129,7 @@ def test_parse_select_simple (requests_mock):
              ["where", ["chemical_substance", "=", "$chemical_exposures"]],
              ["set", ["knowledge_graph"]]]
         ])
-    
+
 def test_parse_select_complex (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Verify the token stream of a more complex select statement. """
@@ -247,6 +247,181 @@ def test_ast_generate_questions (requests_mock):
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
+# def test_ast_merge_results (requests_mock):
+#     set_mock(requests_mock, "workflow-5")
+#     """ Validate that
+#             -- Results from the query plan are being merged together correctly
+#     """
+#     print("test_ast_merge_answers ()")
+#     tranql = TranQL ()
+#     ast = tranql.parse ("""
+#         SELECT cohort_diagnosis:disease->diagnoses:disease
+#           FROM '/clinical/cohort/disease_to_chemical_exposure'
+#          WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+#            AND Sex = '0'
+#            AND cohort = 'all_patients'
+#            AND max_p_value = '0.5'
+#            SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+#     """)
+#
+#     select = ast.statements[0]
+#
+#     # What is the proper format for the name of a mock file? This should be made into one
+#     mock_responses = [
+#         {
+#             'knowledge_graph': {
+#                 'nodes': [
+#                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
+#                     {'id': 'HGNC:2597', 'type': 'gene'}
+#                 ],
+#                 'edges': [
+#                     {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+#                 ]
+#             },
+#             'knowledge_map': [
+#                 {
+#                     'node_bindings': {
+#                         'chemical_substance': 'CHEBI:28177',
+#                         'gene': 'HGNC:2597'
+#                     },
+#                     'edge_bindings': {
+#                         'e1': [
+#                             'e0'
+#                         ],
+#                         's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
+#                     },
+#                     'score': 0.09722323258334348
+#                 }
+#             ]
+#         },
+#         {
+#             'knowledge_graph': {
+#                 'nodes': [
+#                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
+#                     {'id': 'TEST:00000', 'type': 'TEST'}
+#                 ],
+#                 'edges': [
+#                     {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+#                 ]
+#             },
+#             'knowledge_map': [
+#                 {
+#                     'node_bindings': {
+#                         'chemical_substance': 'CHEBI:28177',
+#                         'gene': 'HGNC:2597'
+#                     },
+#                     'edge_bindings': {
+#                         'e1': [
+#                             'e0'
+#                         ],
+#                         's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
+#                     },
+#                     'score': 0.09722323258334348
+#                 }
+#             ]
+#         }
+#     ]
+#
+#     expected_result = {
+#         'knowledge_graph': {
+#             'nodes': [
+#                 {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
+#                 {'id': 'HGNC:2597', 'type': 'gene'},
+#                 {'id': 'TEST:00000', 'type':'TEST'}
+#             ],
+#             'edges': [
+#                 {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+#             ]
+#         },
+#         'knowledge_map': [
+#             {
+#                 'node_bindings': {
+#                     'chemical_substance': 'CHEBI:28177',
+#                     'gene': 'HGNC:2597'
+#                 },
+#                 'edge_bindings': {
+#                     'e1': [
+#                         'e0'
+#                     ],
+#                     's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
+#                 },
+#                 'score': 0.09722323258334348
+#             }
+#         ]
+#     }
+#
+#     merged_results = select.merge_results (mock_responses, select.service)
+#
+#
+#     assert(merged_results == expected_result)
+
+def test_ast_plan_strategy (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    print ("test_ast_plan_strategy ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT cohort_diagnosis:disease->diagnoses:disease
+          FROM '/clinical/cohort/disease_to_chemical_exposure'
+         WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+           AND Sex = '0'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.5'
+           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+    """)
+
+    select = ast.statements[0]
+    plan = select.planner.plan (select.query)
+
+    expected = [
+        [
+            'robokop',
+            '/graph/gamma/quick',
+            [
+                [
+                    select.query.concepts['cohort_diagnosis'],
+                    select.query.arrows[0],
+                    select.query.concepts[select.query.order[1]]
+                ]
+            ]
+        ]
+    ]
+
+    assert_lists_equal(
+        plan,
+        expected
+    )
+
+def test_ast_plan_statements (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    print("test_ast_plan_statements ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT cohort_diagnosis:disease->diagnoses:disease
+          FROM '/clinical/cohort/disease_to_chemical_exposure'
+         WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+           AND Sex = '0'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.5'
+           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+    """)
+
+
+    select = ast.statements[0]
+    statements = select.plan (select.planner.plan (select.query))
+
+    assert len(statements) == 1
+
+    statement = statements[0]
+
+    assert len(statement.query.concepts) == 2
+
+    assert statement.query.concepts['cohort_diagnosis'].nodes == ["MONDO:0004979"]
+    assert statement.query.concepts['diagnoses'].nodes == []
+    assert statement.service == "/graph/gamma/quick"
+    assert statement.where == []
+    assert statement.set_statements == []
+
+
 def test_ast_bidirectional_query (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
@@ -260,7 +435,7 @@ def test_ast_bidirectional_query (requests_mock):
     expectations = {
         "cop.tranql" : mocker.get_obj ("bidirectional_question.json")
     }
-    queries = { os.path.join (os.path.dirname (__file__), "..", "queries", k) : v 
+    queries = { os.path.join (os.path.dirname (__file__), "..", "queries", k) : v
                 for k, v in expectations.items () }
     for program, expected_output in queries.items ():
         ast = app.parse_file (program)
@@ -274,7 +449,7 @@ def test_ast_bidirectional_query (requests_mock):
         assert nodes[-1]['curie'] == disease_id
         assert nodes[0]['curie'] == chemical
         assert node_index[edges[-1]['target_id']] == node_index[edges[-1]['source_id']] - 1
-        
+
 #####################################################
 #
 # Interpreter tests. Test the interpreter interface.
@@ -313,7 +488,7 @@ def test_program (requests_mock):
     --      differential population density, which chemicals are related to these
     --      clusters with a p_value less than some threshold?
     --
-    --   Modules 5-*: Knowledge Graph Phenotypic Associations 
+    --   Modules 5-*: Knowledge Graph Phenotypic Associations
     --      For chemicals produced by the first steps, what phenotypes are
     --      associated with exposure to these chemicals?
     --
@@ -326,17 +501,17 @@ def test_program (requests_mock):
        AND cohort = 'all_patients'
        AND max_p_value = '0.1'
        SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
-    
+
     SELECT chemical_substance->gene->biological_process->phenotypic_feature
       FROM "/graph/gamma/quick"
      WHERE chemical_substance = $chemical_exposures
        SET knowledge_graph
     """)
-    
+
     #print (f"{ast}")
     expos = tranql.context.resolve_arg("$chemical_exposures")
     #print (f" expos =======> {json.dumps(expos)}")
-    
+
     kg = tranql.context.resolve_arg("$knowledge_graph")
     assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
     assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
