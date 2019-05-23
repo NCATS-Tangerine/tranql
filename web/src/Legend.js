@@ -151,8 +151,8 @@ class Legend extends Component {
    * @param {Object} props - React component properties
    * @param {Boolean} props.render - If false, component will return null in `render` method
    * @param {Object} props.typeMappings - Type mappings of each graph element type (nodes/links)
-   * @param {Object[]} props.nodes - Mappings of `type => number of nodes of type`
-   * @param {Object[]} props.links - Mappings of `type => number of link of type`
+   * @param {Object[]} props.typeMappings.nodes - Mappings of `type => number of nodes of type` (e.g. {"chemical_substance":800})
+   * @param {Object[]} props.typeMappings.links - Mappings of `type => number of link of type`
    * @param {int} props.nodeTypeRenderAmount - Amount of node types rendered on the legend
    * @param {int} props.linkTypeRenderAmount - Amount of link types rendered on the legend
    *

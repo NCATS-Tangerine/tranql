@@ -159,31 +159,23 @@ class LegendFilter extends Actor {
       nodes:{},
       links:{}
     };
-    message.graph.nodes.forEach(node => {
-      node.type.forEach(type => {
-        if (message.typeMappings.nodes.hasOwnProperty(type)) {
-          message.typeMappings.nodes[type].quantity++;
-        }
-        else {
-          message.typeMappings.nodes[type] = {
-            color: null,
-            quantity: 1
-          };
-        }
+    for (let elementType in message.graph) {
+      let elements = message.graph[elementType];
+      elements.forEach(element => {
+        if (typeof element.type === "string")  element.type = [element.type];
+        element.type.forEach(type => {
+          if (message.typeMappings[elementType].hasOwnProperty(type)) {
+            message.typeMappings[elementType][type].quantity++;
+          }
+          else {
+            message.typeMappings[elementType][type] = {
+              color: null,
+              quantity: 1
+            };
+          }
+        });
       });
-    });
-    message.graph.links.forEach(link => {
-      let type = link.type;
-      if (message.typeMappings.links.hasOwnProperty(type)) {
-        message.typeMappings.links[type].quantity++;
-      }
-      else {
-        message.typeMappings.links[type] = {
-          color: null,
-          quantity: 1
-        };
-      }
-    });
+    }
 
     let colors = [
       "#7ac984","#ffef89","#8ecccc","#f7a8d8","#9bafff","#fabebe","#ffe47c","#aaffc3","#f79b9b","#ffd24c",
