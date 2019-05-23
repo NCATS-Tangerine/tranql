@@ -248,7 +248,6 @@ def test_ast_generate_questions (requests_mock):
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
 def test_ast_merge_results (requests_mock):
-    # PYTHONPATH=$PWD pytest tranql/tests -k "test_answer_merger" -s
     set_mock(requests_mock, "workflow-5")
     """ Validate that
             -- Results from the query plan are being merged together correctly
@@ -266,19 +265,6 @@ def test_ast_merge_results (requests_mock):
     """)
 
     select = ast.statements[0]
-
-    statements = select.plan (select.planner.plan (select.query))
-    responses = []
-    for index, statement in enumerate(statements):
-        response = statement.execute (tranql)
-        responses.append (response)
-        if index < len(statements) - 1:
-            next_statement = statements[index+1]
-            name = next_statement.query.order [0]
-            values = select.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
-            first_concept = next_statement.query.concepts[name]
-            first_concept.set_nodes (values)
-
 
     # What is the proper format for the name of a mock file? This should be made into one
     mock_responses = [
@@ -366,7 +352,8 @@ def test_ast_merge_results (requests_mock):
 
     merged_results = select.merge_results (mock_responses, select.service)
 
-    # Needs multiple results to confirm that it is merging correctly
+
+    assert(merged_results == expected_result)
 
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
