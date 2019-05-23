@@ -182,23 +182,16 @@ class LegendFilter extends Actor {
       "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff"
     ];
 
-    // Nodes get highest priority over coloring
-
-    //(zip structure ( [type, {quantity:x}] ))
-    let sortedNodeTypes = Object.entries(message.typeMappings.nodes).sort((a,b) => b[1].quantity-a[1].quantity);
-    for (let i=0;i<sortedNodeTypes.length;i++) {
-      let nodeType = sortedNodeTypes[i][0];
-      let color = colors.length > 0 ? colors.shift() : '#ffffff';
-      //set colors of each node
-      message.typeMappings.nodes[nodeType].color = color;
-    }
-
-    let sortedLinkTypes = Object.entries(message.typeMappings.links).sort((a,b) => b[1].quantity-a[1].quantity);
-    for (let i=0;i<sortedLinkTypes.length;i++) {
-      let linkType = sortedLinkTypes[i][0];
-      let color = colors.length > 0 ? colors.shift() : '#ffffff';
-      //set colors of each link
-      message.typeMappings.links[linkType].color = color;
+    // (Zip structure ( [type, {quantity:x}] ))
+    for (let elementType in message.typeMappings) {
+      let sortedTypes = Object.entries(message.typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
+      sortedTypes.forEach(obj => {
+        console.log(obj);
+        let type = obj[0];
+        let color = colors.length > 0 ? colors.shift() : '#ffffff';
+        // Set colors of each type
+        message.typeMappings[elementType][type].color = color;
+      });
     }
     message.graph.nodes.forEach(node => {node.color = message.typeMappings.nodes[node.type[0]].color});
     message.graph.links.forEach(link => {link.color = message.typeMappings.links[link.type].color});
@@ -241,15 +234,18 @@ class LegendFilter extends Actor {
     // Link filter source
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
-        if (context.hiddenTypes.indexOf(link.type) === -1) {
-          result.push (link);
-          if (! node_ref.includes (link.source)) {
-            node_ref.push (link.source);
+        link.type = typeof link.type === "string" ? [link.type] : link.type;
+        link.type.forEach(type => {
+          if (context.hiddenTypes.indexOf(type) === -1) {
+            result.push (link);
+            if (! node_ref.includes (link.source)) {
+              node_ref.push (link.source);
+            }
+            if (! node_ref.includes (link.target)) {
+              node_ref.push (link.target);
+            }
           }
-          if (! node_ref.includes (link.target)) {
-            node_ref.push (link.target);
-          }
-        }
+        });
         return result;
       }, []),
       nodes: message.graph.nodes.reduce (function (result, node) {

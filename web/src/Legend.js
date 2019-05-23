@@ -36,7 +36,7 @@ class TypeButtonGroup extends React.Component {
     this._handleChange = this._handleChange.bind(this);
 
     this.state = {
-      value:[]
+      value:this.props.hiddenTypes
     }
   }
 
@@ -51,14 +51,15 @@ class TypeButtonGroup extends React.Component {
     let newValue = value[value.length-1];
     let newState = this.state.value.slice();
     let turnedOn = false;
+    console.log(this.state.value,newValue.type);
     this.state.value.forEach((value,i) => {
-      let num = value.id;
-      if (num === newValue.id) {
+      let type = value;
+      if (type === newValue.type) {
         newState.splice(i,1);
       }
     });
     if (newState.length === this.state.value.length) {
-      newState.push(newValue);
+      newState.push(newValue.type);
       turnedOn = true;
     }
     typeof this.props.callback === "function" && this.props.callback(newValue.type,turnedOn); //call the callback and pass on/off to it
@@ -75,13 +76,14 @@ class TypeButtonGroup extends React.Component {
         {
           this.props.types.map((typeData,n) => {
             // How to generate unique id??
-            let checked = !(this.state.value.some(val => val.id === n));
+            let checked = this.state.value.every(val => val !== typeData.type);
+            // console.log(this.state.value,typeData.type,checked);
             let data = {
               type: typeData.type,
               quantity: typeData.quantity,
               color: typeData.color
             };
-            return <TypeButton value={Object.assign({id:n},data)} active={checked} data={data} key={n} />
+            return <TypeButton value={data} active={checked} data={data} key={n} />
           })
         }
       </ToggleButtonGroup>
@@ -93,11 +95,6 @@ class TypeButtonGroup extends React.Component {
 class TypeButton extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      quantity:this.props.data.quantity,
-      color:this.props.data.color,
-      type: TypeButton.adjustTitle(this.props.data.type)
-    };
   }
 
   /**
@@ -119,7 +116,7 @@ class TypeButton extends Component {
     //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the css variable `--highlight-box-shadow-color`,
     //so that it is only applied when active.
     let style = {
-      backgroundColor:this.state.color,
+      backgroundColor:this.props.data.color,
       '--highlight-box-shadow-color':"rgb(50,50,50)"
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
@@ -135,7 +132,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.props.active ? <b>{this.state.type}</b> : this.state.type} <b>({this.state.quantity})</b>
+        {this.props.active ? <b>{TypeButton.adjustTitle(this.props.data.type)}</b> : TypeButton.adjustTitle(this.props.data.type)} <b>({this.props.data.quantity})</b>
       </ToggleButton>
     );
   }
@@ -225,6 +222,8 @@ class Legend extends Component {
 
     let typeMappings = this.props.typeMappings;
 
+    console.log(typeMappings);
+
     let sortedMappings = this._sortMappings(typeMappings);
 
 
@@ -269,7 +268,7 @@ class Legend extends Component {
                 <div className="graph-element-type-container" key={i}>
                   <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h6>
                   <ButtonToolbar className="graph-element-content">
-                    <TypeButtonGroup callback={this.props.callback} types={types} />
+                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes} callback={this.props.callback} types={types} />
                   </ButtonToolbar>
                 </div>
               )

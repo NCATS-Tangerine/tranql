@@ -401,7 +401,8 @@ class App extends Component {
       typeMappings : {
         nodes : [],
         links : []
-      }
+      },
+      hiddenTypes : []
     });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
@@ -1060,7 +1061,7 @@ class App extends Component {
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
           <Legend typeMappings={this.state.typeMappings}
-                  actualGraph={this.state.graph}
+                  hiddenTypes={this.state.hiddenTypes}
                   nodeTypeRenderAmount={this.state.legendRenderAmount}
                   linkTypeRenderAmount={this.state.legendRenderAmount}
                   callback={this._updateGraphElementVisibility}
