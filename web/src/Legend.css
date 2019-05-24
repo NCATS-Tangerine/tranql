@@ -44,15 +44,6 @@
   border-radius:0;
 }
 
-/* Change the 'border-like' color of an active TypeButton */
-/* .TypeButton:not(:disabled):not(.disabled).active,
-.TypeButton:not(:disabled):not(.disabled):active,
-.show>.TypeButton.dropdown-toggle{
-  color: black !important;
-  background-color: black !important;
-  border-color: black !important;
-} */
-
 .legend-vis-control {
   /* Using margin for consistency */
   margin-top:7px;

@@ -13,7 +13,7 @@ export class ToolGroup extends Component {
    *
    * @param {Object} props - Properties of the ToolGroup
    * @param {Tool[]} props.children - Tools that are contained within the ToolGroup.
-   *    The default will be the first child listed. The rest will also be listed in the dropdown according to their order
+   * @param {int} [props.default=0] - Index in props.children of the default selected tool
    */
    constructor(props) {
      super(props);
@@ -32,7 +32,6 @@ export class ToolGroup extends Component {
        if (comp.type !== Tool) {
          throw new Error("ToolGroup must only contain components of type Tool, not type '"+(typeof comp.type === 'string' ? comp.type : comp.type.name)+"'");
        }
-       let callback = comp.props.callback;
        return React.cloneElement(comp, {
          onMouseDown: (e) => {
            e.preventDefault();
@@ -50,19 +49,22 @@ export class ToolGroup extends Component {
      this.state = {
        selectMenuHover: false,
        selectMenu: null,
-       children: children
+       children: children,
+       activeTool: this.props.hasOwnProperty('default') ? this.props.default : 0
      };
    }
 
-   componentDidMount() {
-     this._activeTool = 0;
-   }
-
+   /* ToolGroup class needs to be able to function as if it were an instance of a Tool */
    setActive(active) {
-     /* ToolGroup class needs to be able to function exactly as if it is an instance of a Tool */
-     this.state.children.forEach((tool,i) => {
-       tool.ref.current.state.active && tool.ref.current.setActive(active);
-     });
+     /* If none are currently active and the toolbar requests to set ToolGroup to active, set the currently active Tool */
+     if (active && this.state.children.every(tool => !tool.ref.current.state.active)) {
+        this._activeTool.ref.current.setActive(active);
+     }
+     else {
+       this.state.children.forEach((tool,i) => {
+         tool.ref.current.state.active && tool.ref.current.setActive(active);
+       });
+     }
    }
 
    get _activeTool() {
@@ -94,7 +96,7 @@ export class ToolGroup extends Component {
             className="select-menu"
        >
         {
-          this.state.children.map((tool, index) => {
+          this.state.children.map((tool,index) => {
             return (
               <div key={index} className="select-menu-tool" onClick={() => this._selectActive(index,true)}>
                 {/* Clone the icon of the tool (children is a component when only one child exists) */}
@@ -210,7 +212,23 @@ export class Tool extends Component {
 
 /**
  * Toolbar component that contains ToolGroup and Tool components.
- */
+ *
+Ex:
+const tools = (
+  <ToolGroup default={1}>
+    <Tool name="Select" description="Select a node or link" callback={(e) => console.log("foobar",e)}>
+      <FaMousePointer/>
+    </Tool>
+    <Tool name="Testing" description="Testing tool" callback={(e) => console.log("test",e)}>
+      <FaBan/>
+    </Tool>
+  </ToolGroup>,
+  <Tool name="NavigateTest" description="Navigate along the graph" callback={(e) => console.log("other",e)}>
+    <FaArrowsAlt/>
+  </Tool>
+);
+<Toolbar default={1} tools={tools}/>
+*/
 export class Toolbar extends Component {
   /**
    * Constructs a new Toolbar component
@@ -218,16 +236,17 @@ export class Toolbar extends Component {
    * @param {Object} props - Properties of toolbar
    * @param {Tool[]} props.tools - Array of tool groups and tools contained within the toolbar.
    *    NOTE: Tools are not required to be contained inside of ToolGroups, the name may be misleading. Make sure to check out what a ToolGroup actually does.
+   * @param {int} [props.default=0] - Index in props.tools of the default active tool (its callback will be invoked to select it)
    */
   constructor(props) {
     super(props);
 
-    this.setActiveTool = this.setActiveTool.bind(this);
+    this._setActiveTool = this._setActiveTool.bind(this);
 
     this.state = {
       tools: this.props.tools.map((tool,i) => {
         return React.cloneElement(tool, {
-          toolbarCallback: this.setActiveTool,
+          toolbarCallback: this._setActiveTool,
           ref:React.createRef()
         });
       }),
@@ -235,24 +254,33 @@ export class Toolbar extends Component {
 
   }
 
-  setActiveTool(tool) {
+  _setActiveTool(tool) {
     this.state.tools.forEach((tool2,i) => {
       tool !== tool2.ref.current && tool2.ref.current.setActive(false);
     });
   }
 
+  componentDidMount() {
+    let defaultTool = this.props.hasOwnProperty('default') ? this.state.tools[this.props.default].ref.current : this.state.tools[0].ref.current;
+    defaultTool.setActive(true);
+    this._setActiveTool(defaultTool);
+  }
+
   render() {
     return (
       <div id={this.props.id} className="Toolbar">
-        {
-          this.state.tools.map((tool,i) => {
-            return (
-              <div key={i} className='tool-container'>
-                {tool}
-              </div>
-            )
-          })
-        }
+        <div className="toolbar-header"></div>
+        <div className="toolbar-content">
+          {
+            this.state.tools.map((tool,i) => {
+              return (
+                <div key={i} className='tool-container'>
+                  {tool}
+                </div>
+              )
+            })
+          }
+        </div>
       </div>
     )
   }

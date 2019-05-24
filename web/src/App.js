@@ -200,6 +200,9 @@ class App extends Component {
 
       // Tools for the toolbar component
       tools: [
+        <Tool name="NavigateTest" description="Navigate along the graph" callback={(e) => console.log("other",e)}>
+          <FaArrowsAlt/>
+        </Tool>,
         <ToolGroup>
           <Tool name="Select" description="Select a node or link" callback={(e) => console.log("foobar",e)}>
             <FaMousePointer/>
@@ -210,10 +213,7 @@ class App extends Component {
           <Tool name="Navigate" description="Navigate along the graph" callback={(e) => console.log("navi",e)}>
             <FaArrowsAlt/>
           </Tool>
-        </ToolGroup>,
-        <Tool name="NavigateTest" description="Navigate along the graph" callback={(e) => console.log("other",e)}>
-          <FaArrowsAlt/>
-        </Tool>
+        </ToolGroup>
       ],
 
       // Settings modal
