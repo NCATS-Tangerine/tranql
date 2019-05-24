@@ -8,6 +8,7 @@ import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
+import { FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from "react-table";
 //import Tooltip from 'rc-tooltip';
@@ -19,6 +20,7 @@ import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
 import Legend from './Legend.js';
+import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
@@ -195,6 +197,24 @@ class App extends Component {
 
       // Legend component
       hiddenTypes: [],
+
+      // Tools for the toolbar component
+      tools: [
+        <ToolGroup>
+          <Tool name="Select" description="Select a node or link" callback={(e) => console.log("foobar",e)}>
+            <FaMousePointer/>
+          </Tool>
+          <Tool name="Testing" description="Testing tool" callback={(e) => console.log("test",e)}>
+            <FaBan/>
+          </Tool>
+          <Tool name="Navigate" description="Navigate along the graph" callback={(e) => console.log("navi",e)}>
+            <FaArrowsAlt/>
+          </Tool>
+        </ToolGroup>,
+        <Tool name="NavigateTest" description="Navigate along the graph" callback={(e) => console.log("other",e)}>
+          <FaArrowsAlt/>
+        </Tool>
+      ],
 
       // Settings modal
       showSettingsModal : false,
@@ -1114,32 +1134,35 @@ class App extends Component {
                   id="mainLegend"
                   render={this.state.colorGraph}/>
           <div id="graph"></div>
-          <SplitPane split="vertical"
-                     defaultSize={this.state.graphWidth}
-                     minSize={0}
-                     allowResize={Object.keys(this.state.selectedNode).length !== 0}
-                     maxSize={document.body.clientWidth}
-                     style={{"backgroundColor":"black"}}
-                     ref={this._graphSplitPane}
-                     onDragFinished={(width) => this._updateGraphSplitPaneResize()}
-          >
-            <div onContextMenu={this._handleContextMenu}>
-              { this._renderForceGraph () }
-              <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
-            </div>
-            <div id="info">
-              <JSONTree
-              shouldExpandNode={(key,data,level) => level === 1}
-              hideRoot={true}
-              theme={
-                {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
-                base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
-                base0E:"#ae81ff",base0F:"#cc6633"}
-              }
-              invertTheme={false}
-              data={this.state.selectedNode} />
-            </div>
-          </SplitPane>
+          <div id="viewContainer">
+            <Toolbar id="toolbar" tools={this.state.tools}/>
+            <SplitPane split="vertical"
+                       defaultSize={this.state.graphWidth}
+                       minSize={0}
+                       allowResize={Object.keys(this.state.selectedNode).length !== 0}
+                       maxSize={document.body.clientWidth}
+                       style={{"backgroundColor":"black","position":"static"}}
+                       ref={this._graphSplitPane}
+                       onDragFinished={(width) => this._updateGraphSplitPaneResize()}
+            >
+              <div onContextMenu={this._handleContextMenu}>
+                { this._renderForceGraph () }
+                <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+              </div>
+              <div id="info">
+                <JSONTree
+                shouldExpandNode={(key,data,level) => level === 1}
+                hideRoot={true}
+                theme={
+                  {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
+                  base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
+                  base0E:"#ae81ff",base0F:"#cc6633"}
+                }
+                invertTheme={false}
+                data={this.state.selectedNode} />
+              </div>
+            </SplitPane>
+          </div>
         </div>
         <div id='next'/>
       </div>

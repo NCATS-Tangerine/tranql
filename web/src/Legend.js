@@ -51,7 +51,6 @@ class TypeButtonGroup extends React.Component {
     let newValue = value[value.length-1];
     let newState = this.state.value.slice();
     let turnedOn = false;
-    console.log(this.state.value,newValue.type);
     this.state.value.forEach((value,i) => {
       let type = value;
       if (type === newValue.type) {
@@ -77,7 +76,6 @@ class TypeButtonGroup extends React.Component {
           this.props.types.map((typeData,n) => {
             // How to generate unique id??
             let checked = this.state.value.every(val => val !== typeData.type);
-            // console.log(this.state.value,typeData.type,checked);
             let data = {
               type: typeData.type,
               quantity: typeData.quantity,
@@ -145,6 +143,7 @@ class TypeButton extends Component {
 class Legend extends Component {
   /**
    * Constructs React.Component with arguments `props` and `context`
+   *
    * @param {Object} props - React component properties
    * @param {Boolean} props.render - If false, component will return null in `render` method
    * @param {Object} props.typeMappings - Type mappings of each graph element type (nodes/links)
@@ -210,19 +209,10 @@ class Legend extends Component {
     return newMappings;
   }
 
-  /*
-  TODO:
-
-    (medium) ask about nodes having multiple types and if they should hide if any types are filtered or if all are filtered
-
-  */
-
   render() {
     //Move some of this logic elsewhere? Not really supposed to have any in render, but I don't know where to properly place it
 
     let typeMappings = this.props.typeMappings;
-
-    console.log(typeMappings);
 
     let sortedMappings = this._sortMappings(typeMappings);
 
@@ -236,6 +226,7 @@ class Legend extends Component {
     if (this.state.collapse) {
       return (
           <div id={this.props.id} className="Legend">
+            <ReactTooltip place="left"/>
             <IoIosArrowDropdownCircle data-tip="Open legend"
                                       className="legend-vis-control"
                                       onClick={(e) => this.setState({ collapse : false })}
@@ -257,7 +248,6 @@ class Legend extends Component {
       // });
       return (
         <div id={this.props.id} className="Legend">
-          <ReactTooltip place="left"/>
           {/*+2px in margin-top is because of 2px border*/}
           <IoIosArrowDropupCircle onClick={(e) => this.setState({ collapse : true })} data-tip="Close legend" className="legend-vis-control"/>
           {

@@ -24,18 +24,37 @@
     height : 100%;
     width : 100%;
 }
+#viewContainer {
+    display:flex;
+    height:100%;
+    width:100%;
+    position:absolute;
+}
+#viewContainer > .SplitPane {
+    flex:1 !important;
+}
+#toolbar {
+    background-color:rgba(39, 40, 34, 1);
+    border-right:2px solid rgb(80, 86, 70);
+    width:auto;
+}
 #info {
     /* position: absolute; */
     background-color: rgb(39, 40, 34);
     /* bottom: 0px; */
     overflow:auto;
     height:100%;
+    width:100%;
     border-left: 2px solid rgb(166, 226, 46);
 
 }
 #info > ul {
-  margin:5px !important;
-  margin-bottom: 12.5px !important;
+    margin:5px !important;
+    margin-bottom: 12.5px !important;
+}
+
+.Resizer.disabled {
+  cursor:auto !important;
 }
 
 .tableView {
