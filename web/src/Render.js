@@ -186,7 +186,6 @@ class LegendFilter extends Actor {
     for (let elementType in message.typeMappings) {
       let sortedTypes = Object.entries(message.typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
       sortedTypes.forEach(obj => {
-        console.log(obj);
         let type = obj[0];
         let color = colors.length > 0 ? colors.shift() : '#ffffff';
         // Set colors of each type

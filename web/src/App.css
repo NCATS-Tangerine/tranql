@@ -30,11 +30,12 @@
     /* bottom: 0px; */
     overflow:auto;
     height:100%;
-    border-left: 2px solid rgb(60,60,60);
+    border-left: 2px solid rgb(166, 226, 46);
 
 }
 #info > ul {
   margin:5px !important;
+  margin-bottom: 12.5px !important;
 }
 
 .tableView {

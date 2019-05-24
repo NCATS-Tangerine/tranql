@@ -341,7 +341,9 @@ class App extends Component {
 
     }
     this.setState ({
-      navigateMode: ! this.state.navigateMode
+      navigateMode: ! this.state.navigateMode,
+      selectedNode: {},
+      selectedLink: {}
     });
   }
   /**
@@ -414,8 +416,13 @@ class App extends Component {
         nodes : [],
         links : []
       },
-      hiddenTypes : []
+      hiddenTypes : [],
+      selectedNode: {},
+      selectedLink: {}
     });
+    let width = this._graphSplitPane.current.splitPane.offsetWidth;
+    this._updateGraphSize(width);
+    this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
@@ -662,7 +669,7 @@ class App extends Component {
         selectedNode : { link : link.origin }
       }));
       let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
-      this._updateGraphSize(width) // Sets info element to containerSize - size
+      this._updateGraphSize(width); // Sets info element to containerSize - size
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
 
 
@@ -1110,6 +1117,7 @@ class App extends Component {
           <SplitPane split="vertical"
                      defaultSize={this.state.graphWidth}
                      minSize={0}
+                     allowResize={Object.keys(this.state.selectedNode).length !== 0}
                      maxSize={document.body.clientWidth}
                      style={{"backgroundColor":"black"}}
                      ref={this._graphSplitPane}
@@ -1121,6 +1129,7 @@ class App extends Component {
             </div>
             <div id="info">
               <JSONTree
+              shouldExpandNode={(key,data,level) => level === 1}
               hideRoot={true}
               theme={
                 {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",

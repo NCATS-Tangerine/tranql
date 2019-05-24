@@ -239,7 +239,7 @@ class Legend extends Component {
             <IoIosArrowDropdownCircle data-tip="Open legend"
                                       className="legend-vis-control"
                                       onClick={(e) => this.setState({ collapse : false })}
-                                      color="rgba(255,255,255,.5)"
+                                      color="rgba(220,220,220,1)"
             />
           </div>
       )
