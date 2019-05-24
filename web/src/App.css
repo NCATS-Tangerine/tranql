@@ -25,16 +25,18 @@
     width : 100%;
 }
 #info {
-    position: absolute;
-    background-color: white;
-    text-align: left;
-    bottom: 0px;
-    width: 100%;
-    height: 100px;
-    color: aliceblue;
-    border-top: 2px solid lightblue;
-    display: none;
+    /* position: absolute; */
+    background-color: rgb(39, 40, 34);
+    /* bottom: 0px; */
+    overflow:auto;
+    height:100%;
+    border-left: 2px solid rgb(60,60,60);
+
 }
+#info > ul {
+  margin:5px !important;
+}
+
 .tableView {
     position : absolute;
     bottom : 0px;
@@ -43,9 +45,9 @@
     border-top: 2px solid lightblue;
  }
 .react-json-view {
+    height:100%;
     position: absolute;
-    overflow: scroll;
-    height: 100px;
+    overflow: auto;
  }
 .App-logo {
     /*animation: App-logo-spin infinite 20s linear; */

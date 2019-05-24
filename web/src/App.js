@@ -4,6 +4,7 @@ import { Button } from 'reactstrap';
 import { Modal, Form } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
+import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
@@ -95,6 +96,9 @@ class App extends Component {
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
     this._handleContextMenu = this._handleContextMenu.bind(this);
+    this._updateGraphSize = this._updateGraphSize.bind(this);
+    this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
+
 
     // Visualization filter state values
     this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
@@ -125,6 +129,7 @@ class App extends Component {
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
+    this._graphSplitPane = React.createRef ();
 
 
     // Cache graphs locally using IndexedDB web component.
@@ -185,6 +190,8 @@ class App extends Component {
         nodeRelSize : 7,
         enableNodeDrag : true
       },
+      graphHeight: window.innerHeight,
+      graphWidth: document.body.clientWidth,
 
       // Legend component
       hiddenTypes: [],
@@ -326,7 +333,12 @@ class App extends Component {
   _setNavMode () {
     if (! this.state.navigateMode) {
       // Turn off the object viewer if we're going into navigate.
-      document.getElementById ('info').style.display = 'none';
+      let width = this._graphSplitPane.current.splitPane.offsetWidth;
+      this._updateGraphSize(width) // Set the graph size to the size of the container (meaning info will be of size 0)
+      // React-split-pane doesn't offer a native method for manually resizing panes within it so this is a kinda hacky solution
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+
+
     }
     this.setState ({
       navigateMode: ! this.state.navigateMode
@@ -649,7 +661,11 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { link : link.origin }
       }));
-      document.getElementById ('info').style.display = 'block';
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      this._updateGraphSize(width) // Sets info element to containerSize - size
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+
+
     }
   }
   _handleNodeRightClick (node) {
@@ -666,6 +682,25 @@ class App extends Component {
         foo: 'bar'
       }
     });
+  }
+
+  /**
+   * Update graph size on split pane resize
+   *
+   * @private
+   */
+   _updateGraphSplitPaneResize () {
+     this._updateGraphSize (this._graphSplitPane.current.pane1.offsetWidth);
+   }
+
+ /**
+  * Update graph size
+  *
+  * @param {int} width - New width of the graph
+  * @private
+  */
+  _updateGraphSize (width) {
+    this.setState ({ graphWidth: width, graphHeight: this.state.graphHeight });
   }
 
 
@@ -716,7 +751,10 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
-      document.getElementById ('info').style.display = 'block';
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      this._updateGraphSize(width) // Sets info element to containerSize - size
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+
     }
   }
   /**
@@ -747,8 +785,8 @@ class App extends Component {
       return <ForceGraph3D id="forceGraph3D"
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
-                           width={window.innerWidth}
-                           height={window.innerHeight * (84 / 100)}
+                           width={this.state.graphWidth}
+                           height={this.state.graphHeight}
                            nodeColor={(node) => node.color}
                            linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
@@ -769,8 +807,8 @@ class App extends Component {
       return <ForceGraph2D id="forceGraph3D"
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
-                           width={window.innerWidth}
-                           height={window.innerHeight * (85 / 100)}
+                           width={this.state.graphWidth}
+                           height={this.state.graphHeight}
                            nodeColor={(node) => node.color}
                            linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
@@ -792,8 +830,8 @@ class App extends Component {
       return <ForceGraphVR id="forceGraphVR"
                            ref={el => { this.fg = el; }}
                            graphData={this.state.graph}
-                           width={window.innerWidth}
-                           height={window.innerHeight * (85 / 100)}
+                           width={this.state.graphWidth}
+                           height={this.state.graphHeight}
                            nodeColor={(node) => node.color}
                            linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
@@ -1019,6 +1057,7 @@ class App extends Component {
    * @private
    */
   componentDidMount() {
+    this.setState({ graphWidth : document.body.clientWidth });
     this._hydrateState ();
   }
 
@@ -1067,22 +1106,36 @@ class App extends Component {
                   callback={this._updateGraphElementVisibility}
                   id="mainLegend"
                   render={this.state.colorGraph}/>
-          <div onContextMenu={this._handleContextMenu}>
-            { this._renderForceGraph () }
-            <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
-          </div>
           <div id="graph"></div>
-          <div id="info">
-            <ReactJson
-              src={this.state.selectedNode}
-              theme="monokai" />
-          </div>
+          <SplitPane split="vertical"
+                     defaultSize={this.state.graphWidth}
+                     minSize={0}
+                     maxSize={document.body.clientWidth}
+                     style={{"backgroundColor":"black"}}
+                     ref={this._graphSplitPane}
+                     onDragFinished={(width) => this._updateGraphSplitPaneResize()}
+          >
+            <div onContextMenu={this._handleContextMenu}>
+              { this._renderForceGraph () }
+              <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+            </div>
+            <div id="info">
+              <JSONTree
+              hideRoot={true}
+              theme={
+                {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
+                base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
+                base0E:"#ae81ff",base0F:"#cc6633"}
+              }
+              invertTheme={false}
+              data={this.state.selectedNode} />
+            </div>
+          </SplitPane>
         </div>
         <div id='next'/>
       </div>
     );
   }
-
 }
 
 export default App;
