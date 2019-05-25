@@ -193,27 +193,24 @@ class App extends Component {
         enableNodeDrag : true
       },
       graphHeight: window.innerHeight,
-      graphWidth: document.body.clientWidth,
+      graphWidth: 0,
+
+      // Object viewer
+      objectViewerEnabled: true,
 
       // Legend component
       hiddenTypes: [],
 
+      toolbarEnabled: true,
+
       // Tools for the toolbar component
       tools: [
-        <Tool name="NavigateTest" description="Navigate along the graph" callback={(e) => console.log("other",e)}>
-          <FaArrowsAlt/>
+        <Tool name="Navigate" description="Navigate the graph" callback={(e) => this._setNavMode(false)}>
+        <FaArrowsAlt/>
         </Tool>,
-        <ToolGroup>
-          <Tool name="Select" description="Select a node or link" callback={(e) => console.log("foobar",e)}>
-            <FaMousePointer/>
-          </Tool>
-          <Tool name="Testing" description="Testing tool" callback={(e) => console.log("test",e)}>
-            <FaBan/>
-          </Tool>
-          <Tool name="Navigate" description="Navigate along the graph" callback={(e) => console.log("navi",e)}>
-            <FaArrowsAlt/>
-          </Tool>
-        </ToolGroup>
+        <Tool name="Select" description="Select a node or link" callback={(e) => this._setNavMode(true)}>
+          <FaMousePointer/>
+        </Tool>
       ],
 
       // Settings modal
@@ -348,20 +345,27 @@ class App extends Component {
   /**
    * Set the navigation / selection mode.
    *
+   * @param {boolean} navigate - If true, mode will be set to navigate
    * @private
    */
-  _setNavMode () {
-    if (! this.state.navigateMode) {
+  _setNavMode (navigate) {
+    if (!navigate) {
       // Turn off the object viewer if we're going into navigate.
-      let width = this._graphSplitPane.current.splitPane.offsetWidth;
-      this._updateGraphSize(width) // Set the graph size to the size of the container (meaning info will be of size 0)
-      // React-split-pane doesn't offer a native method for manually resizing panes within it so this is a kinda hacky solution
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      let width;
+      if (this.state.objectViewerEnabled) {
+        width = this._graphSplitPane.current.splitPane.offsetWidth;
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      }
+      else {
+        width = this._graphSplitPane.current.offsetWidth;
+      }
+      console.log(width);
+      this._updateGraphSize(width);
 
 
     }
     this.setState ({
-      navigateMode: ! this.state.navigateMode,
+      navigateMode: navigate,
       selectedNode: {},
       selectedLink: {}
     });
@@ -440,9 +444,15 @@ class App extends Component {
       selectedNode: {},
       selectedLink: {}
     });
-    let width = this._graphSplitPane.current.splitPane.offsetWidth;
+    let width;
+    if (this.state.objectViewerEnabled) {
+      width = this._graphSplitPane.current.splitPane.offsetWidth;
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+    }
+    else {
+      width = this._graphSplitPane.current.offsetWidth;
+    }
     this._updateGraphSize(width);
-    this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
@@ -688,11 +698,15 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { link : link.origin }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
-      this._updateGraphSize(width); // Sets info element to containerSize - size
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-
-
+      let width;
+      if (this.state.objectViewerEnabled) {
+        width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      }
+      else {
+        width = this._graphSplitPane.current.offsetWidth;
+      }
+      this._updateGraphSize(width);
     }
   }
   _handleNodeRightClick (node) {
@@ -778,9 +792,15 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
-      this._updateGraphSize(width) // Sets info element to containerSize - size
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      let width;
+      if (this.state.objectViewerEnabled) {
+        width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      }
+      else {
+        width = this._graphSplitPane.current.offsetWidth;
+      }
+      this._updateGraphSize(width);
 
     }
   }
@@ -1084,7 +1104,7 @@ class App extends Component {
    * @private
    */
   componentDidMount() {
-    this.setState({ graphWidth : document.body.clientWidth });
+    this.setState({ graphWidth : this.state.objectViewerEnabled ? document.body.offsetWidth : this._graphSplitPane.offsetWidth });
     this._hydrateState ();
   }
 
@@ -1105,11 +1125,14 @@ class App extends Component {
               size={6}
               color={'#2cbc12'}
               loading={this.state.loading} />
-            <Button id="navModeButton"
-                    outline
-                    color="primary" onClick={this._setNavMode}>
-              { this.state.navigateMode && this.state.visMode === '3D' ? "Navigate" : "Select" }
-            </Button>
+            {
+              !this.state.toolbarEnabled &&
+                <Button id="navModeButton"
+                        outline
+                        color="primary" onClick={() => {this._setNavMode(!this.state.navigateMode)}}>
+                  { this.state.navigateMode && (this.state.visMode === '3D' || this.state.visMode === '2D') ? "Navigate" : "Select" }
+                </Button>
+            }
             <Button id="runButton"
                     outline
                     color="success" onClick={this._executeQuery}>
@@ -1135,33 +1158,51 @@ class App extends Component {
                   render={this.state.colorGraph}/>
           <div id="graph"></div>
           <div id="viewContainer">
-            <Toolbar id="toolbar" tools={this.state.tools}/>
-            <SplitPane split="vertical"
-                       defaultSize={this.state.graphWidth}
-                       minSize={0}
-                       allowResize={Object.keys(this.state.selectedNode).length !== 0}
-                       maxSize={document.body.clientWidth}
-                       style={{"backgroundColor":"black","position":"static"}}
-                       ref={this._graphSplitPane}
-                       onDragFinished={(width) => this._updateGraphSplitPaneResize()}
-            >
-              <div onContextMenu={this._handleContextMenu}>
-                { this._renderForceGraph () }
-                <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
-              </div>
-              <div id="info">
-                <JSONTree
-                shouldExpandNode={(key,data,level) => level === 1}
-                hideRoot={true}
-                theme={
-                  {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
-                  base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
-                  base0E:"#ae81ff",base0F:"#cc6633"}
+            {
+              this.state.toolbarEnabled && (
+                <Toolbar id="toolbar" default={0} tools={this.state.tools}/>
+              )
+            }
+            {
+              /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
+              this.state.objectViewerEnabled &&
+              <SplitPane split="vertical"
+                         defaultSize={this.state.graphWidth}
+                         minSize={0}
+                         allowResize={Object.keys(this.state.selectedNode).length !== 0}
+                         maxSize={document.body.clientWidth}
+                         style={{"backgroundColor":"black","position":"static"}}
+                         ref={this._graphSplitPane}
+                         onDragFinished={(width) => this._updateGraphSplitPaneResize()}
+              >
+                <div onContextMenu={this._handleContextMenu}>
+                  { this._renderForceGraph () }
+                  <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                </div>
+                {this.state.objectViewerEnabled &&
+                  <div id="info">
+                    <JSONTree
+                    shouldExpandNode={(key,data,level) => level === 1}
+                    hideRoot={true}
+                    theme={
+                      {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
+                      base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
+                      base0E:"#ae81ff",base0F:"#cc6633"}
+                    }
+                    invertTheme={false}
+                    data={this.state.selectedNode} />
+                  </div>
                 }
-                invertTheme={false}
-                data={this.state.selectedNode} />
+              </SplitPane>
+            ||
+              /* Style purposes */
+              <div className="SplitPane" ref={this._graphSplitPane}>
+                <div onContextMenu={this._handleContextMenu}>
+                  { this._renderForceGraph () }
+                <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                </div>
               </div>
-            </SplitPane>
+            }
           </div>
         </div>
         <div id='next'/>
