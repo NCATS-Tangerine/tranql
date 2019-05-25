@@ -1,7 +1,7 @@
 .Toolbar {
   height:100%;
   width:auto;
-  border-right:2px solid rgb(80, 86, 70);
+  border-right:5px solid rgb(50,50,50);
 }
 
 
@@ -9,7 +9,7 @@
   position:relative;
   white-space:nowrap;
   padding:5px;
-  border-radius:2px;
+  border-radius:3px;
   display:flex; /* Inline-block doesn't seem to work to fit to contents when icon is contained, but flex does */
 }
 
@@ -27,7 +27,7 @@
 }
 
 .Tool[data-active-tool="true"] {
-  background-color:rgba(20,20,20,1);
+  background-color:rgba(0,0,0,1);
 }
 
 /* Lots of styling to create a triangle in the bottom-right corner */
@@ -63,18 +63,22 @@
   flex-direction:column;
 }
 
+
 .select-menu-tool {
   white-space:nowrap;
   display:inline-block;
   width:100%;
-  font-size:13px;
+  font-size:14px;
   color:rgba(220,220,220,.9);
-  padding:4px 3px 4px 3px;
+  padding:5px;
   user-select:none;
   -webkit-user-select:none;
   -moz-user-select:none;
   -o-user-select:none;
   -ms-user-select:none;
+}
+
+.select-menu-tool[data-active-tool="true"] {
 }
 
 .select-menu-tool:hover {
@@ -108,7 +112,7 @@
 
 .tool-container {
   /* Type of container that each tool and tool group is wrapped inside of */
-  margin:6px;
+  margin:3px;
   display:flex;
   justify-content:center;
 }

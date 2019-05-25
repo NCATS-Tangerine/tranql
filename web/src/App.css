@@ -9,6 +9,15 @@
      width: 100%;
      border: 1px solid lightgray;
 }
+#headerContainer {
+    width:100%;
+    display:flex;
+    align-items:center;
+    padding: 0 5px 0 5px;
+}
+#headerContainer > * {
+  margin:5px;
+}
 #splitpane {
     position: relative;
     height : 80%;
@@ -80,11 +89,9 @@
 
 .App-header {
     background-color: #282c34;
-     padding: 5px;
      min-height: 8vh;
      display: flex;
-     flex-direction: column;
-     align-items: left; /* center; */
+     align-items: center; /* center; */
      justify-content: left; /*center;*/
      color: white;
      font-size: calc(9px + 2vmin);
@@ -132,8 +139,9 @@
     right: 105px;
 }
 #runButton {
-    position: absolute;
-    right: 41px;
+  height:60%;
+    /* position: absolute; */
+    /* right: 41px; */
  }
 .settingsDialog {
     width: 95%;
@@ -141,19 +149,26 @@
     height: 95%;
     /*max-height: 95%; */
 }
+#appControlContainer {
+  display:flex;
+  flex-direction:column;
+}
+#appControlContainer > * {
+  margin:0;
+}
 #settings {
-    position: absolute;
-    right : 3px;
-    top : 11px;
+    /* position: absolute; */
+    /* right : 3px; */
+    /* top : 11px; */
+}
+#answerViewer {
+  /* position: absolute; */
+  /* right : 3px; */
+  /* top: 40px; */
 }
 #mainLegend {
   border-top:1px solid rgb(200,200,200);
   border-bottom:1px solid rgb(200,200,200);
-}
-#answerViewer {
-    position: absolute;
-    right : 3px;
-    top: 40px;
 }
 .App-link {
   color: #61dafb;

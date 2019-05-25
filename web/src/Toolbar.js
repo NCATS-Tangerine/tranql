@@ -98,7 +98,7 @@ export class ToolGroup extends Component {
         {
           this.state.children.map((tool,index) => {
             return (
-              <div key={index} className="select-menu-tool" onClick={() => this._selectActive(index,true)}>
+              <div key={index} className="select-menu-tool" data-active-tool={this.state.activeTool === index} onClick={() => this._selectActive(index,true)}>
                 {/* Clone the icon of the tool (children is a component when only one child exists) */}
                 {React.cloneElement(tool.props.children)} {tool.props.description}
               </div>
@@ -166,7 +166,7 @@ export class Tool extends Component {
    *
    * @param {Object} props - Properties of the Tool
    * @param {string} props.name - Name of the tool
-   * @param {string} props.description - Description of the tool (keep it short)
+   * @param {string} props.description - Description of the tool (keep it short). Only functional when contained in a ToolGroup.
    * @param {onClick} props.callback - Callback invoked on click
    * @param {Component} props.children - Icon of the child (e.g. <IoIosSettings />)
    */
@@ -200,6 +200,7 @@ export class Tool extends Component {
       <div className="Tool"
            onMouseUp={this.props.onMouseUp || (() => {this.setActive(true);})}
            onMouseDown={this.props.onMouseDown}
+           title={this.props.name}
            data-active-tool={this.state.active}>
         {
           /* this.props.children is a single component (not an array) when only one child is present */

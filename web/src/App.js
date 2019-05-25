@@ -49,9 +49,6 @@ const spinnerStyleOverride = css`
     display: block;
     margin: 4 auto;
     border-color: red;
-    position: absolute;
-    right: 207px;
-    top: 9px;
 `;
 
 /**
@@ -1114,8 +1111,8 @@ class App extends Component {
       <div className="App" id="AppElement">
         <ReactTooltip place="left"/>
         <header className="App-header" >
-          <div>
-            TranQL {this._renderModal () }
+          <div id="headerContainer">
+            <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
             <Message show={false} ref={this._messageDialog} />
             <GridLoader
@@ -1138,8 +1135,10 @@ class App extends Component {
                     color="success" onClick={this._executeQuery}>
               Run
             </Button>
-            <IoIosSettings data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
-            <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
+            <div id="appControlContainer">
+              <IoIosSettings data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
+              <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
+            </div>
           </div>
         </header>
         <div>
