@@ -5,12 +5,14 @@ import requests
 import requests_cache
 import sys
 import traceback
+import time # Basic time profiling for async
 from collections import defaultdict
 from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
 from tranql.tranql_schema import Schema
 from tranql.util import Concept
 from tranql.util import JSONKit
+from tranql.request_util import async_make_requests
 from tranql.tranql_schema import Schema
 from tranql.exception import ServiceInvocationError
 from tranql.exception import UndefinedVariableError
@@ -23,13 +25,13 @@ logger = logging.getLogger (__name__)
 
 def truncate (s, max_length=75):
     return (s[:max_length] + '..') if len(s) > max_length else s
-    
+
 class Bionames:
     """ Resolve natural language names to ontology identifiers. """
     def __init__(self):
         """ Initialize the operator. """
         self.url = "https://bionames.renci.org/lookup/{input}/{type}/"
-    
+
     def get_ids (self, name, type_name):
         url = self.url.format (**{
             "input" : name,
@@ -46,7 +48,7 @@ class Bionames:
         else:
             raise ServiceInvocationError (response.text)
         return result
-    
+
 class Statement:
     """ The interface contract for a statement. """
     def execute (self, interpreter, context={}):
@@ -57,7 +59,7 @@ class Statement:
         if url.startswith ('/'):
             backplane = interpreter.context.resolve_arg ("$backplane")
             result =  f"{backplane}{url}"
-        return result    
+        return result
 
     def message (self, q_nodes=[], q_edges=[], k_nodes=[], k_edges=[], options={}):
         """ Generate the frame of a question. """
@@ -110,9 +112,9 @@ class Statement:
             #traceback.print_exc ()
             logger.error (traceback.format_exc ())
         if unknown_service:
-            raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?") 
+            raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?")
         return response
-    
+
 class SetStatement(Statement):
     """ Model the set statement's semantics and variants. """
     def __init__(self, variable, value=None, jsonpath_query=None):
@@ -178,7 +180,7 @@ class CreateGraphStatement(Statement):
                                      message=graph)
         interpreter.context.set (self.name, response)
         return response
-    
+
 def synonymize(nodetype,identifier):
     robokop_server = 'robokopdb2.renci.org'
     robokop_server = 'robokop.renci.org'
@@ -204,10 +206,10 @@ class SelectStatement(Statement):
         self.set_statements = []
         self.jsonkit = JSONKit ()
         self.planner = QueryPlanStrategy (ast.backplane)
-        
+
     def __repr__(self):
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
-    
+
     def edge (self, index, source, target, type_name=None):
         """ Generate a question edge. """
         e = {
@@ -225,7 +227,7 @@ class SelectStatement(Statement):
             "type": type_name
         }
         if value:
-            n ['curie'] = value 
+            n ['curie'] = value
         return n
 
     def val(self, value, field="id"):
@@ -309,7 +311,7 @@ class SelectStatement(Statement):
                         statement.where.append (constraint_copy)
         self.query.disable = True # = Query ()
         return statements
-        
+
     def generate_questions (self, interpreter):
         """
         Given an archetype question graph and values, generate question
@@ -340,7 +342,7 @@ class SelectStatement(Statement):
                 concept.set_nodes ([ self.node (
                     index = name, #index,
                     type_name = concept.type_name) ])
-            
+
         options = {}
         for constraint in self.where:
             """ This is where we pass constraints to a service. We do this only for constraints
@@ -358,7 +360,7 @@ class SelectStatement(Statement):
         questions = []
         logger.debug (f"concept order> {self.query.order}")
         for index, name in enumerate (self.query.order):
-            concept = self.query[name] 
+            concept = self.query[name]
             previous = self.query.order[index-1] if index > 0 else None
             logger.debug (f"query:{self.query}")
             #logger.debug (f"questions:{index} ==>> {json.dumps(questions, indent=2)}")
@@ -432,23 +434,73 @@ class SelectStatement(Statement):
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
             service = interpreter.context.resolve_arg (self.service)
+
             """ Invoke the service and store the response. """
-            responses = []
-            for index, q in enumerate(questions):
-                logger.debug (f"executing question {json.dumps(q, indent=2)}")
-                response = self.request (service, q)
-                # TODO - add a parameter to limit service invocations.
-                # Until we parallelize requests, cap the max number we attempt for performance reasons. 
-                if index > 50:
-                    break
-                #logger.debug (f"response: {json.dumps(response, indent=2)}")
-                responses.append (response)
-                 
+
+            """
+            Basic data from default query about asthma (in seconds):
+                Async (4 parallel requests at once):
+                    [
+                        8.950051546096802,
+                        8.789488792419434,
+                        8.992945432662964
+                    ]
+                    Average time: 8.910828590393066
+
+                Serial:
+                    [
+                        120.87169480323792,
+                        121.13019347190857,
+                        120.94755744934082
+                    ]
+                    Average time: 120.9831485748291
+
+                Average speed increase of async requests: 1357% (almost 13.6 times faster)
+            """
+
+
+            # For each question, make a request to the service with the question
+            # Only have a maximum of maximumParallelRequests requests executing at any given time
+            logger.setLevel (logging.DEBUG)
+            logger.debug (f"Starting queries on service: {service} (asynchronous={interpreter.asynchronous})")
+            logger.setLevel (logging.INFO)
+            prev = time.time ()
+            if interpreter.asynchronous:
+                maximumParallelRequests = 4
+                responses = async_make_requests ([
+                    {
+                        "method" : "post",
+                        "url" : service,
+                        "json" : q,
+                        "headers" : {
+                            "accept": "application/json"
+                        }
+                    }
+                    for q in questions[:50]
+                ],maximumParallelRequests)
+
+            else:
+                responses = []
+                for index, q in enumerate(questions):
+                    logger.debug (f"executing question {json.dumps(q, indent=2)}")
+                    response = self.request (service, q)
+                    # TODO - add a parameter to limit service invocations.
+                    # Until we parallelize requests, cap the max number we attempt for performance reasons.
+                    if index > 50:
+                        break
+                    #logger.debug (f"response: {json.dumps(response, indent=2)}")
+                    responses.append (response)
+
             if len(responses) == 0:
                 raise ServiceInvocationError (
                     f"No valid results from service {self.service} executing " +
                     f"query {self.query}. Unable to continue query. Exiting.")
                 #raise ServiceInvocationError (f"No responses received from {service}")
+
+            logger.setLevel (logging.DEBUG)
+            logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
+            logger.setLevel (logging.INFO)
+
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
@@ -456,7 +508,7 @@ class SelectStatement(Statement):
             logger.debug (f"{set_statement}")
             set_statement.execute (interpreter, context = { "result" : result })
         return result
-    
+
     def execute_plan (self, interpreter):
         """ Execute a query using a schema based query planning strategy. """
         self.service = ''
@@ -468,9 +520,9 @@ class SelectStatement(Statement):
             response = statement.execute (interpreter)
             responses.append (response)
             if index < len(statements) - 1:
-                """ Implement handoff. Finds the type name of the first element of the 
+                """ Implement handoff. Finds the type name of the first element of the
                 next plan segment, looks up values for that type from the answer bindings of the
-                last response, and transfers values to the new question. TODO: incorporate 
+                last response, and transfers values to the new question. TODO: incorporate
                 user specified namnes. """
                 next_statement = statements[index+1]
                 name = next_statement.query.order [0]
@@ -487,7 +539,7 @@ class SelectStatement(Statement):
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
         return merged
-        
+
     def merge_results (self, responses, service):
         """ Merge results. """
         result = responses[0] if len(responses) > 0 else None
@@ -501,7 +553,7 @@ class SelectStatement(Statement):
 
         node_map = { n['id'] : n for n in kg['nodes'] }
         for response in responses[1:]:
-            #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
+            #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
             # their ids are equal. Consider merging provenance/properties.
             # Edges, we may keep distinct and whole or merge to some tbd extent.
@@ -516,10 +568,10 @@ class SelectStatement(Statement):
                         node_map[n['id']] = n
                         kg['nodes'].append (n)
         return result
-    
+
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
-    
+
     def __init__(self, parse_tree, backplane):
         logger.debug (f"{json.dumps(parse_tree, indent=2)}")
         """ Create an abstract syntax tree from the parser token stream. """
@@ -553,7 +605,7 @@ class TranQL_AST:
                 service = element[1][1],
                 name = element[2][1]))
         logger.debug (f"--parse_create(): {self.statements[-1]}")
-        
+
     def remove_whitespace (self, group, also=[]):
         """
         Delete spurious items in a statement.
@@ -562,7 +614,7 @@ class TranQL_AST:
         return [ x for x in group
                  if not isinstance(x, str) or
                  (not x.isspace () and not x in also) ]
-        
+
     def parse_select (self, statement):
         """ Parse a select statement. """
         select = SelectStatement (ast=self)
@@ -586,7 +638,7 @@ class TranQL_AST:
                                 elif op == '=~':
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
-                                    select.query[var].exclude_patterns.append (val)                                    
+                                    select.query[var].exclude_patterns.append (val)
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':
@@ -604,7 +656,7 @@ class TranQL_AST:
     def is_command (self, e):
         """ Is this structured like a command? """
         return isinstance(e, list) and len(e) > 0
-    
+
     def __repr__(self):
         return json.dumps(self.parse_tree)
 
@@ -614,9 +666,9 @@ class Edge:
         self.predicate = predicate
     def __repr__(self):
         return f"edge[dir:{self.direction},pred:{self.predicate}]"
-    
+
 class Query:
-    """ Model a query. 
+    """ Model a query.
     TODO:
        - Model queries with arrows in both diretions.
        - Model predicates
@@ -629,13 +681,13 @@ class Query:
 
     """ The biolink model. Will use for query validation. """
     concept_model = ConceptModel ("biolink-model")
-    
+
     def __init__(self):
         self.order = []
         self.arrows = []
         self.concepts = {}
         self.disable = False
-        
+
     def add(self, key):
         """ Add a token in the question graph to this query object. """
         if key == self.forward_arrow or key == self.back_arrow:
@@ -679,7 +731,7 @@ class Query:
 
 class QueryPlan:
     """ A plan outlining which schema to use to fulfill a query. """
-    def __init__(self):        
+    def __init__(self):
         self.plan = []
     def add (self, schema_name, schema_url, subj, pred, obj):
         """ Add a mapping between a schema and a query transition. """
@@ -694,14 +746,14 @@ class QueryPlan:
                 plan.append ([ schema_name, sub_schema_url, [
                     [ source, predicate, target ]
                 ]])
-                
+
 class QueryPlanStrategy:
     """ A strategy for developing a query plan given a schema. """
 
     def __init__(self, backplane):
         """ Construct a query strategy, specifying the schema. """
         self.schema = Schema (backplane)
-        
+
     def plan (self, query):
         """
         Plan a query over the configured sources and their associated schemas.
@@ -719,7 +771,7 @@ class QueryPlanStrategy:
                 predicate=query.arrows[index])
         logger.debug (f"--created plan {plan}")
         return plan
-    
+
     def plan_edge (self, plan, source, target, predicate):
         """ Determine if a transition between two types is supported by
         any of the registered sub-schemas.
@@ -768,5 +820,3 @@ class QueryPlanStrategy:
                                           include_patterns=source.include_patterns,
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
-    
-    

@@ -145,7 +145,7 @@ class TranQLQuery(StandardAPIResource):
 
     def __init__(self):
         super().__init__()
-        
+
     def post(self):
         """
         query
@@ -181,7 +181,7 @@ class TranQLQuery(StandardAPIResource):
         #self.validate (request)
         result = {}
         try:
-            tranql = TranQL ()
+            tranql = TranQL (asynchronous=False)
             logging.debug (request.json)
             query = request.json['query'] if 'query' in request.json else ''
             logging.debug (f"----------> query: {query}")
@@ -208,7 +208,7 @@ class ModelConceptsQuery(StandardAPIResource):
 
     def __init__(self):
         super().__init__()
-        
+
     def post(self):
         """
         query
@@ -252,7 +252,7 @@ class ModelRelationsQuery(StandardAPIResource):
 
     def __init__(self):
         super().__init__()
-        
+
     def post(self):
         """
         query
