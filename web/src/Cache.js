@@ -30,7 +30,7 @@ class Cache extends Component {
     return await this.db[table].get (id, callback);
   }
   async clear () {
-    return await Object.values(this.db).forEach((table) => table.clear ());
+    return await this.db.tables.forEach((table) => table.clear ());
   }
 }
 
