@@ -226,12 +226,13 @@ class Legend extends Component {
     }
     if (this.state.collapse) {
       return (
-          <div id={this.props.id} className="Legend">
+          <div id={this.props.id} className="Legend" data-closed={true}>
+            {/*<h6 className="legendHeader">Legend</h6>*/}
             <ReactTooltip place="left"/>
             <IoIosArrowDropdownCircle data-tip="Open legend"
-                                      className="legend-vis-control"
+                                      className="legend-vis-control-open"
                                       onClick={(e) => this.setState({ collapse : false })}
-                                      color="rgba(220,220,220,1)"
+                                      color="rgba(40,40,40,1)"
             />
           </div>
       )

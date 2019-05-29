@@ -2,6 +2,18 @@
   width: 100%;
   background-color:rgb(230,230,230);
 }
+.Legend[data-closed="true"] {
+  padding:5px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
+.legendHeader {
+  flex-grow:1;
+  margin:0;
+  font-size:16px;
+}
 
 /* Default = flexbox, but this prevents the ButtonGroup from being multiple lines, which is the default behavior. */
 .btn-group {
@@ -54,7 +66,9 @@
   /* Since the icon is overlayed over the force graph when collapsed, set z-index to higher than force graph's (auto) */
   z-index: 1 !important;
 }
-
+.legend-vis-control-open {
+  font-size:24px;
+}
 .graph-element-type-container {
   padding:5px 5px 5px 7.5px;
 }
