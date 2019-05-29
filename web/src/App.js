@@ -1353,7 +1353,7 @@ class App extends Component {
                     {this.state.schemaViewerEnabled ?
                       (
                         this._renderForceGraph (
-                          JSON.parse(JSON.stringify(this.state.schema)),
+                          this.state.schema,
                           {
                           ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
 
@@ -1368,7 +1368,7 @@ class App extends Component {
                     :
                       (
                         this._renderForceGraph (
-                          JSON.parse(JSON.stringify(this.state.graph)), {
+                          this.state.graph, {
                           ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;}
 
                           // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
