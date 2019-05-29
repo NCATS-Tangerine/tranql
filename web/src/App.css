@@ -193,7 +193,7 @@
   /* right : 3px; */
   /* top: 40px; */
 }
-#mainLegend {
+.Legend {
   border-top:1px solid rgb(200,200,200);
   border-bottom:1px solid rgb(200,200,200);
 }

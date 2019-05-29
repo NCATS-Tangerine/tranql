@@ -12,7 +12,7 @@ class Cache extends Component {
     // Declare tables, IDs and indexes
     this.db.version(1).stores({
       cache: '++id, name, &key, graph',
-      schema: '++id, graph'
+      schema: '&id, graph'
     });
     this.write = this.write.bind (this);
   }

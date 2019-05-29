@@ -168,9 +168,10 @@ class Legend extends Component {
    * @param {Object} typeMappings - Mappings of types of nodes and links to their quantities and colors
    * @param {Object} typeMappings.nodes - Node object mappings with structure `type` => {`color`,`quantity`}
    * @param {Object} typeMappings.links - Link object mappings with structure `type` => {`color`,`quantity`}
-   *
+   * @param {String[]} hiddenTypes - Array of strings specifying the hidden types contained within the typeMappings.
+   *    This allows the Legend to make each type button the correct state (on/off) when rendering.
    * @returns {Object} - New sorted mapping object with zipped structure
-   *   {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
+   *    {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
    * @private
    */
   _sortMappings(typeMappings) {

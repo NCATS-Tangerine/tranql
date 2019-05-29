@@ -156,12 +156,12 @@ class App extends Component {
       messageRecord : null,
       graph : {
         nodes : [],
-        links : []
-      },
-      // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
-      typeMappings : {
-        nodeTypes : [],
-        linkTypes : []
+        links : [],
+
+        // Types that aren't rendered
+        hiddenTypes: [],
+        // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
+        typeMappings: {}
       },
       // Filters.
       linkWeightRange : [0, 100],
@@ -208,13 +208,17 @@ class App extends Component {
       // Schema viewer
       schema : {
         nodes : [],
-        links : []
+        links : [],
+
+        // Types that aren't rendered
+        hiddenTypes: [],
+        // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
+        typeMappings: {}
       },
+      schemaMessage : null,
       schemaViewerEnabled : true,
       schemaLoaded : false,
 
-      // Legend component
-      hiddenTypes: [],
 
       toolbarEnabled: true,
 
@@ -250,6 +254,13 @@ class App extends Component {
       new LinkFilter (),
       new NodeFilter (),
       new SourceDatabaseFilter (),
+      new LegendFilter ()
+    ]);
+
+    // Create rendering pipeline for schema
+    this._schemaRenderChain = new Chain ([
+      new RenderInit (),
+      new NodeFilter (),
       new LegendFilter ()
     ]);
   }
@@ -445,13 +456,11 @@ class App extends Component {
     this.setState ({
       graph : {
         nodes : [],
-        links : []
+        links : [],
+
+        hiddenTypes: [],
+        typeMappings: {}
       },
-      typeMappings : {
-        nodes : [],
-        links : []
-      },
-      hiddenTypes : [],
       selectedNode: {},
       selectedLink: {},
 
@@ -507,6 +516,7 @@ class App extends Component {
                   this._translateGraph (result);
                   this._configureMessage (result);
                   this._cacheWrite (result);
+                  this._setSchemaViewerActive(false);
                 }
               },
               // Note: it's important to handle errors here
@@ -553,29 +563,33 @@ class App extends Component {
           })
         });
   }
+  _configureMessageLogic (message) {
+    var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
+      return message.knowledge_graph.edges.reduce ((acc, cur) => {
+        return cur.target_id === node.id ? acc + 1 : acc;
+      }, 1);
+    }).sort ((a,b) => a - b).reverse();
+    // Configure data sources
+    var dataSources = message.knowledge_graph.edges.flatMap ((edge, index) => {
+      return edge.source_database;
+    }).unique ().flatMap ((source, index) => {
+      var result = [];
+      if (typeof source == "string") {
+        result.push ({ checked : true, label : source });
+      } else if (typeof source == "array") {
+        result = source.map ((s, index) => {
+          return { checked : true, label : s };
+        });
+      }
+      return result;
+    });
+    return [dataSources,nodeDegrees];
+  }
   _configureMessage (message) {
     console.log(message);
     if (message && message.knowledge_graph) {
       // Configure node degree range.
-      var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
-        return message.knowledge_graph.edges.reduce ((acc, cur) => {
-          return cur.target_id === node.id ? acc + 1 : acc;
-        }, 1);
-      }).sort ((a,b) => a - b).reverse();
-      // Configure data sources
-      var dataSources = message.knowledge_graph.edges.flatMap ((edge, index) => {
-        return edge.source_database;
-      }).unique ().flatMap ((source, index) => {
-        var result = [];
-        if (typeof source == "string") {
-          result.push ({ checked : true, label : source });
-        } else if (typeof source == "array") {
-          result = source.map ((s, index) => {
-            return { checked : true, label : s };
-          });
-        }
-        return result;
-      });
+      let [dataSources, nodeDegrees] = this._configureMessageLogic(message);
       this.setState({
         dataSources : dataSources,
         message : message,
@@ -595,10 +609,8 @@ class App extends Component {
     if (message) {
       this._renderChain.handle (message, this.state);
       this.setState({
-        graph: message.graph,
-        typeMappings: message.typeMappings
+        graph: message.graph
       });
-      this._setSchemaViewerActive(false);
     }
   }
   /**
@@ -608,12 +620,14 @@ class App extends Component {
    */
    _getSchema () {
      this.setState(p => ({}),() => {
-       var cachePromise = this.state.useCache ? this._cache.get ('schema', 1) : Promise.resolve (undefined);
+       var cachePromise = this.state.useCache ? this._cache.get ('schema', 0) : Promise.resolve (undefined);
        cachePromise.then (
          function success (result) {
            if (result !== undefined) {
              console.log("Got schema from cache");
-             this.setState({ schemaLoaded : true, schema : result.data.graph });
+             let msg = result.data;
+             this._schemaRenderChain.handle (msg, this.state);
+             this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
              this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -630,22 +644,20 @@ class App extends Component {
                      delete result.answers;
                    }
 
-                   result.graph = {
+                   result.knowledge_graph = {
                      nodes: result.knowledge_graph.nodes.map((node) => {
                        return {
                          id: node,
                          type: node,
-                         radius: 9,
                          name: node
                        }
                      }),
-                     links: result.knowledge_graph.edges.reduce((acc, edge) => {
+                     edges: result.knowledge_graph.edges.reduce((acc, edge) => {
                        // TODO fix? Can't draw edges from a node to itself
                        if (edge[0] !== edge[1]) {
                          acc.push({
-                           source: edge[0],
-                           target: edge[1],
-                           name: edge[2],
+                           source_id: edge[0],
+                           target_id: edge[1],
                            type: edge[2],
                            weight: 1
                          });
@@ -656,10 +668,13 @@ class App extends Component {
 
                    console.log("Fetched schema:", result);
 
-                   this.setState({ schemaLoaded : true, schema : result.graph });
+                   this._schemaRenderChain.handle (result, this.state);
+
+                   this.setState({ schemaLoaded : true, schema : result.graph, schemaMessage : result });
                    this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
 
                    this._cache.write ('schema', {
+                     'id' : 0,
                      'data' : result
                    });
                  }
@@ -834,15 +849,28 @@ class App extends Component {
    * @private
    */
   _updateGraphElementVisibility(type,visibility) {
-    this.setState(prevState => {
-      let newHiddenTypes = prevState.hiddenTypes.slice();
-      visibility ? newHiddenTypes.push(type) : newHiddenTypes.splice(newHiddenTypes.indexOf(type),1);
-      return {
-        hiddenTypes : newHiddenTypes
-      }
-    },() => {
-      this._translateGraph ();
-    });
+    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled ? this.state.schema : this.state.graph));
+    if (visibility) {
+      graph.hiddenTypes.push(type);
+    } else {
+      graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(type),1);
+    }
+
+    if (this.state.schemaViewerEnabled) {
+      let newMessage = this.state.schemaMessage;
+      newMessage.hiddenTypes = graph.hiddenTypes;
+      this._schemaRenderChain.handle(newMessage, this.state);
+      // console.log(message);
+      this.setState({ schema : newMessage.graph });
+    }
+    else {
+      let newMessage = this.state.message;
+      newMessage.hiddenTypes = graph.hiddenTypes;
+
+      this.setState({ message : newMessage }, () => {
+        this._translateGraph();
+      });
+    }
   }
 
   /**
@@ -1026,7 +1054,9 @@ class App extends Component {
       localStorage.setItem (targetName, JSON.stringify (useCache));
     } else if (targetName === 'visMode') {
       // Toggle between 2D and 3D visualizations.
-      this.setState ({ visMode : e.currentTarget.value });
+      this.setState ({ visMode : e.currentTarget.value }, () => {
+        this._fgAdjustCharge (this.state.charge);
+      });
       localStorage.setItem (targetName, JSON.stringify(e.currentTarget.value));
     } else if (targetName === 'colorGraph') {
       var colorGraph = e.currentTarget.checked;
@@ -1242,7 +1272,6 @@ class App extends Component {
               size={6}
               color={'#2cbc12'}
               loading={this.state.loading && this.state.schemaViewerEnabled} />
-            {/* GridLoader is commented out for the time being as the schema banner displays if a graph is loading */}
             {
               !this.state.toolbarEnabled &&
                 <Button id="navModeButton"
@@ -1269,13 +1298,18 @@ class App extends Component {
                       onKeyUp={this.handleKeyUpEvent}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
-          <Legend typeMappings={this.state.typeMappings}
-                  hiddenTypes={this.state.hiddenTypes}
+          <Legend typeMappings={this.state.graph.typeMappings}
+                  hiddenTypes={this.state.graph.hiddenTypes}
                   nodeTypeRenderAmount={this.state.legendRenderAmount}
                   linkTypeRenderAmount={this.state.legendRenderAmount}
                   callback={this._updateGraphElementVisibility}
-                  id="mainLegend"
-                  render={this.state.colorGraph}/>
+                  render={!this.state.schemaViewerEnabled && this.state.colorGraph}/>
+          <Legend typeMappings={this.state.schema.typeMappings}
+                  hiddenTypes={this.state.schema.hiddenTypes}
+                  nodeTypeRenderAmount={this.state.legendRenderAmount}
+                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  callback={this._updateGraphElementVisibility}
+                  render={this.state.schemaViewerEnabled && this.state.colorGraph}/>
           <div id="graph"></div>
           <div id="viewContainer">
             {
