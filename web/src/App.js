@@ -373,6 +373,11 @@ class App extends Component {
     this.setState({ schemaViewerEnabled : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
+    if (this.state.objectViewerEnabled) {
+      let width = this._graphSplitPane.current.splitPane.offsetWidth;
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      this._updateGraphSize(width);
+    }
   }
   /**
    * Set the navigation / selection mode.
@@ -791,7 +796,8 @@ class App extends Component {
         this.state.selectedLink !== null &&
 //        this.state.selectedLink.source !== link.source_id &&
 //        this.state.selectedLink.target !== link.target_id &&
-        this.state.selectMode)
+        this.state.selectMode &&
+        !this.state.navigateMode)
     {
       // Select the node.
       this.setState ((prevState, props) => ({
@@ -1344,33 +1350,32 @@ class App extends Component {
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
-                      {this.state.schemaViewerEnabled ?
-                        (
-                          this._renderForceGraph (
-                            this.state.schema,
-                            {
-                            ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
-                            nodeAutoColorBy: 'type',
-                            linkAutoColorBy: 'type'
+                    {this.state.schemaViewerEnabled ?
+                      (
+                        this._renderForceGraph (
+                          JSON.parse(JSON.stringify(this.state.schema)),
+                          {
+                          ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
 
-                            // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
-                            // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
-                            // Additionally, the react-force-graph does not seem to like it when you pass in a property as undefined.
-                            // Therefore, the spread operator is used here to conditionally add properties to the object without having to pass in a property as undefined
-                            // Commented out because it breaks charge. Needs to somehow reset graph when graph type changes, but also needs to retain auto color property.
-                            // ...(this.state.schema.nodes.some(n => n.index !== undefined) || this.state.schema.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
-                          })
-                        )
-                      :
-                        (
-                          this._renderForceGraph (this.state.graph, {
-                            ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;}
+                          // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
+                          // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
+                          // Additionally, the react-force-graph does not seem to like it when you pass in a property as undefined.
+                          // Therefore, the spread operator is used here to conditionally add properties to the object without having to pass in a property as undefined
+                          // Commented out because it breaks charge. Needs to somehow reset graph when graph type changes, but also needs to retain auto color property.
+                          // ...(this.state.schema.nodes.some(n => n.index !== undefined) || this.state.schema.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
+                        })
+                      )
+                    :
+                      (
+                        this._renderForceGraph (
+                          JSON.parse(JSON.stringify(this.state.graph)), {
+                          ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;}
 
-                            // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
-                            // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
-                          })
-                        )
-                      }
+                          // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
+                          // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
+                        })
+                      )
+                    }
                     <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
                   </div>
                 </div>
