@@ -18,6 +18,7 @@ from tranql.concept import ConceptModel
 from tranql.main import TranQL
 import networkx as nx
 from tranql.util import JSONKit
+from tranql.tranql_schema import GraphTranslator, Schema
 from tranql.concept import BiolinkModelWalker
 from tranql.exception import TranQLException
 #import flask_monitoringdashboard as dashboard
@@ -181,7 +182,7 @@ class TranQLQuery(StandardAPIResource):
         #self.validate (request)
         result = {}
         try:
-            tranql = TranQL (asynchronous=False)
+            tranql = TranQL ()
             logging.debug (request.json)
             query = request.json['query'] if 'query' in request.json else ''
             logging.debug (f"----------> query: {query}")
@@ -202,6 +203,38 @@ class TranQLQuery(StandardAPIResource):
                 "details" : ''
             }
         return result
+
+class SchemaGraph(StandardAPIResource):
+    """ Graph of schema to display to the client """
+
+    def __init__(self):
+        super().__init__()
+
+    def get(self):
+        """
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        tranql = TranQL ()
+        schema = Schema (backplane=tranql.context.mem.get('backplane'))
+        schemaGraph = GraphTranslator(schema.schema_graph)
+
+        # logger.info(schema.schema_graph.net.nodes)
+        # logger.info(schemaGraph.graph_to_message())
+
+        # return {"nodes":[],"links":[]}
+        return schemaGraph.graph_to_message()
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """
@@ -297,6 +330,7 @@ class ModelRelationsQuery(StandardAPIResource):
 ###############################################################################################
 
 api.add_resource(TranQLQuery, '/tranql/query')
+api.add_resource(SchemaGraph, '/tranql/schema')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 

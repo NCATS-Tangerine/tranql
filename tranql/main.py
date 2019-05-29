@@ -175,6 +175,9 @@ class TranQL:
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
 
+        if 'ASYNCHRONOUS_REQUESTS' in self.config:
+            asynchronous = self.config['ASYNCHRONOUS_REQUESTS']
+
         self.asynchronous = asynchronous
 
     def parse (self, program):

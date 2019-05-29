@@ -46,6 +46,27 @@
     background-color:rgba(30,30,30, 1);
     width:auto;
 }
+#schemaBanner {
+    background-color: rgb(30, 30, 30);
+    border-bottom: 4px solid rgb(50, 50, 50);
+    /* font-weight: bold; */
+    position: relative;
+    padding: 12.5px;
+    /* text-align: center; */
+    font-style: italic;
+    font-size: 18px;
+    color: rgb(235, 235, 235);
+}
+#schemaViewToggleButtonContainer {
+  height:100%;
+  float:right;
+  /* top:0; */
+  /* right:12.5px; */
+  /* position:absolute; */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
 #info {
     /* position: absolute; */
     background-color: rgb(39, 40, 34);
@@ -54,7 +75,6 @@
     height:100%;
     width:100%;
     border-left: 2px solid rgb(166, 226, 46);
-
 }
 #info > ul {
     margin:5px !important;

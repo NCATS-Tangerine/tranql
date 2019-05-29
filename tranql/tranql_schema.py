@@ -1,6 +1,7 @@
 import networkx as nx
 import json
 import yaml
+import logging
 import requests
 import requests_cache
 import os
@@ -28,11 +29,15 @@ class NetworkxGraph:
                 result = e
                 break
         return result
+    def get_nodes (self):
+        return self.net.nodes
+    def get_edges (self):
+        return self.net.edges
     def delete (self):
         self.net.clear ()
     def commit (self):
         pass
-    
+
 class GraphTranslator:
     """
     An interface to a knowledge graph.
@@ -58,9 +63,27 @@ class GraphTranslator:
             self.graph.add_edge (e['source_id'], e['target_id'], properties=e)
         return g
 
+    def graph_to_message(self):
+        """
+        Write underlying graph interface to a KGS message
+        :return: Return a KGS message
+        """
+        nodes = list (self.graph.get_nodes ())
+        edges = list (self.graph.get_edges ())
+        return {
+            "knowledge_graph" : {
+                "nodes" : nodes,
+                "edges" : edges
+            },
+            "knowledge_maps" : [
+                {}
+            ],
+            "options" : {}
+        }
+
 class Schema:
     """ A schema for a distributed knowledge network. """
-    
+
     def __init__(self, backplane):
         """
         Create a metadata map of the knowledge network.
@@ -81,7 +104,7 @@ class Schema:
                                  if isinstance(schema_data, str) and schema_data.startswith('http') \
                                     else schema_data
         self.schema = self.config['schema']
-        
+
         """ Build a graph of the schema. """
         #self.schema_graph = RedisGraph ()
         self.schema_graph = NetworkxGraph ()
@@ -89,13 +112,13 @@ class Schema:
             self.schema_graph.delete ()
         except:
             pass
-        
+
         for k, v in self.config['schema'].items ():
             #print (f"layer: {k}")
             self.add_layer (layer=v['schema'])
 
         self.schema_graph.commit ()
-        
+
     def add_layer (self, layer):
         """
         :param layer: Knowledge schema metadata layers.
@@ -163,7 +186,7 @@ class Schema:
                                   predicate, edge_direction,
                                   target_name, target_type ]
                             ]])
-    
+
     def plan (self, query):
         """
         Plan a query over the configured sources and their associated schemas.
@@ -191,7 +214,7 @@ class Schema:
                 edge_direction=query.arrows[index].direction)
         print (f"----------> {json.dumps(plan, indent=2)}")
         return plan
-    
+
     def get_node (self, node_id, attrs={}):
         """ Get a node if it exists; create one if it doesn't.
         :param node_id: Unique id of the node.
@@ -215,7 +238,7 @@ class Schema:
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
             raise TranQLException (f"Invalid transition: {source_type}->{target_type}")
-        
+
     def validate_question (self, message):
         """
         Validate the question in a message object.
@@ -247,7 +270,7 @@ def main ():
     args = arg_parser.parse_args ()
     if args.create_schema:
         print ('yeah')
-    
+
 test_question = {
   "question_graph": {
     "edges": [

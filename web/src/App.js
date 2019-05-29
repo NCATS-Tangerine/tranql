@@ -98,6 +98,8 @@ class App extends Component {
     this._updateGraphSize = this._updateGraphSize.bind(this);
     this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
 
+    // Fetch data for schema visualization
+    this._getSchema = this._getSchema.bind(this);
 
     // Visualization filter state values
     this._onLinkWeightRangeChange = this._onLinkWeightRangeChange.bind (this);
@@ -168,7 +170,7 @@ class App extends Component {
       selectedNode : {},
       selectedLink : {},
       contextNode : null,
-      navigateMode: true,
+      navigateMode: false,
 
       // Set up CodeMirror settings.
       codeMirrorOptions : {
@@ -189,11 +191,18 @@ class App extends Component {
         nodeRelSize : 7,
         enableNodeDrag : true
       },
-      graphHeight: window.innerHeight,
-      graphWidth: 0,
+      graphHeight : window.innerHeight,
+      graphWidth : 0,
 
       // Object viewer
-      objectViewerEnabled: true,
+      objectViewerEnabled : true,
+
+      // Schema viewer
+      schema : {
+        nodes : [],
+        links : []
+      },
+      schemaViewerEnabled : true,
 
       // Legend component
       hiddenTypes: [],
@@ -202,10 +211,10 @@ class App extends Component {
 
       // Tools for the toolbar component
       tools: [
-        <Tool name="Navigate" description="Navigate the graph" callback={(e) => this._setNavMode(false)}>
+        <Tool name="Navigate" description="Navigate the graph" callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
-        <Tool name="Select" description="Select a node or link" callback={(e) => this._setNavMode(true)}>
+        <Tool name="Select" description="Select a node or link" callback={(bool) => this._setNavMode(!bool)}>
           <FaMousePointer/>
         </Tool>
       ],
@@ -223,10 +232,6 @@ class App extends Component {
           });
         }
       });
-
-    // Populate concepts and relations metadata.
-    this._getModelConcepts ();
-    this._getModelRelations ();
 
     /**
      * Create the rendering pipeline, a chain of responsibility.
@@ -346,21 +351,11 @@ class App extends Component {
    * @private
    */
   _setNavMode (navigate) {
-    if (!navigate) {
-      // Turn off the object viewer if we're going into navigate.
-      let width;
-      if (this.state.objectViewerEnabled) {
-        width = this._graphSplitPane.current.splitPane.offsetWidth;
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      else {
-        width = this._graphSplitPane.current.offsetWidth;
-      }
-      console.log(width);
-      this._updateGraphSize(width);
-
-
+    let width = this._graphSplitPane.current.splitPane.offsetWidth;
+    if (this.state.objectViewerEnabled) {
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
     }
+    this._updateGraphSize(width);
     this.setState ({
       navigateMode: navigate,
       selectedNode: {},
@@ -441,13 +436,9 @@ class App extends Component {
       selectedNode: {},
       selectedLink: {}
     });
-    let width;
+    let width = this._graphSplitPane.current.splitPane.offsetWidth;
     if (this.state.objectViewerEnabled) {
-      width = this._graphSplitPane.current.splitPane.offsetWidth;
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-    }
-    else {
-      width = this._graphSplitPane.current.offsetWidth;
     }
     this._updateGraphSize(width);
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
@@ -540,6 +531,7 @@ class App extends Component {
         });
   }
   _configureMessage (message) {
+    console.log(message);
     if (message && message.knowledge_graph) {
       // Configure node degree range.
       var nodeDegrees = message.knowledge_graph.nodes.map ((node, index) => {
@@ -585,6 +577,73 @@ class App extends Component {
       });
     }
   }
+  /**
+   * Fetch the schema data for visualization
+   *
+   * @private
+   */
+   _getSchema () {
+     fetch(this.tranqlURL + '/tranql/schema', {
+       method: "GET"
+     })
+     .then((res) => res.json()
+     )
+     .then(
+       (result) => {
+         if (result.message) {
+           this._handleMessageDialog ("Error", result.message, result.details);
+           console.log ("--error: " + result.message);
+         } else {
+           if (result.answers) {
+             delete result.answers;
+           }
+
+           // result.knowledge_graph.edges = [
+           //   [
+           //     "gene",
+           //     "chemical_substance",
+           //     "test"
+           //   ],
+           //   [
+           //     "gene",
+           //     "chemical_substance",
+           //     "foo"
+           //   ]
+           // ];
+
+           result.graph = {
+             nodes: result.knowledge_graph.nodes.map((node) => {
+               return {
+                 id: node,
+                 type: node,
+                 radius: 9,
+                 name: node
+               }
+             }),
+             links: result.knowledge_graph.edges.reduce((acc, edge) => {
+               // TODO fix? Can't draw edges from a node to itself
+               if (edge[0] !== edge[1]) {
+                 acc.push({
+                   source: edge[0],
+                   target: edge[1],
+                   name: edge[2],
+                   type: edge[2],
+                   weight: 1
+                 });
+               }
+               return acc;
+             }, [])
+          };
+
+           // new RenderInit ().handle (result); // Format the schema into a renderable object
+
+           console.log("Fetched schema:", result);
+
+           this.setState({ schema : result.graph });
+         }
+       }
+     );
+   }
   /**
    * Get the configuration for this deployment.
    *
@@ -695,13 +754,9 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { link : link.origin }
       }));
-      let width;
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
       if (this.state.objectViewerEnabled) {
-        width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
         this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      else {
-        width = this._graphSplitPane.current.offsetWidth;
       }
       this._updateGraphSize(width);
     }
@@ -738,7 +793,7 @@ class App extends Component {
   * @private
   */
   _updateGraphSize (width) {
-    this.setState ({ graphWidth: width, graphHeight: this.state.graphHeight });
+    this.setState (prevState => ({ graphWidth: width, graphHeight: this.state.graphHeight }));
   }
 
 
@@ -770,6 +825,7 @@ class App extends Component {
    */
   _handleNodeClick (node) {
     console.log (node);
+    console.log(this.state.navigateMode);
     if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
       // Aim at node from outside it
@@ -789,13 +845,9 @@ class App extends Component {
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
-      let width;
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
       if (this.state.objectViewerEnabled) {
-        width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
         this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      else {
-        width = this._graphSplitPane.current.offsetWidth;
       }
       this._updateGraphSize(width);
 
@@ -803,17 +855,19 @@ class App extends Component {
   }
   /**
    * Render the force directed graph in either 2D or 3D rendering modes.
+   * @param {Object} data - Data containing nodes and links that is used to render the force graph
+   * @param {Object} props - Override default props used to render the graph.
    *
    * @private
    */
-  _renderForceGraph () {
+  _renderForceGraph (data, props) {
     var result = null;
     if (this.state.visMode === '3D') {
-      result = this._renderForceGraph3D ();
+      result = this._renderForceGraph3D (data, props);
     } else if (this.state.visMode === '2D') {
-      result = this._renderForceGraph2D ();
+      result = this._renderForceGraph2D (data, props);
     } else if (this.state.visMode === 'VR') {
-      result = this._renderForceGraphVR ();
+      result = this._renderForceGraphVR (data, props);
     } else {
       throw "Unrecognized rendering mode: " + this.state.visMode;
     }
@@ -825,14 +879,12 @@ class App extends Component {
    * @private
    * nodeAutoColorBy="type"
    */
-  _renderForceGraph3D () {
-      return <ForceGraph3D id="forceGraph3D"
-                           ref={el => { this.fg = el; }}
-                           graphData={this.state.graph}
+  _renderForceGraph3D (data, props) {
+      return <ForceGraph3D graphData={data}
                            width={this.state.graphWidth}
                            height={this.state.graphHeight}
-                           nodeColor={(node) => node.color}
-                           linkColor={(link) => link.color}
+                           linkAutoColorBy="type"
+                           nodeAutoColorBy="type"
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -840,21 +892,18 @@ class App extends Component {
                            enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick} />
+                           onNodeClick={this._handleNodeClick}
+                           {...props} />
   }
   /**
    * Render in 3D
    *
    * @private
    */
-  _renderForceGraph2D () {
-      return <ForceGraph2D id="forceGraph3D"
-                           ref={el => { this.fg = el; }}
-                           graphData={this.state.graph}
+  _renderForceGraph2D (data, props) {
+      return <ForceGraph2D graphData={data}
                            width={this.state.graphWidth}
                            height={this.state.graphHeight}
-                           nodeColor={(node) => node.color}
-                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -862,7 +911,8 @@ class App extends Component {
                            enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick} />
+                           onNodeClick={this._handleNodeClick}
+                           {...props} />
   }
 
   /**
@@ -870,14 +920,10 @@ class App extends Component {
    *
    * @private
    */
-  _renderForceGraphVR () {
-      return <ForceGraphVR id="forceGraphVR"
-                           ref={el => { this.fg = el; }}
-                           graphData={this.state.graph}
+  _renderForceGraphVR (data, props) {
+      return <ForceGraphVR graphData={data}
                            width={this.state.graphWidth}
                            height={this.state.graphHeight}
-                           nodeColor={(node) => node.color}
-                           linkColor={(link) => link.color}
                            d3AlphaDecay={0.2}
                            strokeWidth={2}
                            linkWidth={2}
@@ -885,7 +931,8 @@ class App extends Component {
                            enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
                            onLinkClick={this._handleLinkClick}
                            onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick} />
+                           onNodeClick={this._handleNodeClick}
+                           {...props} />
   }
   /**
    * Show the modal settings dialog.
@@ -1101,8 +1148,16 @@ class App extends Component {
    * @private
    */
   componentDidMount() {
-    this.setState({ graphWidth : this.state.objectViewerEnabled ? document.body.offsetWidth : this._graphSplitPane.offsetWidth });
     this._hydrateState ();
+
+    // Populate concepts and relations metadata.
+    this._getModelConcepts ();
+    this._getModelRelations ();
+
+    // Fetch schema
+    this._getSchema ();
+
+    this._updateGraphSize(document.body.offsetWidth);
   }
 
   render() {
@@ -1164,43 +1219,64 @@ class App extends Component {
             }
             {
               /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
-              this.state.objectViewerEnabled &&
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
                          minSize={0}
-                         allowResize={Object.keys(this.state.selectedNode).length !== 0}
+                         allowResize={this.state.objectViewerEnabled && Object.keys(this.state.selectedNode).length !== 0}
                          maxSize={document.body.clientWidth}
                          style={{"backgroundColor":"black","position":"static"}}
                          ref={this._graphSplitPane}
                          onDragFinished={(width) => this._updateGraphSplitPaneResize()}
               >
-                <div onContextMenu={this._handleContextMenu}>
-                  { this._renderForceGraph () }
-                  <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
-                </div>
-                {this.state.objectViewerEnabled &&
-                  <div id="info">
-                    <JSONTree
-                    shouldExpandNode={(key,data,level) => level === 1}
-                    hideRoot={true}
-                    theme={
-                      {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
-                      base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
-                      base0E:"#ae81ff",base0F:"#cc6633"}
-                    }
-                    invertTheme={false}
-                    data={this.state.selectedNode} />
+                <div>
+                  <div id="schemaBanner">
+                    <div id="schemaViewToggleButtonContainer">
+                      <Button color="primary"
+                              id="schemaViewToggleButton"
+                              outline
+                              size="sm"
+                              onClick={(e) => this.setState({ schemaViewerEnabled : !this.state.schemaViewerEnabled })}
+                      >
+                      {this.state.schemaViewerEnabled ? "Show graph" : "Show schema"}
+                      </Button>
+                    </div>
+                    {this.state.schemaViewerEnabled ? "Schema:" : "Graph:"}
                   </div>
-                }
-              </SplitPane>
-            ||
-              /* Style purposes */
-              <div className="SplitPane" ref={this._graphSplitPane}>
-                <div onContextMenu={this._handleContextMenu}>
-                  { this._renderForceGraph () }
-                <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                  <div onContextMenu={this._handleContextMenu}>
+                      {this.state.schemaViewerEnabled ?
+                        (
+                          this._renderForceGraph (this.state.schema, {
+                            ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
+                            nodeAutoColorBy: 'type',
+                            linkAutoColorBy: 'type'
+                          })
+                        )
+                      :
+                        (
+                          this._renderForceGraph (this.state.graph, {
+                            ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;},
+                            nodeColor: (node) => node.color,
+                            linkColor: (link) => link.color
+                          })
+                        )
+                      }
+                    <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                  </div>
                 </div>
-              </div>
+                <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
+                  <JSONTree
+                  shouldExpandNode={(key,data,level) => level === 1}
+                  hideRoot={true}
+                  theme={
+                    {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
+                    base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
+                    base0E:"#ae81ff",base0F:"#cc6633"}
+                  }
+                  invertTheme={false}
+                  data={this.state.selectedNode} />
+                </div>
+
+              </SplitPane>
             }
           </div>
         </div>

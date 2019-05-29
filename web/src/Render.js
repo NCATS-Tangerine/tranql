@@ -11,7 +11,7 @@ class RenderInit extends Actor {
             type : node.type,
             radius : 9,
             name: node.name,
-            origin: node        // keep the orgin node.
+            origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
           var weight = Math.round (edge.weight * 100) / 100;
