@@ -232,7 +232,7 @@ class App extends Component {
       showSettingsModal : false,
       //showAnswerViewer : true
     };
-    this._cache.read ('query', this.state.code).
+    this._cache.read ('cache', this.state.code).
       then ((result) => {
         console.log ("-----------> ",result);
         if (result.length > 0) {
@@ -414,11 +414,7 @@ class App extends Component {
           var url = this.robokop_url + "/simple/view/" + result;
           console.log ('--new ' + url);
           message.viewURL = url;
-          this._cacheWrite ({
-              'key' : this.state.code,
-              'type' : 'query',
-              'data' : message
-          });
+          this._cacheWrite (message);
           this._answerViewer.current.handleShow (url);
           //var win = window.open (message.viewURL, 'answerViewer');
           //win.focus ();
@@ -471,7 +467,7 @@ class App extends Component {
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
-    var cachePromise = this.state.useCache ? this._cache.read ('query', this.state.code) : Promise.resolve ([]);
+    var cachePromise = this.state.useCache ? this._cache.read ('cache', this.state.code) : Promise.resolve ([]);
     cachePromise.then (
       function success (result) {
         if (result.length > 0) {
@@ -510,11 +506,7 @@ class App extends Component {
                   }
                   this._translateGraph (result);
                   this._configureMessage (result);
-                  this._cacheWrite ({
-                    'key' : this.state.code,
-                    'type' : 'query',
-                    'data' : result
-                  });
+                  this._cacheWrite (result);
                 }
               },
               // Note: it's important to handle errors here
@@ -535,17 +527,20 @@ class App extends Component {
         //console.log ("-- error", result);
       }.bind(this));
   }
-  _cacheWrite (obj) {
+  _cacheWrite (message) {
     //this._cache.write (this.state.code, result);
-
+    var obj = {
+      'key' : this.state.code,
+      'data' : message
+    };
     if (this.state.record) {
       obj.id = this.state.record.id;
     }
     console.log (obj);
     var record = this._cache.
-        write (obj).
+        write ('cache', obj).
         then ((result) => {
-          this._cache.get (result,
+          this._cache.get ('cache', result,
                            (result) => {
                              this.setState ({
                                loading : false,
@@ -603,6 +598,7 @@ class App extends Component {
         graph: message.graph,
         typeMappings: message.typeMappings
       });
+      this._setSchemaViewerActive(false);
     }
   }
   /**
@@ -612,12 +608,12 @@ class App extends Component {
    */
    _getSchema () {
      this.setState(p => ({}),() => {
-       var cachePromise = this.state.useCache ? this._cache.read ('schema', null) : Promise.resolve ([]);
+       var cachePromise = this.state.useCache ? this._cache.get ('schema', 1) : Promise.resolve (undefined);
        cachePromise.then (
          function success (result) {
-           if (result.length > 0) {
+           if (result !== undefined) {
              console.log("Got schema from cache");
-             this.setState({ schemaLoaded : true, schema : result[0].data.graph });
+             this.setState({ schemaLoaded : true, schema : result.data.graph });
              this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -663,9 +659,7 @@ class App extends Component {
                    this.setState({ schemaLoaded : true, schema : result.graph });
                    this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
 
-                   this._cacheWrite ({
-                     'key' : null,
-                     'type' : 'schema',
+                   this._cache.write ('schema', {
                      'data' : result
                    });
                  }
@@ -1241,13 +1235,13 @@ class App extends Component {
             <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
             <Message show={false} ref={this._messageDialog} />
-            {/*<GridLoader
+            <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}
               sizeUnit={"px"}
               size={6}
               color={'#2cbc12'}
-              loading={this.state.loading} /> */}
+              loading={this.state.loading && this.state.schemaViewerEnabled} />
             {/* GridLoader is commented out for the time being as the schema banner displays if a graph is loading */}
             {
               !this.state.toolbarEnabled &&
@@ -1323,7 +1317,7 @@ class App extends Component {
                             {
                             ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
                             nodeAutoColorBy: 'type',
-                            linkAutoColorBy: 'type',
+                            linkAutoColorBy: 'type'
 
                             // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
                             // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
@@ -1336,9 +1330,7 @@ class App extends Component {
                       :
                         (
                           this._renderForceGraph (this.state.graph, {
-                            ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;},
-                            nodeColor: (node) => node.color,
-                            linkColor: (link) => link.color,
+                            ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;}
 
                             // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
                             // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
