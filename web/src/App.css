@@ -49,23 +49,30 @@
 #schemaBanner {
     background-color: rgb(30, 30, 30);
     border-bottom: 4px solid rgb(50, 50, 50);
-    /* font-weight: bold; */
     position: relative;
-    padding: 12.5px;
+    padding: 10px;
     /* text-align: center; */
+    /* text-decoration: underline; */
+    font-weight: bold;
     font-style: italic;
     font-size: 18px;
     color: rgb(235, 235, 235);
+    display:flex;
+    align-items: center;
+}
+.fa-spin {
+  /* Pseudo fa-spin class because react-icons doesn't seem to natively support it */
+  -ms-animation:spin 2s linear infinite;
+  -o-animation:spin 2s linear infinite;
+  -webkit-animation:spin 2s linear infinite;
+  -moz-animation:spin 2s linear infinite;
+  animation:spin 2s linear infinite;
 }
 #schemaViewToggleButtonContainer {
-  height:100%;
-  float:right;
-  /* top:0; */
-  /* right:12.5px; */
-  /* position:absolute; */
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  flex-grow: 1;
+}
+#schemaViewToggleButton {
+  float: right;
 }
 #info {
     /* position: absolute; */
@@ -275,3 +282,9 @@
     .Resizer.disabled:hover {
       border-color: transparent;
     }
+
+@-ms-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-o-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
