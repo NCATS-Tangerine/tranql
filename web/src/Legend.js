@@ -79,6 +79,7 @@ class TypeButtonGroup extends React.Component {
             let data = {
               type: typeData.type,
               quantity: typeData.quantity,
+              actualQuantity: typeData.hasOwnProperty('actualQuantity') ? typeData.actualQuantity : 0,
               color: typeData.color
             };
             return <TypeButton value={data} active={checked} data={data} key={n} />
@@ -130,7 +131,8 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.props.active ? <b>{TypeButton.adjustTitle(this.props.data.type)}</b> : TypeButton.adjustTitle(this.props.data.type)} <b>({this.props.data.quantity})</b>
+        {this.props.active ? <b>{TypeButton.adjustTitle(this.props.data.type)}</b> : TypeButton.adjustTitle(this.props.data.type)}
+        {this.props.active ? <b>({this.props.data.actualQuantity}/{this.props.data.quantity})</b> : "("+this.props.data.actualQuantity+"/"+this.props.data.quantity+")"}
       </ToggleButton>
     );
   }

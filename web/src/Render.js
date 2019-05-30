@@ -256,9 +256,24 @@ class LegendFilter extends Actor {
         }
         return result;
       }, []),
-      typeMappings: typeMappings,
-      hiddenTypes: message.hiddenTypes
     };
+    for (let elementType in message.graph) {
+      let elements = message.graph[elementType];
+      console.log(elements,typeof elements,elements.forEach);
+      elements.forEach(element => {
+        if (typeof element.type === "string")  element.type = [element.type];
+        element.type.forEach(type => {
+          if (typeMappings[elementType][type].hasOwnProperty('actualQuantity')) {
+            typeMappings[elementType][type].actualQuantity++;
+          }
+          else {
+            typeMappings[elementType][type].actualQuantity = 1;
+          }
+        });
+      });
+    }
+    message.graph.typeMappings = typeMappings;
+    message.graph.hiddenTypes = message.hiddenTypes;
   }
 }
 export {

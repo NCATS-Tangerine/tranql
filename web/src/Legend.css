@@ -32,7 +32,7 @@
 
 .TypeButton:hover, .TypeButton.active, .TypeButton:hover.active {
   border-color:rgb(100,100,100);
-  color:rgb(245,245,245) !important;
+  color:rgb(100,100,100) !important;
 }
 
 .TypeButton.focus, .TypeButton:focus {
