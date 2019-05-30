@@ -7,10 +7,11 @@ import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
+import { FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import ReactTable from "react-table";
+import ReactTable from 'react-table';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
 import Slider, { Range } from 'rc-slider';
@@ -19,7 +20,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
-import Legend from './Legend.js';
+import Legend, { adjustTitle } from './Legend.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
@@ -110,6 +111,9 @@ class App extends Component {
 
     // Visualization modifiers
     this._onChargeChange = this._onChargeChange.bind (this);
+
+    // Type chart
+    this._renderTypeChart = this._renderTypeChart.bind (this);
 
 
     // Settings management
@@ -235,10 +239,17 @@ class App extends Component {
       buttons: [
         <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance"
                          id="answerViewerToolbar"
-                         className="App-control-toolbar"
+                         className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
-        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar" onClick={this._handleShowModal} />
+        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
+        <FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
+                    className="App-control-toolbar fa"
+                    onClick={() => this.setState ({ showTypeChart : true })} />
       ],
+
+      // Type chart
+      showTypeNodes : true, // When false, shows link types (prevents far too many types being shown at once)
+      showTypeChart : false,
 
       // Settings modal
       showSettingsModal : false,
@@ -1148,6 +1159,57 @@ class App extends Component {
     value !== "" && this.setState({ legendRenderAmount : value });
   }
   /**
+   * Rneder the type bar chart
+   *
+   * @private
+   */
+  _renderTypeChart () {
+    const renderAmount = 5;
+    let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+    let mappings = Legend.sortMappings(graph.typeMappings, renderAmount, renderAmount);
+    console.log(JSON.parse(JSON.stringify(mappings)),JSON.parse(JSON.stringify(graph)));
+    if (!mappings.hasOwnProperty('nodes')) mappings.nodes = [];
+    if (!mappings.hasOwnProperty('links')) mappings.links = [];
+    let data = (this.state.showTypeNodes ? mappings.nodes : mappings.links).map(elem => (
+      {
+        type: adjustTitle(elem.type),
+        // A little confusing...
+        "Filtered Quantity": elem.hasOwnProperty('actualQuantity') ? elem.actualQuantity : 0,
+        "Actual Quantity": elem.quantity
+      }
+    ));
+    return (
+      <Modal show={this.state.showTypeChart}
+             onHide={() => this.setState ({ showTypeChart : false })}>
+        <Modal.Header closeButton>
+          <Modal.Title id="typeChartTitle">
+            {this.state.showTypeNodes ? 'Node' : 'Link'} Bar Graph
+            <IoIosSwap id="swapBar" onClick={() => this.setState({ showTypeNodes: !this.state.showTypeNodes })}/>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <BarChart data={data}
+                    height={500}
+                    width={400}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 20,
+                      bottom: 5
+                    }}>
+            <CartesianGrid strokeDasharray="3 3"/>
+            <XAxis dataKey="type" />
+            <YAxis />
+            <ChartTooltip />
+            <ChartLegend />
+            <Bar dataKey="Actual Quantity" fill="#6aef56" />
+            <Bar dataKey="Filtered Quantity" fill="#7fc1ff" />
+          </BarChart>
+        </Modal.Body>
+      </Modal>
+    );
+  }
+  /**
    * Render the modal settings dialog.
    *
    * @private
@@ -1280,9 +1342,9 @@ class App extends Component {
         <ReactTooltip place="left"/>
         <header className="App-header" >
           <div id="headerContainer">
-            <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () }
+            <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () } {this._renderTypeChart ()}
             <AnswerViewer show={true} ref={this._answerViewer} />
-            <Message show={false} id="messages" ref={this._messageDialog} />
+            <Message show={false} ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}

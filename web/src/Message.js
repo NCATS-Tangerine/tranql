@@ -26,8 +26,6 @@ class Message extends Component {
         message : message.replace ("\n", "<br/>"),
         details : details.replace ("\n", "<br/>"),
       });
-    } else {
-      console.log ("message: " + message + " with details " + details);
     }
   }
   render() {
@@ -51,12 +49,12 @@ class Message extends Component {
                 <Tab><b>Advanced</b></Tab>
               </TabList>
               <TabPanel>
-                <code>{this.state.message}</code>
+                {this.state.message}
                 <br/>
                 <br/>
               </TabPanel>
               <TabPanel>
-                <code>{this.state.details}</code>
+                {this.state.details}
                 <br/>
                 <br/>
               </TabPanel>

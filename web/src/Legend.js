@@ -174,14 +174,14 @@ class Legend extends Component {
    *    This allows the Legend to make each type button the correct state (on/off) when rendering.
    * @returns {Object} - New sorted mapping object with zipped structure
    *    {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
-   * @private
+   * @static
    */
-  _sortMappings(typeMappings) {
+  static sortMappings(typeMappings, nodeTypeRenderAmount, linkTypeRenderAmount) {
     let newMappings = {};
     // (object properties in javascript are unordered and therefore cannot be effectively)
     for (let graphElementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[graphElementType]).sort((a,b) => b[1].quantity-a[1].quantity);
-      let min = Math.min(graphElementType === "nodes" ? this.props.nodeTypeRenderAmount : this.props.linkTypeRenderAmount, sortedTypes.length);
+      let min = Math.min(graphElementType === "nodes" ? nodeTypeRenderAmount : linkTypeRenderAmount, sortedTypes.length);
       for (let i=0;i<min;i++) {
         if (!newMappings.hasOwnProperty(graphElementType)) newMappings[graphElementType] = [];
         newMappings[graphElementType].push(Object.assign({type:sortedTypes[i][0]},sortedTypes[i][1]));
@@ -217,7 +217,7 @@ class Legend extends Component {
 
     let typeMappings = this.props.typeMappings;
 
-    let sortedMappings = this._sortMappings(typeMappings);
+    let sortedMappings = Legend.sortMappings(typeMappings, this.props.nodeTypeRenderAmount, this.props.linkTypeRenderAmount);
 
 
     let render = this.props.render;
@@ -278,3 +278,4 @@ class Legend extends Component {
 }
 
 export default Legend;
+export const adjustTitle = TypeButton.adjustTitle;
