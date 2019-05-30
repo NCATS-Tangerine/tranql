@@ -1282,7 +1282,7 @@ class App extends Component {
           <div id="headerContainer">
             <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
-            <Message show={false} ref={this._messageDialog} />
+            <Message show={false} id="messages" ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}

@@ -52,7 +52,23 @@ class StandardAPIResource(Resource):
         except jsonschema.exceptions.ValidationError as error:
             logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
-
+    def handle_exception (self, e):
+        result = {}
+        if isinstance (e, TranQLException):
+            result = {
+                "status" : "error",
+                "message" : str(e),
+                "details" : e.details if e.details else ''
+            }
+        elif isinstance (e, Exception):
+            traceback.print_exc (e)
+            result = {
+                "status" : "error",
+                "message" : str(e),
+                "details" : ''
+            }
+        return result
+    
 class WebAppRoot(Resource):
     def get(self):
         """
@@ -189,11 +205,16 @@ class TranQLQuery(StandardAPIResource):
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
+        except Exception as e:
+            #traceback.print_exc (e)
+            result = self.handle_exception (e)
+
+        '''
         except TranQLException as e:
             result = {
                 "status" : "error",
                 "message" : str(e),
-                "details" : e.details
+                "details" : e.details if e.details else ''
             }
         except Exception as e:
             traceback.print_exc (e)
@@ -202,6 +223,7 @@ class TranQLQuery(StandardAPIResource):
                 "message" : str(e),
                 "details" : ''
             }
+        '''
         return result
 
 class SchemaGraph(StandardAPIResource):
@@ -274,10 +296,15 @@ class ModelConceptsQuery(StandardAPIResource):
                             type: string
 
         """
-        concept_model = ConceptModel ("biolink-model")
-        concepts = sorted (list(concept_model.by_name.keys ()))
-        logging.debug (concepts)
-        return concepts
+        result = {}
+        try:
+            concept_model = ConceptModel ("biolink-model")
+            result = sorted (list(concept_model.by_name.keys ()))
+            logging.debug (result)
+        except Exception as e:
+            #traceback.print_exc (e)
+            result = self.handle_exception (e)
+        return result
 
 
 class ModelRelationsQuery(StandardAPIResource):
@@ -318,11 +345,16 @@ class ModelRelationsQuery(StandardAPIResource):
                             type: string
 
         """
-        concept_model = ConceptModel ("biolink-model")
-        relations = sorted (list(concept_model.relations_by_name.keys ()))
-        logging.debug (relations)
-        return relations
-
+        result = {}
+        try:
+            concept_model = ConceptModel ("biolink-model")
+            result = sorted (list(concept_model.relations_by_name.keys ()))
+            logging.debug (result)
+        except Exception as e:
+            #traceback.print_exc (e)
+            result = self.handle_exception (e)
+        return result
+        
 ###############################################################################################
 #
 # Define routes.
