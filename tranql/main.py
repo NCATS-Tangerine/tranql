@@ -91,7 +91,7 @@ realNum = ppc.real()
 intNum = ppc.signed_integer()
 
 # need to add support for alg expressions
-columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName 
+columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName
 whereCondition = Group(
     ( columnName + binop + (columnRval | Word(printables) ) ) |
     ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
@@ -114,9 +114,9 @@ optWhite = ZeroOrMore(LineEnd() | White())
 """ Define the statement grammar. """
 statement <<= (
     Group(
-        Group(SELECT + question_graph_expression)("concepts") + optWhite + 
-        Group(FROM + tableNameList) + optWhite + 
-        Group(Optional(WHERE + whereExpression("where"), "")) + optWhite + 
+        Group(SELECT + question_graph_expression)("concepts") + optWhite +
+        Group(FROM + tableNameList) + optWhite +
+        Group(Optional(WHERE + whereExpression("where"), "")) + optWhite +
         Group(Optional(SET + setExpression("set"), ""))("select")
     )
     |
@@ -140,7 +140,7 @@ program_grammar = statement + ZeroOrMore(statement)
 """ Make rest-of-line comments. """
 comment = "--" + restOfLine
 program_grammar.ignore (comment)
-        
+
 class TranQLParser:
     """ Defines the language's grammar. """
     def __init__(self, backplane):
@@ -150,16 +150,16 @@ class TranQLParser:
         """ Parse a program, returning an abstract syntax tree. """
         result = self.program.parseString (line)
         return TranQL_AST (result.asList (), self.backplane)
-        
+
 class TranQL:
     """
-    Define the language interpreter. 
+    Define the language interpreter.
     It provides an interface to
       Execute the parser
       Generate an abstract syntax tree
       Execute statements in the abstract syntax tree.
     """
-    def __init__(self, backplane="http://localhost:8099"):
+    def __init__(self, backplane="http://localhost:8099", asynchronous=True):
         """ Initialize the interpreter. """
         self.context = Context ()
         config_path = "conf.yml"
@@ -174,7 +174,12 @@ class TranQL:
             backplane = env_backplane
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
-        
+
+        if 'ASYNCHRONOUS_REQUESTS' in self.config:
+            asynchronous = self.config['ASYNCHRONOUS_REQUESTS']
+
+        self.asynchronous = asynchronous
+
     def parse (self, program):
         """ If we just want the AST. """
         return self.parser.parse (program)
@@ -184,7 +189,7 @@ class TranQL:
         with open(file_name, "r") as stream:
             result = self.parse (stream.read ())
         return result
-    
+
     def execute (self, program, cache=False):
         """ Execute a program - a list of statements. """
         ast = None
@@ -193,7 +198,7 @@ class TranQL:
                                          allowable_methods=('GET', 'POST', ))
         else:
             requests_cache.disabled()
-            
+
         if isinstance(program, str):
             ast = self.parse (program)
         if not ast:
@@ -221,15 +226,15 @@ class TranQL:
             for t in term:
                 result.update ({ x : self.context.mem[x] for x in list(self.context.mem.keys ()) if x.lower().startswith (t) })
         else:
-            result = { x : self.context.mem[x] for x in list(self.context.mem.keys ()) if x.lower().startswith (term) } 
+            result = { x : self.context.mem[x] for x in list(self.context.mem.keys ()) if x.lower().startswith (term) }
         return result
-    
+
     def shell (self):
         """ Read, Eval, Print Loop. """
         header = """
-  ______                 ____    __ 
- /_  __/________ _____  / __ \  / / 
-  / / / ___/ __ `/ __ \/ / / / / /  
+  ______                 ____    __
+ /_  __/________ _____  / __ \  / /
+  / / / ___/ __ `/ __ \/ / / / / /
  / / / /  / /_/ / / / / /_/ / / /___
 /_/ /_/   \__,_/_/ /_/\___\_\/_____/
                                      v0.1"""
@@ -270,7 +275,7 @@ def set_verbose ():
     for logger_name in [ "tranql.main", "tranql.tranql_ast", "tranql.util" ]:
         logger = logging.getLogger (logger_name)
         logger.setLevel (logging.DEBUG)
-        
+
 def main ():
     """ Process arguments. """
     arg_parser = argparse.ArgumentParser(
@@ -291,6 +296,8 @@ def main ():
     arg_parser.add_argument('-o', '--output', help="Output destination")
     arg_parser.add_argument('-a', '--arg', help="Output destination",
                             action="append", default=[])
+    # -x is placeholder as '-a' taken; should eventually replace with better fitting letter
+    arg_parser.add_argument('-x', '--asynchronous', default=False, help="Run requests asynchronously with asyncio")
     args = arg_parser.parse_args ()
 
     global logger
@@ -306,7 +313,7 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    tranql = TranQL (backplane = args.backplane)
+    tranql = TranQL (backplane = args.backplane, asynchronous = args.asynchronous)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")
         tranql.context.set (k, v)
@@ -322,7 +329,6 @@ def main ():
             print (f"top-gene: {json.dumps(context.top('gene',k='chemical_pathways'), indent=2)}")
     else:
         print ("Either source or shell must be specified")
-        
-if __name__ == '__main__':    
+
+if __name__ == '__main__':
     main ()
-    

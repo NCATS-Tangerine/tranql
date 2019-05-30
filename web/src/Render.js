@@ -11,7 +11,7 @@ class RenderInit extends Actor {
             type : node.type,
             radius : 9,
             name: node.name,
-            origin: node        // keep the orgin node.
+            origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
           var weight = Math.round (edge.weight * 100) / 100;
@@ -141,7 +141,6 @@ class SourceDatabaseFilter extends Actor {
 }
 class LegendFilter extends Actor {
   handle (message, context) {
-    console.log(context);
     var links = [];
     var nodes = [];
     /*
@@ -155,7 +154,7 @@ class LegendFilter extends Actor {
           }
       }
     */
-    message.typeMappings = {
+    let typeMappings = {
       nodes:{},
       links:{}
     };
@@ -164,11 +163,11 @@ class LegendFilter extends Actor {
       elements.forEach(element => {
         if (typeof element.type === "string")  element.type = [element.type];
         element.type.forEach(type => {
-          if (message.typeMappings[elementType].hasOwnProperty(type)) {
-            message.typeMappings[elementType][type].quantity++;
+          if (typeMappings[elementType].hasOwnProperty(type)) {
+            typeMappings[elementType][type].quantity++;
           }
           else {
-            message.typeMappings[elementType][type] = {
+            typeMappings[elementType][type] = {
               color: null,
               quantity: 1
             };
@@ -183,25 +182,28 @@ class LegendFilter extends Actor {
     ];
 
     // (Zip structure ( [type, {quantity:x}] ))
-    for (let elementType in message.typeMappings) {
-      let sortedTypes = Object.entries(message.typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
+    for (let elementType in typeMappings) {
+      let sortedTypes = Object.entries(typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
       sortedTypes.forEach(obj => {
-        console.log(obj);
         let type = obj[0];
         let color = colors.length > 0 ? colors.shift() : '#ffffff';
         // Set colors of each type
-        message.typeMappings[elementType][type].color = color;
+        typeMappings[elementType][type].color = color;
       });
     }
-    message.graph.nodes.forEach(node => {node.color = message.typeMappings.nodes[node.type[0]].color});
-    message.graph.links.forEach(link => {link.color = message.typeMappings.links[link.type].color});
+    message.graph.nodes.forEach(node => {node.color = typeMappings.nodes[node.type[0]].color});
+    message.graph.links.forEach(link => {link.color = typeMappings.links[link.type].color});
 
+    if (!message.hasOwnProperty('hiddenTypes')) {
+      // If this is the first time the message is processed by the render chain, give it the hiddenTypes property.
+      message.hiddenTypes = [];
+    }
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
     var nodes = message.graph.nodes.reduce ((acc, node) => {
       //keep node if all of its types are visible
-      if (node.type.every(type => context.hiddenTypes.indexOf(type) === -1)) {
+      if (node.type.every(type => message.hiddenTypes.indexOf(type) === -1)) {
         acc.push (node);
       }
       return acc;
@@ -236,7 +238,7 @@ class LegendFilter extends Actor {
       links: message.graph.links.reduce (function (result, link) {
         link.type = typeof link.type === "string" ? [link.type] : link.type;
         link.type.forEach(type => {
-          if (context.hiddenTypes.indexOf(type) === -1) {
+          if (message.hiddenTypes.indexOf(type) === -1) {
             result.push (link);
             if (! node_ref.includes (link.source)) {
               node_ref.push (link.source);
@@ -253,8 +255,24 @@ class LegendFilter extends Actor {
           result.push (node);
         }
         return result;
-      }, [])
+      }, []),
     };
+    for (let elementType in message.graph) {
+      let elements = message.graph[elementType];
+      elements.forEach(element => {
+        if (typeof element.type === "string")  element.type = [element.type];
+        element.type.forEach(type => {
+          if (typeMappings[elementType][type].hasOwnProperty('actualQuantity')) {
+            typeMappings[elementType][type].actualQuantity++;
+          }
+          else {
+            typeMappings[elementType][type].actualQuantity = 1;
+          }
+        });
+      });
+    }
+    message.graph.typeMappings = typeMappings;
+    message.graph.hiddenTypes = message.hiddenTypes;
   }
 }
 export {

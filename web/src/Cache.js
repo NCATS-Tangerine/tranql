@@ -11,25 +11,26 @@ class Cache extends Component {
     this.db = new Dexie('TranQLClientCache');
     // Declare tables, IDs and indexes
     this.db.version(1).stores({
-      cache: '++id, name, &key, graph'
+      cache: '++id, name, &key, graph',
+      schema: '&id, graph'
     });
     this.write = this.write.bind (this);
   }
-  async write (data) {//key, data) {
+  async write (table, data) {
     // Write cache.
-    return await this.db.cache.put (data);
+    return await this.db[table].put (data);
   }
-  async read (key) {
-    return await this.db.cache 
+  async read (table, key) {
+    return await this.db[table]
     .where('key')
     .equals (key)
     .toArray();
   }
-  async get (id, callback) {
-    return await this.db.cache.get (id, callback);
+  async get (table, id, callback) {
+    return await this.db[table].get (id, callback);
   }
   async clear () {
-    return await this.db.cache.clear ();
+    return await this.db.tables.forEach((table) => table.clear ());
   }
 }
 

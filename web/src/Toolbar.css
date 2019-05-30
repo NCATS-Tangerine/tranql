@@ -1,0 +1,136 @@
+.Toolbar {
+  height:100%;
+  width:auto;
+  border-right:5px solid rgb(50,50,50);
+  display:flex;
+  flex-direction:column;
+}
+
+
+.Tool {
+  position:relative;
+  white-space:nowrap;
+  padding:5px;
+  border-radius:3px;
+  display:flex; /* Inline-block doesn't seem to work to fit to contents when icon is contained, but flex does */
+}
+
+.Tool:active {
+  background-color:rgba(30,30,30,1);
+}
+
+.Tool:active > * {
+  color:rgba(180,180,180,.9);
+}
+
+.Tool:hover {
+  background-color:rgba(35,35,35,1);
+
+}
+
+.Tool[data-active-tool="true"] {
+  background-color:rgba(0,0,0,1);
+}
+
+/* Lots of styling to create a triangle in the bottom-right corner */
+.tool-group > .Tool::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  right:0;
+  transform:translate(-1px,-1px); /* Padding/margin does not work */
+  border-radius: 0;
+  border-color:transparent;
+  border-style:solid;
+  border-width:2px;
+  border-right-color:rgba(220,220,220,.9);
+  border-bottom-color:rgba(220,220,220,.9);
+}
+
+/* Change color of corner when active to match background */
+.Tool[data-tool-group="true"]:active::after {
+  border-right-color:rgba(130,130,130,.9);
+  border-bottom-color:rgba(130,130,130,.9);
+}
+
+.select-menu {
+  position:absolute;
+  z-index:1;
+  background-color:rgb(30,30,30);
+  top:0;
+  left:100%;
+  margin-left:3.5px;
+  border:1px solid rgba(150,150,150,1);
+  display:flex;
+  flex-direction:column;
+}
+
+
+.select-menu-tool {
+  white-space:nowrap;
+  display:inline-block;
+  width:100%;
+  font-size:14px;
+  color:rgba(220,220,220,.9);
+  padding:5px;
+  user-select:none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -o-user-select:none;
+  -ms-user-select:none;
+}
+
+.select-menu-tool[data-active-tool="true"] {
+}
+
+.select-menu-tool:hover {
+  background-color:rgba(50,50,50,1);
+}
+
+.select-menu-tool:active {
+  background-color:rgba(45,45,45,1);
+}
+
+.select-menu-tool > * {
+  font-size:16px;
+  color:rgba(220,220,220,.9);
+}
+
+.Tool > * {
+  /* I'm not sure this will support all of the icon toolkits in react-icons (only tested on FontAwesome and IonIcons) */
+  font-size:16px;
+  color:rgba(220,220,220,.9); /* Easier on the eyes and just generally looks better */
+}
+
+.toolbar-header {
+}
+
+.toolbar-content {
+  flex-grow:1;
+  padding:6px;
+  display:grid;
+  grid-template-columns:auto auto;
+  grid-auto-rows:min-content;
+}
+
+.toolbar-button-container {
+  position:relative;
+  flex-grow:0;
+}
+.toolbar-button-container::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  left: 5%;
+  width:90%;
+  height:2px;
+  background-color:rgba(70,70,70,1);
+  /* border-bottom:2px solid rgba(50,50,50,1); */
+}
+
+.tool-container {
+  /* Type of container that each tool and tool group is wrapped inside of */
+  margin:3px;
+  display:flex;
+  justify-content:center;
+}

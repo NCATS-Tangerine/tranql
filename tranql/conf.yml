@@ -1,2 +1,3 @@
 ---
 BACKPLANE: http://localhost:8099
+ASYNCHRONOUS_REQUESTS: true
