@@ -130,6 +130,10 @@
     margin-left : 5px;
     margin-right : 5px;
 }
+.App-control-toolbar {
+  font-size: 22px;
+  color: rgba(220,220,220,.9);
+}
 .answerNavigator {
     width: 95%;
     height: 95%;
@@ -162,8 +166,6 @@
     float: right;
 }
 #navModeButton {
-    position: absolute;
-    right: 105px;
 }
 #runButton {
   height:60%;

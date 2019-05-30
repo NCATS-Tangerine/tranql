@@ -216,11 +216,12 @@ class App extends Component {
         typeMappings: {}
       },
       schemaMessage : null,
-      schemaViewerEnabled : true,
+      schemaViewerActive : true,
+      schemaViewerEnabled : true, // Sandbox the feature
       schemaLoaded : false,
 
 
-      toolbarEnabled: true,
+      toolbarEnabled : true,
 
       // Tools for the toolbar component
       tools: [
@@ -230,6 +231,13 @@ class App extends Component {
         <Tool name="Select" description="Select a node or link" callback={(bool) => this._setNavMode(!bool)}>
           <FaMousePointer/>
         </Tool>
+      ],
+      buttons: [
+        <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance"
+                         id="answerViewerToolbar"
+                         className="App-control-toolbar"
+                         onClick={this._handleShowAnswerViewer} />,
+        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar" onClick={this._handleShowModal} />
       ],
 
       // Settings modal
@@ -370,7 +378,9 @@ class App extends Component {
    * @private
    */
   _setSchemaViewerActive (active) {
-    this.setState({ schemaViewerEnabled : active }, () => {
+    // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
+
+    this.setState({ schemaViewerActive : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
     if (this.state.objectViewerEnabled) {
@@ -378,6 +388,7 @@ class App extends Component {
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
       this._updateGraphSize(width);
     }
+
   }
   /**
    * Set the navigation / selection mode.
@@ -633,7 +644,7 @@ class App extends Component {
              let msg = result.data;
              this._schemaRenderChain.handle (msg, this.state);
              this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
-             this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
+             this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
                method: "GET"
@@ -676,7 +687,7 @@ class App extends Component {
                    this._schemaRenderChain.handle (result, this.state);
 
                    this.setState({ schemaLoaded : true, schema : result.graph, schemaMessage : result });
-                   this.state.schemaViewerEnabled && this._setSchemaViewerActive(true);
+                   this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
                    this._cache.write ('schema', {
                      'id' : 0,
@@ -855,14 +866,14 @@ class App extends Component {
    * @private
    */
   _updateGraphElementVisibility(type,visibility) {
-    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled ? this.state.schema : this.state.graph));
+    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerActive ? this.state.schema : this.state.graph));
     if (visibility) {
       graph.hiddenTypes.push(type);
     } else {
       graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(type),1);
     }
 
-    if (this.state.schemaViewerEnabled) {
+    if (this.state.schemaViewerActive) {
       let newMessage = this.state.schemaMessage;
       newMessage.hiddenTypes = graph.hiddenTypes;
       this._schemaRenderChain.handle(newMessage, this.state);
@@ -923,9 +934,10 @@ class App extends Component {
    * @private
    */
   _fgAdjustCharge (charge) {
-    console.log("Adjusting to",charge);
-    this.fg.d3Force ('charge').strength(charge);
-    this.fg.refresh ();
+    if (this.fg) {
+      this.fg.d3Force ('charge').strength(charge);
+      this.fg.refresh ();
+    }
   }
   /**
    * Render the force directed graph in either 2D or 3D rendering modes.
@@ -1277,7 +1289,7 @@ class App extends Component {
               sizeUnit={"px"}
               size={6}
               color={'#2cbc12'}
-              loading={this.state.loading && this.state.schemaViewerEnabled} />
+              loading={this.state.loading && (this.state.schemaViewerActive || !this.state.schemaViewerEnabled)} />
             {
               !this.state.toolbarEnabled &&
                 <Button id="navModeButton"
@@ -1291,7 +1303,7 @@ class App extends Component {
                     color="success" onClick={this._executeQuery}>
               Run
             </Button>
-            <div id="appControlContainer">
+            <div id="appControlContainer" style={{display:(this.state.toolbarEnabled ? "none" : "")}}>
               <IoIosSettings data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
               <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
             </div>
@@ -1309,18 +1321,18 @@ class App extends Component {
                   nodeTypeRenderAmount={this.state.legendRenderAmount}
                   linkTypeRenderAmount={this.state.legendRenderAmount}
                   callback={this._updateGraphElementVisibility}
-                  render={!this.state.schemaViewerEnabled && this.state.colorGraph}/>
+                  render={(!this.state.schemaViewerActive || !this.state.schemaViewerEnabled) && this.state.colorGraph}/>
           <Legend typeMappings={this.state.schema.typeMappings}
                   hiddenTypes={this.state.schema.hiddenTypes}
                   nodeTypeRenderAmount={this.state.legendRenderAmount}
                   linkTypeRenderAmount={this.state.legendRenderAmount}
                   callback={this._updateGraphElementVisibility}
-                  render={this.state.schemaViewerEnabled && this.state.colorGraph}/>
+                  render={this.state.schemaViewerActive && this.state.schemaViewerEnabled && this.state.colorGraph}/>
           <div id="graph"></div>
           <div id="viewContainer">
             {
               this.state.toolbarEnabled && (
-                <Toolbar id="toolbar" default={0} tools={this.state.tools}/>
+                <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons}/>
               )
             }
             {
@@ -1335,27 +1347,27 @@ class App extends Component {
                          onDragFinished={(width) => this._updateGraphSplitPaneResize()}
               >
                 <div>
-                  <div id="schemaBanner">
-                  {((this.state.schemaViewerEnabled && !this.state.schemaLoaded) || (!this.state.schemaViewerEnabled && this.state.loading)) &&  <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
-                  {this.state.schemaViewerEnabled ? "Schema:" : "Graph:"}
+                  <div id="schemaBanner" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
+                  {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) &&  <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
+                  {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
                     <div id="schemaViewToggleButtonContainer">
                       <Button color="primary"
                               id="schemaViewToggleButton"
                               outline
                               size="sm"
-                              onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerEnabled)}
+                              onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
                       >
-                      {this.state.schemaViewerEnabled ? "Show graph" : "Show schema"}
+                      {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
                       </Button>
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
-                    {this.state.schemaViewerEnabled ?
+                    {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                       (
                         this._renderForceGraph (
                           this.state.schema,
                           {
-                          ref: (el) => {if (this.state.schemaViewerEnabled) this.fg = el;},
+                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el;},
 
                           // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
                           // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
@@ -1369,7 +1381,7 @@ class App extends Component {
                       (
                         this._renderForceGraph (
                           this.state.graph, {
-                          ref: (el) => {if (!this.state.schemaViewerEnabled) this.fg = el;}
+                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el;}
 
                           // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
                           // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})

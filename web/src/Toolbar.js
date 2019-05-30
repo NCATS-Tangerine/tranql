@@ -237,6 +237,8 @@ export class Toolbar extends Component {
    * @param {Object} props - Properties of toolbar
    * @param {Tool[]} props.tools - Array of tool groups and tools contained within the toolbar.
    *    NOTE: Tools are not required to be contained inside of ToolGroups, the name may be misleading. Make sure to check out what a ToolGroup actually does.
+   * @param {Component[]} props.buttons - Array of components (icons) contained at the bottom of the toolbar.
+   *    The Toolbar does not modify these components in any way. It simply provides a container for them to be better placed within the larger document.
    * @param {int} [props.default=0] - Index in props.tools of the default active tool (its callback will be invoked to select it)
    */
   constructor(props) {
@@ -271,6 +273,17 @@ export class Toolbar extends Component {
     return (
       <div id={this.props.id} className="Toolbar">
         <div className="toolbar-header"></div>
+        <div className="toolbar-content toolbar-button-container">
+        {
+          this.props.buttons.map((button,i) => {
+            return (
+              <div key={i} className='tool-container'>
+              {button}
+              </div>
+            )
+          })
+        }
+        </div>
         <div className="toolbar-content">
           {
             this.state.tools.map((tool,i) => {

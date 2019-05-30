@@ -259,7 +259,6 @@ class LegendFilter extends Actor {
     };
     for (let elementType in message.graph) {
       let elements = message.graph[elementType];
-      console.log(elements,typeof elements,elements.forEach);
       elements.forEach(element => {
         if (typeof element.type === "string")  element.type = [element.type];
         element.type.forEach(type => {
