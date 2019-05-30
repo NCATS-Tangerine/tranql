@@ -282,6 +282,22 @@ class Concept:
     def apply_filters (self):
         nodes = self.filter_nodes (self.nodes)
         self.nodes = nodes
+
+class Text:
+    """ Utilities for processing text. """
+
+    @staticmethod
+    def get_curie (text):
+        return text.upper().split(':', 1)[0] if ':' in text else None
+        
+    @staticmethod
+    def un_curie (text):
+        return text.split (':', 1)[1] if ':' in text else text
+        
+    @staticmethod
+    def short (obj, limit=80):
+        text = str(obj) if obj else None
+        return (text[:min(len(text),limit)] + ('...' if len(text)>limit else '')) if text else None
         
 def generate_gene_vocab ():
     gene_map = {}

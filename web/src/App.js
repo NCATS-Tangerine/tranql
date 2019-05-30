@@ -1031,7 +1031,7 @@ class App extends Component {
           <div>
             TranQL {this._renderModal () }
             <AnswerViewer show={true} ref={this._answerViewer} />
-            <Message show={false} ref={this._messageDialog} />
+            <Message show={false} id="messages" ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}

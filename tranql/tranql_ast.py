@@ -11,6 +11,7 @@ from tranql.concept import BiolinkModelWalker
 from tranql.tranql_schema import Schema
 from tranql.util import Concept
 from tranql.util import JSONKit
+from tranql.util import Text
 from tranql.tranql_schema import Schema
 from tranql.exception import ServiceInvocationError
 from tranql.exception import UndefinedVariableError
@@ -382,6 +383,9 @@ class SelectStatement(Statement):
                         for node in concept.nodes:
                             """ Permute each question. """
                             nodes = copy.deepcopy (question["question_graph"]['nodes'])
+                            if len(nodes) == 0:
+                                logger.debug (f"No values in concept {concept.name}")
+                                continue
                             lastnode = nodes[-1]
                             nodes.append (node)
                             edges = copy.deepcopy (question["question_graph"]['edges'])
@@ -476,13 +480,16 @@ class SelectStatement(Statement):
                 name = next_statement.query.order [0]
                 #name = statement.query.order[-1]
                 #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
+                logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
                 values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
                 first_concept.set_nodes (values)
                 if len(values) == 0:
+                    message = f"No valid results from service {statement.service} executing " + \
+                              f"query {statement.query}. Unable to continue query. Exiting."
                     raise ServiceInvocationError (
-                        f"No valid results from service {statement.service} executing " +
-                        f"query {statement.query}. Unable to continue query. Exiting.")
+                        message = message,
+                        details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
         merged = self.merge_results (responses, self.service)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
@@ -499,7 +506,7 @@ class SelectStatement(Statement):
         #answers = result['answers']
         answers = result['knowledge_map']
 
-        node_map = { n['id'] : n for n in kg['nodes'] }
+        node_map = { n['id'] : n for n in kg.get('nodes',[]) }
         for response in responses[1:]:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")            
             # TODO: Preserve reasoner provenance. This treats nodes as equal if

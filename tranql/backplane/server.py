@@ -422,6 +422,70 @@ class PublishToGamma(GammaResource):
         print(f"view-post-response: {view_post_response}")
         print(f"view-url: {self.view_url(uid)}")
 
+class GNBRReasoner:
+    def query (self, message):
+        url=f'https://gnbr-reason.ncats.io/decorator'
+        response = requests.post(url,json=message)
+        print( f"Return Status: {response.status_code}" )
+        result = {}
+        if response.status_code == 200:
+            result = response.json()
+        return result
+
+class GNBRDecorator(StandardAPIResource):
+    """ GNBR Knowledge Graph annotator."""
+    def post(self):
+        """
+        Decorate a knowledge graph via GNBR.
+        ---
+        tag: validation
+        description: GNBR decorator.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        self.validate (request)
+
+        # Specify result number in range 0-4
+        index = 0
+        
+        rtx_result = rtx['result_list'][index]
+        for edge in rtx_result['result_graph']['edge_list']:
+            edge['publications'] = list(edge['publications'].split(','))    
+        for node in rtx_result['result_graph']['node_list']:
+            node['type'] = [node['type']]            
+        node_list = rtx_result['result_graph']['node_list']
+        edge_list = rtx_result['result_graph']['edge_list']
+
+        gnbr_reasoner = GNBRReasoner ()
+        return gnbr_reasoner.query ({
+            "query_message": {
+                "query_graph": {
+                    'nodes': node_list, 
+                    'edges': edge_list
+                }
+            }
+        })
+
 class BiolinkModelWalkerService(StandardAPIResource):
     """ Biolink Model Walk Resource. """
     def __init__(self):
@@ -498,6 +562,7 @@ class BiolinkModelWalkerService(StandardAPIResource):
 # Generic
 api.add_resource(GammaQuery, '/graph/gamma/quick')
 api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
+api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
