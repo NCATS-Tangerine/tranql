@@ -216,7 +216,6 @@ class LegendFilter extends Actor {
           // console.log(totalHueCycles*hueCycleShift, totalShift, cycles);
 
           let ind = index % colors.length; // Restart the index for color array
-          console.log(hueCycleShift, totalHueCycles, totalShift);
           color = changeHue(colors[ind], -totalShift-(hueCycleShift));
         }
         else {
@@ -231,7 +230,7 @@ class LegendFilter extends Actor {
         index++;
       });
     }
-    console.log(overallColors.length,new Set(overallColors).size);
+    // console.log(overallColors.length,new Set(overallColors).size);
     message.graph.nodes.forEach(node => {node.color = typeMappings.nodes[node.type[0]].color});
     message.graph.links.forEach(link => {link.color = typeMappings.links[link.type].color});
 

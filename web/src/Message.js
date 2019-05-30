@@ -19,7 +19,7 @@ class Message extends Component {
     this.handleShow = this.handleShow.bind (this);
   }
   handleShow (title, message, details) {
-    if (message && details) {
+    if (typeof message !== 'undefined' && typeof details !== 'undefined') {
       this.setState({
         show: true,
         title : title,

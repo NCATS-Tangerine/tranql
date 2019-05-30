@@ -1060,7 +1060,7 @@ class App extends Component {
     }
   }
   _handleMessageDialog (title, message, details) {
-    this._messageDialog.current.handleShow (title, message, details);
+    this._messageDialog.current.handleShow (title, message, details === undefined ? "" : details);
   }
   /**
    * Take appropriate actions on the closing of the modal settings dialog.
@@ -1185,6 +1185,7 @@ class App extends Component {
           - knowledge_maps
       So delete the useless information (graph is huge and contains a lot of data that slows the requests down)
     */
+    this.setState({ loading : true });
     fetch(this.tranqlURL + '/tranql/annotate', {
       method: "POST",
       headers: {
@@ -1192,14 +1193,47 @@ class App extends Component {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify (message)
-    }).then(res => res.text())
+    }).then(res => res.json())
       .then(
         (result) => {
-          console.log("Annotate result:", result);
+          if (result.message) {
+            this._handleMessageDialog ("Error", result.message, result.details);
+            console.log ("--error: " + result.message);
+            this.setState ({
+              loading : false,
+              error : result.message
+            });
+          } else {
+            console.time();
+            // for (let type in result.knowledge_graph) {
+            //   result.knowledge_graph[type].forEach(newElem => {
+            //     newElem.source_database = [];
+            //   });
+            // }
+            for (let type in result.knowledge_graph) {
+              result.knowledge_graph[type].forEach(newElem => {
+                message.knowledge_graph[type].forEach(oldElem => {
+                  if (newElem.id === oldElem.id) {
+                    for (let prop in newElem) {
+                      oldElem[prop] = newElem[prop];
+                    }
+                  }
+                });
+              });
+            }
+            console.timeEnd();
+            this.setState({ loading : false });
+            console.log("Annotated result:", result);
+            console.log("Current message:", message);
+            this._translateGraph (result);
+            this._configureMessage (result);
+            this._setSchemaViewerActive(false);
+          }
         },
         (error) => {
           this.setState({
-            error
+            error : error,
+            loading : false
           });
         }
       );
@@ -1213,7 +1247,6 @@ class App extends Component {
     const renderAmount = 5;
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
     let mappings = Legend.sortMappings(graph.typeMappings, renderAmount, renderAmount);
-    console.log(JSON.parse(JSON.stringify(mappings)),JSON.parse(JSON.stringify(graph)));
     if (!mappings.hasOwnProperty('nodes')) mappings.nodes = [];
     if (!mappings.hasOwnProperty('links')) mappings.links = [];
     let data = (this.state.showTypeNodes ? mappings.nodes : mappings.links).map(elem => (
