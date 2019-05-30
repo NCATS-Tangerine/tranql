@@ -8,7 +8,7 @@ import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -20,7 +20,8 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
-import Legend, { adjustTitle } from './Legend.js';
+import Legend from './Legend.js';
+import { adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
@@ -114,6 +115,9 @@ class App extends Component {
 
     // Type chart
     this._renderTypeChart = this._renderTypeChart.bind (this);
+
+    // Annotate graph
+    this._annotateGraph = this._annotateGraph.bind (this);
 
 
     // Settings management
@@ -244,7 +248,8 @@ class App extends Component {
         <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
         <FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
                     className="App-control-toolbar fa"
-                    onClick={() => this.setState ({ showTypeChart : true })} />
+                    onClick={() => this.setState ({ showTypeChart : true })} />,
+        <FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>
       ],
 
       // Type chart
@@ -1159,7 +1164,48 @@ class App extends Component {
     value !== "" && this.setState({ legendRenderAmount : value });
   }
   /**
-   * Rneder the type bar chart
+   * Send graph message to backplane which annotates it and relays it back
+   *
+   * @private
+   */
+  _annotateGraph () {
+    if (this.state.message === null) {
+      console.log("Can't annotate message if graph isn't loaded");
+      return;
+    }
+    let message = Object.assign({}, this.state.message);
+    delete message.graph;
+    delete message.hiddenTypes;
+    /*
+      Structure of Message object in schema is:
+        type: object
+        required:
+          - question_graph
+          - knowledge_graph
+          - knowledge_maps
+      So delete the useless information (graph is huge and contains a lot of data that slows the requests down)
+    */
+    fetch(this.tranqlURL + '/tranql/annotate', {
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify (message)
+    }).then(res => res.text())
+      .then(
+        (result) => {
+          console.log("Annotate result:", result);
+        },
+        (error) => {
+          this.setState({
+            error
+          });
+        }
+      );
+  }
+  /**
+   * Render the type bar chart
    *
    * @private
    */

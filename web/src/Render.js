@@ -1,4 +1,5 @@
 import Actor from './Actor.js';
+import { changeHue } from './Util.js';
 
 class RenderInit extends Actor {
   handle (message, context) {
@@ -178,19 +179,59 @@ class LegendFilter extends Actor {
 
     let colors = [
       "#7ac984","#ffef89","#8ecccc","#f7a8d8","#9bafff","#fabebe","#ffe47c","#aaffc3","#f79b9b","#ffd24c",
-      "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff"
+      "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff", "#cd546b", "#996ec3", "#7aa444", "#4cab98",
+      "#c27f3c", "#8cc8b1", "#aabbea", "#7bcaed", "#7bc950", "#df99f0"
     ];
 
+
+    // The following code iterates over first the nodes and then the links assigning every type a color.
+    // It does this by manipulating the hues of the `colors` array every time it iterates over them.
+    // Links are identical to node colors except in hue which they have `hueShift` more.
+    // Every n iteration of the colors array, it shifts the colors down by -n*hueShift hue.
+    // Everytime it shifts past 360 hue (the maximum hue in HSL) from the initial color is known as a cycle.
+    // Every k cycle it shifts by k * (hueShift/(k+1)) more.
+
+    const hueShift = 50;
+    let overallColors = [];
+    let index = 0;
     // (Zip structure ( [type, {quantity:x}] ))
     for (let elementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
-      sortedTypes.forEach(obj => {
+      sortedTypes.forEach((obj) => {
+        // let index = elementType === "nodes" ? i : colors.length-(i+1);
         let type = obj[0];
-        let color = colors.length > 0 ? colors.shift() : '#ffffff';
+
+        let color;
+
+        if (index >= colors.length) {
+          // If run out of colors, start recycling but shift the hues down. Make sure to shift the hues. Ensure that after multiple times iterating colors you continue to shift more.
+          // Note - this method runs out of colors and starts cycling after hue has been shifted over 360
+          let cycles = Math.ceil(index/colors.length);
+
+          let totalShift = cycles*hueShift;
+          let totalHueCycles = Math.floor(totalShift/360);
+
+          let hueCycleShift = totalHueCycles * (hueShift / (totalHueCycles + 1));
+
+          // console.log(totalHueCycles*hueCycleShift, totalShift, cycles);
+
+          let ind = index % colors.length; // Restart the index for color array
+          console.log(hueCycleShift, totalHueCycles, totalShift);
+          color = changeHue(colors[ind], -totalShift-(hueCycleShift));
+        }
+        else {
+          color = colors[index];
+        }
+        if (elementType === "links") {
+          // color = changeHue(color, hueShift*2); //reuse the same color but shift its hue by enough that it's distinguishable as a completely different color
+        }
         // Set colors of each type
         typeMappings[elementType][type].color = color;
+        overallColors.push(color);
+        index++;
       });
     }
+    console.log(overallColors.length,new Set(overallColors).size);
     message.graph.nodes.forEach(node => {node.color = typeMappings.nodes[node.type[0]].color});
     message.graph.links.forEach(link => {link.color = typeMappings.links[link.type].color});
 
