@@ -478,7 +478,7 @@ def test_interpreter_set (requests_mock):
 def test_program (requests_mock):
     print ("test_program ()")
     mock_map = MockMap (requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (asynchronous=False)
     ast = tranql.execute ("""
     --
     -- Workflow 5
