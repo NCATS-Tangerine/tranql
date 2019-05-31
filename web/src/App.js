@@ -12,6 +12,7 @@ import { FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePoint
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
+import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
 import Slider, { Range } from 'rc-slider';
@@ -1244,7 +1245,7 @@ class App extends Component {
    * @private
    */
   _renderTypeChart () {
-    const renderAmount = 10;
+    const renderAmount = 9;
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
     let mappings = Legend.sortMappings(graph.typeMappings, renderAmount, renderAmount);
     if (!mappings.hasOwnProperty('nodes')) mappings.nodes = [];
@@ -1255,7 +1256,8 @@ class App extends Component {
         // A little confusing...
         "Filtered Quantity": elem.hasOwnProperty('actualQuantity') ? elem.actualQuantity : 0,
         "Actual Quantity": elem.quantity,
-        color: elem.color
+        color: elem.color,
+        hidden: elem.hasOwnProperty('actualQuantity') ? false : true
       }
     ));
     return (
@@ -1283,31 +1285,59 @@ class App extends Component {
                      height={85}
                      interval={0}
                      tickMargin={0}
-                     tick={(props) => (
-                       <g transform={`translate(${props.x},${props.y})`}>
-                       <switch>
-                          {/* Translate x -50% of width to center it*/}
-                          <foreignObject style={{transform:"translateX(-40px)"}} x={0} y={0} dy={16} width={80} height="100%">
-                            <p style={{fontSize:"14px",textAlign:"center"}} xmlns="http://www.w3.org/1999/xhtml">{props.payload.value}</p>
-                          </foreignObject>
-                        </switch>
-                        {/*
-                          props.payload.value.split(/((?:\w+\s+){1,5})/).map((block, i) => (
-                            <text x={0} y={0} dy={16+(i*16)} textAnchor="end" fill="#666" font-size="14px" transform="rotate(-35)">
-                              {block}
-                            </text>
-                          ))
-                        */}
-                       </g>
-                     )}
+                     tick={(props) => {
+                       const width = props.width/props.visibleTicksCount;
+                       return (
+                         <g transform={`translate(${props.x},${props.y})`}>
+                           <switch>
+                              {/* Translate x -50% of width to center it*/}
+                              <foreignObject style={{transform:`translateX(-${width/2}px)`}} x={0} y={0} dy={16} width={width} height="100%">
+                                <p style={{padding:"2px",fontSize:"14px",textAlign:"center"}} xmlns="http://www.w3.org/1999/xhtml">{props.payload.value}</p>
+                              </foreignObject>
+                            </switch>
+                            {/*
+                              props.payload.value.split(/((?:\w+\s+){1,5})/).map((block, i) => (
+                                <text x={0} y={0} dy={16+(i*16)} textAnchor="end" fill="#666" font-size="14px" transform="rotate(-35)">
+                                  {block}
+                                </text>
+                              ))
+                            */}
+                           </g>
+                       );
+                     }}
               />
               <YAxis />
-              <ChartTooltip />
+              <ChartTooltip content={
+                (props) => {
+                  /*const newPayload = props.payload !== null && props.payload.length > 0
+                    ? [
+                        {
+                          name: 'Filtered quantity',
+                          value: props.payload[0].payload.filtered
+                        },
+                        ...props.payload
+                      ]
+                    : [
+
+                      ];
+                  */
+                  const newPayload = props.payload;
+
+                  const label = props.payload !== null && props.payload.length > 0
+                    ? props.payload[0].payload.type + (props.payload[0].payload.hidden
+                      ? " (hidden)"
+                      : "")
+                    : ""
+
+                  return (<DefaultTooltipContent {...props} label={label} payload={newPayload}/>);
+                }
+              }
+              />
               <Bar dataKey="Actual Quantity">
                 {
                   data.map((entry, index) => {
                     let color = entry.color;
-                    return <Cell fill={color} />
+                    return <Cell key={index} fill={color} />
                   })
                 }
               </Bar>
@@ -1315,7 +1345,7 @@ class App extends Component {
                 {
                   data.map((entry, index) => {
                     let color = entry.color;
-                    return <Cell fill={shadeColor(color,-20)} />
+                    return <Cell key={index} fill={shadeColor(color,-20)} />
                   })
                 }
               </Bar>
