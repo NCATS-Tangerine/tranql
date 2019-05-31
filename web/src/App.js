@@ -11,7 +11,7 @@ import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
 import { FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
+import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
 import Slider, { Range } from 'rc-slider';
@@ -21,7 +21,7 @@ import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
 import Legend from './Legend.js';
-import { adjustTitle } from './Util.js';
+import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
@@ -1225,8 +1225,8 @@ class App extends Component {
             this.setState({ loading : false });
             console.log("Annotated result:", result);
             console.log("Current message:", message);
-            this._translateGraph (result);
-            this._configureMessage (result);
+            this._translateGraph (message);
+            this._configureMessage (message);
             this._setSchemaViewerActive(false);
           }
         },
@@ -1244,7 +1244,7 @@ class App extends Component {
    * @private
    */
   _renderTypeChart () {
-    const renderAmount = 5;
+    const renderAmount = 10;
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
     let mappings = Legend.sortMappings(graph.typeMappings, renderAmount, renderAmount);
     if (!mappings.hasOwnProperty('nodes')) mappings.nodes = [];
@@ -1254,12 +1254,14 @@ class App extends Component {
         type: adjustTitle(elem.type),
         // A little confusing...
         "Filtered Quantity": elem.hasOwnProperty('actualQuantity') ? elem.actualQuantity : 0,
-        "Actual Quantity": elem.quantity
+        "Actual Quantity": elem.quantity,
+        color: elem.color
       }
     ));
     return (
       <Modal show={this.state.showTypeChart}
-             onHide={() => this.setState ({ showTypeChart : false })}>
+             onHide={() => this.setState ({ showTypeChart : false })}
+             dialogClassName="typeChart">
         <Modal.Header closeButton>
           <Modal.Title id="typeChartTitle">
             {this.state.showTypeNodes ? 'Node' : 'Link'} Bar Graph
@@ -1267,23 +1269,59 @@ class App extends Component {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <BarChart data={data}
-                    height={500}
-                    width={400}
-                    margin={{
-                      top: 5,
-                      right: 30,
-                      left: 20,
-                      bottom: 5
-                    }}>
-            <CartesianGrid strokeDasharray="3 3"/>
-            <XAxis dataKey="type" />
-            <YAxis />
-            <ChartTooltip />
-            <ChartLegend />
-            <Bar dataKey="Actual Quantity" fill="#6aef56" />
-            <Bar dataKey="Filtered Quantity" fill="#7fc1ff" />
-          </BarChart>
+          <ResponsiveContainer width={"100%"} height={"100%"}>
+            <BarChart data={data}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5
+                      }}
+                      barCategoryGap={10}>
+              <CartesianGrid strokeDasharray="3 3"/>
+              <XAxis dataKey="type"
+                     height={85}
+                     interval={0}
+                     tickMargin={0}
+                     tick={(props) => (
+                       <g transform={`translate(${props.x},${props.y})`}>
+                       <switch>
+                          {/* Translate x -50% of width to center it*/}
+                          <foreignObject style={{transform:"translateX(-40px)"}} x={0} y={0} dy={16} width={80} height="100%">
+                            <p style={{fontSize:"14px",textAlign:"center"}} xmlns="http://www.w3.org/1999/xhtml">{props.payload.value}</p>
+                          </foreignObject>
+                        </switch>
+                        {/*
+                          props.payload.value.split(/((?:\w+\s+){1,5})/).map((block, i) => (
+                            <text x={0} y={0} dy={16+(i*16)} textAnchor="end" fill="#666" font-size="14px" transform="rotate(-35)">
+                              {block}
+                            </text>
+                          ))
+                        */}
+                       </g>
+                     )}
+              />
+              <YAxis />
+              <ChartTooltip />
+              <Bar dataKey="Actual Quantity">
+                {
+                  data.map((entry, index) => {
+                    let color = entry.color;
+                    return <Cell fill={color} />
+                  })
+                }
+              </Bar>
+              <Bar dataKey="Filtered Quantity">
+                {
+                  data.map((entry, index) => {
+                    let color = entry.color;
+                    return <Cell fill={shadeColor(color,-20)} />
+                  })
+                }
+              </Bar>
+              {/*<Bar dataKey="Filtered Quantity" fill="#7fc1ff" />*/}
+            </BarChart>
+          </ResponsiveContainer>
         </Modal.Body>
       </Modal>
     );
@@ -1418,10 +1456,12 @@ class App extends Component {
     // Render it.
     return (
       <div className="App" id="AppElement">
+      {this._renderModal () }
+      {this._renderTypeChart ()}
         <ReactTooltip place="left"/>
         <header className="App-header" >
           <div id="headerContainer">
-            <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () } {this._renderTypeChart ()}
+            <p style={{display:"inline-block",flex:1}}>TranQL</p>
             <AnswerViewer show={true} ref={this._answerViewer} />
             <Message show={false} ref={this._messageDialog} />
             <GridLoader
