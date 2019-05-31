@@ -11,10 +11,6 @@ class TypeButtonGroup extends React.Component {
     super(props,context);
 
     this._handleChange = this._handleChange.bind(this);
-
-    this.state = {
-      value:this.props.hiddenTypes
-    }
   }
 
   /**
@@ -23,36 +19,34 @@ class TypeButtonGroup extends React.Component {
    * @param {Array} value - Current value of ToggleButtonGroup (used to detect if the item should be added or removed).
    */
   _handleChange(value) {
-    // This is likely a poor method of going about this, but I could find no documentation on how to accomplish this simple task.
-    // It probably shouldn't be this ridiculously complicated to do such a simple thing.
     let newValue = value[value.length-1];
-    let newState = this.state.value.slice();
+    let newState = this.props.hiddenTypes.slice();
     let turnedOn = false;
-    this.state.value.forEach((value,i) => {
+    this.props.hiddenTypes.forEach((value,i) => {
       let type = value;
       if (type === newValue.type) {
         newState.splice(i,1);
       }
     });
-    if (newState.length === this.state.value.length) {
+    if (newState.length === this.props.hiddenTypes.length) {
       newState.push(newValue.type);
       turnedOn = true;
     }
     typeof this.props.callback === "function" && this.props.callback(newValue.type,turnedOn); //call the callback and pass on/off to it
-    this.setState({ value: newState });
+    // this.setState({ value: newState });
   }
 
   render() {
     return (
       <ToggleButtonGroup
         type="checkbox"
-        value={this.state.value}
+        value={this.props.hiddenTypes}
         onChange={this._handleChange}
       >
         {
           this.props.types.map((typeData,n) => {
             // How to generate unique id??
-            let checked = this.state.value.every(val => val !== typeData.type);
+            let checked = this.props.hiddenTypes.every(val => val !== typeData.type);
             let data = {
               type: typeData.type,
               quantity: typeData.quantity,

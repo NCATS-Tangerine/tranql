@@ -9,7 +9,7 @@ import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -90,6 +90,7 @@ class App extends Component {
 
     // The visualization
     this._setNavMode = this._setNavMode.bind(this);
+    this._setSelectMode = this._setSelectMode.bind(this);
     this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
     this._highlightType = this._highlightType.bind(this);
     this._renderForceGraph = this._renderForceGraph.bind (this);
@@ -192,6 +193,7 @@ class App extends Component {
       selectedLink : {},
       contextNode : null,
       navigateMode: false,
+      selectMode: false,
 
       // Set up CodeMirror settings.
       codeMirrorOptions : {
@@ -242,16 +244,16 @@ class App extends Component {
 
       // Tools for the toolbar component
       tools: [
-        <Tool name="Navigate" description="Navigate the graph" callback={(bool) => this._setNavMode(bool)}>
+        <Tool name="Navigate" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
-        <Tool name="Select" description="Select a node or link" callback={(bool) => this._setNavMode(!bool)}>
+        <Tool name="Select" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
           <FaMousePointer/>
         </Tool>,
         <Tool name="Highlight Types"
-              description="Select a node or link and highlight all other nodes or links of the same type"
+              description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type."
               callback={(bool) => this._setHighlightTypesMode(bool)}>
-          <FaEye/>
+          <FaSearch/>
         </Tool>
       ],
       buttons: [
@@ -474,15 +476,32 @@ class App extends Component {
    */
   _setHighlightTypesMode (bool) {
     if (!bool && this.state.highlightedType.length > 0) {
-      // TODO deselect currently highlighted type
       this._highlightType(this.state.highlightedType, false);
     }
     this.setState({ highlightTypes : bool, highlightedType : [] });
   }
   /**
-   * Set the navigation / selection mode.
+   * Set if the select mode tool is active.
    *
-   * @param {boolean} navigate - If true, mode will be set to navigate
+   * @param {boolean} select - Sets if active or not.
+   * @private
+   */
+  _setSelectMode (select) {
+    let width = this._graphSplitPane.current.splitPane.offsetWidth;
+    if (this.state.objectViewerEnabled) {
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+    }
+    this._updateGraphSize(width);
+    this.setState ({
+      selectMode: select,
+      selectedNode: {},
+      selectedLink: {}
+    });
+  }
+  /**
+   * Set if the navigation mode tool is active.
+   *
+   * @param {boolean} navigate - Sets if active or not.
    * @private
    */
   _setNavMode (navigate) {
@@ -940,12 +959,15 @@ class App extends Component {
    * @private
    */
   _handleLinkClick (link) {
-    if (link !== null &&
+    if (this.state.highlightTypes) {
+      link !== null && this._updateGraphElementVisibility(link.type, true);
+    }
+    else if (link !== null &&
         this.state.selectedLink !== null &&
 //        this.state.selectedLink.source !== link.source_id &&
 //        this.state.selectedLink.target !== link.target_id &&
         this.state.selectMode &&
-        !this.state.navigateMode)
+        !this.state.selectMode)
     {
       // Select the node.
       this.setState ((prevState, props) => ({
@@ -998,19 +1020,23 @@ class App extends Component {
   /**
    * Handle Legend callback on toggling of element type
    *
-   * @param {string} type - Type of element (e.g. "gene" or "affects_response_to")
+   * @param {string|string[]} type - Type of element (e.g. "gene" or "affects_response_to")
    * @param {boolean} visibility - Determines the new visibility of the elements
    * @private
    */
-  _updateGraphElementVisibility(type,visibility) {
-    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerActive ? this.state.schema : this.state.graph));
+  _updateGraphElementVisibility(type, visibility) {
+    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph));
+    if (!Array.isArray(type)) type = [type];
+
     if (visibility) {
-      graph.hiddenTypes.push(type);
+      graph.hiddenTypes.push(...type);
     } else {
-      graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(type),1);
+      type.forEach(t => {
+        graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(t),1);
+      });
     }
 
-    if (this.state.schemaViewerActive) {
+    if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
       let newMessage = this.state.schemaMessage;
       newMessage.hiddenTypes = graph.hiddenTypes;
       this._schemaRenderChain.handle(newMessage, this.state);
@@ -1035,8 +1061,10 @@ class App extends Component {
    */
   _handleNodeClick (node) {
     console.log (node);
-    console.log(this.state.navigateMode);
-    if (this.state.navigateMode && this.state.visMode === '3D') {
+    if (this.state.highlightTypes) {
+      node !== null && this._updateGraphElementVisibility(node.type, true);
+    }
+    else if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
       // Aim at node from outside it
       const distance = 40;
@@ -1046,7 +1074,7 @@ class App extends Component {
         node, // lookAt ({ x, y, z })
         3000  // ms transition duration
       );
-    } else if (node !== null && node.id !== undefined && node.id !== null &&
+    } else if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
                this.state.selectedNode !== null &&
                this.state.selectedNode.id !== node.id &&
                this.state.selectMode)
@@ -1307,29 +1335,27 @@ class App extends Component {
               error : result.message
             });
           } else {
-            console.time();
-            // for (let type in result.knowledge_graph) {
-            //   result.knowledge_graph[type].forEach(newElem => {
-            //     newElem.source_database = [];
-            //   });
-            // }
             for (let type in result.knowledge_graph) {
               result.knowledge_graph[type].forEach(newElem => {
-                message.knowledge_graph[type].forEach(oldElem => {
-                  if (newElem.id === oldElem.id) {
-                    for (let prop in newElem) {
-                      oldElem[prop] = newElem[prop];
-                    }
-                  }
-                });
+                newElem.source_database = [];
               });
             }
-            console.timeEnd();
+            // for (let type in result.knowledge_graph) {
+            //   result.knowledge_graph[type].forEach(newElem => {
+            //     message.knowledge_graph[type].forEach(oldElem => {
+            //       if (newElem.id === oldElem.id) {
+            //         for (let prop in newElem) {
+            //           oldElem[prop] = newElem[prop];
+            //         }
+            //       }
+            //     });
+            //   });
+            // }
             this.setState({ loading : false });
             console.log("Annotated result:", result);
             console.log("Current message:", message);
-            this._translateGraph (message);
-            this._configureMessage (message);
+            this._translateGraph (result);
+            this._configureMessage (result);
             this._setSchemaViewerActive(false);
           }
         },
@@ -1607,7 +1633,7 @@ class App extends Component {
               !this.state.toolbarEnabled &&
                 <Button id="navModeButton"
                         outline
-                        color="primary" onClick={() => {this._setNavMode(!this.state.navigateMode)}}>
+                        color="primary" onClick={() => {this._setNavMode(!this.state.navigateMode); this._setSelectMode(!this.state.selectMode)}}>
                   { this.state.navigateMode && (this.state.visMode === '3D' || this.state.visMode === '2D') ? "Navigate" : "Select" }
                 </Button>
             }
