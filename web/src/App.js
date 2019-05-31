@@ -3,12 +3,13 @@ import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal, Form } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
+import * as THREE from 'three';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -89,6 +90,8 @@ class App extends Component {
 
     // The visualization
     this._setNavMode = this._setNavMode.bind(this);
+    this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
+    this._highlightType = this._highlightType.bind(this);
     this._renderForceGraph = this._renderForceGraph.bind (this);
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
@@ -96,8 +99,10 @@ class App extends Component {
     this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
+    this._handleNodeHover = this._handleNodeHover.bind(this);
     this._fgAdjustCharge = this._fgAdjustCharge.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
+    this._handleLinkHover = this._handleLinkHover.bind(this);
     this._handleContextMenu = this._handleContextMenu.bind(this);
     this._updateGraphSize = this._updateGraphSize.bind(this);
     this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
@@ -232,6 +237,9 @@ class App extends Component {
 
       toolbarEnabled : true,
 
+      highlightTypes : false, // Highlight types tool state
+      highlightedType : [], // Currently highlighted types
+
       // Tools for the toolbar component
       tools: [
         <Tool name="Navigate" description="Navigate the graph" callback={(bool) => this._setNavMode(bool)}>
@@ -239,6 +247,11 @@ class App extends Component {
         </Tool>,
         <Tool name="Select" description="Select a node or link" callback={(bool) => this._setNavMode(!bool)}>
           <FaMousePointer/>
+        </Tool>,
+        <Tool name="Highlight Types"
+              description="Select a node or link and highlight all other nodes or links of the same type"
+              callback={(bool) => this._setHighlightTypesMode(bool)}>
+          <FaEye/>
         </Tool>
       ],
       buttons: [
@@ -406,6 +419,65 @@ class App extends Component {
       this._updateGraphSize(width);
     }
 
+  }
+  /**
+   * Highlight or unhighlight a given node or link type
+   *
+   * @param {string|string[]} - Type/Types which are highlighted or unhighlighted
+   * @param {boolean} highlight - Determines whether the nodes/links of the type will be highlighted or unhighlighted
+   *
+   * @private
+   */
+  _highlightType (type, highlight) {
+    if (!Array.isArray(type)) {
+      type = [type];
+    }
+
+    let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+    type.forEach(highlightType => {
+      for (let graphElementType of ["nodes","links"]) {
+        let elements = graph[graphElementType];
+        for (let i=0;i<elements.length;i++) {
+          let element = elements[i];
+          let types = element.type;
+          if (!Array.isArray(types)) types = [types];
+          if (types.includes(highlightType)) {
+            let material = (element.__lineObj || element.__threeObj).material; // : THREE.MeshLambertMaterial
+            let color;
+            let opacity;
+            if (highlight) {
+              color = new THREE.Color(0xff0000);
+              element.prevOpacity = material.opacity;
+              opacity = 1;
+            }
+            else {
+              color = new THREE.Color(parseInt(element.color.slice(1),16));
+              opacity = element.prevOpacity;
+              delete element.prevOpacity;
+            }
+            // console.log(highlight ? "Highlight" : "Unhighlight", highlightType)
+            material.color = color;
+            material.opacity = opacity;
+            // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
+            break;
+          }
+        };
+      }
+    });
+  }
+  /**
+   * Set the state of the highlight types tool and let it clean up when it is turned off
+   *
+   * @param {boolean} bool - Sets whether or not the highlight types tool is active
+   *
+   * @private
+   */
+  _setHighlightTypesMode (bool) {
+    if (!bool && this.state.highlightedType.length > 0) {
+      // TODO deselect currently highlighted type
+      this._highlightType(this.state.highlightedType, false);
+    }
+    this.setState({ highlightTypes : bool, highlightedType : [] });
   }
   /**
    * Set the navigation / selection mode.
@@ -814,6 +886,54 @@ class App extends Component {
       )
   }
   /**
+   * Handle a hover over a graph node
+   *
+   * @param {object} node - The node that is being hovered over in the graph
+   * @param {object} prevNode - The node that was previously being hovered over in the graph
+   *
+   * @private
+   */
+  _handleNodeHover (node, prevNode) {
+    if (this.state.highlightTypes) {
+      let newType = [];
+      if (prevNode !== null) {
+        this._highlightType(prevNode.type, false);
+      }
+      if (node !== null) {
+        this._highlightType(node.type, true);
+        newType = node.type;
+      }
+      this.setState({ highlightedType : newType });
+    }
+  }
+  /**
+   * Handle a hover over a graph link
+   *
+   * @param {object} link - The link that is being hovered over in the graph
+   * @param {object} prevLink - The link that was previously being hovered over in the graph
+   *
+   * @private
+   */
+  _handleLinkHover (link, prevLink) {
+    if (this.state.highlightTypes) {
+      let newType = [];
+      // Eliminate overhead by not deselecting all the types if going to reselect them immediately after
+      // If new link is null don't bother trying to check
+      if (prevLink !== null && (link === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type))) {
+        this._highlightType(prevLink.type, false);
+      }
+      // Same goes for here but with the previous link
+      // We still want to set newType though
+      if (link !== null) {
+        if (prevLink === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type)) {
+          this._highlightType(link.type, true);
+        }
+        newType = link.type;
+      }
+      this.setState({ highlightedType : newType });
+    }
+  }
+  /**
    * Handle a click on a graph link.
    *
    * @param {object} - A link in the force directed graph visualization.
@@ -965,6 +1085,27 @@ class App extends Component {
    */
   _renderForceGraph (data, props) {
     var result = null;
+    let defaultProps = {
+      graphData:data,
+       width:this.state.graphWidth,
+       height:this.state.graphHeight,
+       linkAutoColorBy:"type",
+       nodeAutoColorBy:"type",
+       d3AlphaDecay:0.2,
+       strokeWidth:2,
+       linkWidth:this.state.forceGraphOpts.linkWidth,
+       nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
+       enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
+       onLinkClick:this._handleLinkClick,
+       onLinkHover:this._handleLinkHover,
+       onNodeRightClick:this._handleNodeRightClick,
+       onNodeClick:this._handleNodeClick,
+       onNodeHover:this._handleNodeHover
+    };
+    props = {
+      ...defaultProps,
+      ...props
+    }
     if (this.state.visMode === '3D') {
       result = this._renderForceGraph3D (data, props);
     } else if (this.state.visMode === '2D') {
@@ -983,20 +1124,7 @@ class App extends Component {
    * nodeAutoColorBy="type"
    */
   _renderForceGraph3D (data, props) {
-      return <ForceGraph3D graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraph3D {...props} />
   }
   /**
    * Render in 3D
@@ -1004,20 +1132,7 @@ class App extends Component {
    * @private
    */
   _renderForceGraph2D (data, props) {
-      return <ForceGraph2D graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraph2D {...props} />
   }
 
   /**
@@ -1026,20 +1141,7 @@ class App extends Component {
    * @private
    */
   _renderForceGraphVR (data, props) {
-      return <ForceGraphVR graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraphVR {...props} />
   }
   /**
    * Show the modal settings dialog.

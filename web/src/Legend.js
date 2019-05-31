@@ -79,7 +79,8 @@ class TypeButton extends Component {
     //so that it is only applied when active.
     let style = {
       backgroundColor:this.props.data.color,
-      '--highlight-box-shadow-color':"rgb(50,50,50)"
+      '--highlight-box-shadow-color':'rgb(50,50,50)',
+      '--hover-background-color':shadeColor(this.props.data.color,-10)
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
 
