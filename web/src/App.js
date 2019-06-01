@@ -223,6 +223,8 @@ class App extends Component {
       graphHeight : window.innerHeight,
       graphWidth : 0,
       curvedLinks : false, // Can't change the width of curved links beyond 0 due to it using THREE.Line
+      directionalParticles : false, // Huge performance tank - basically unusable when viewing an entire graph
+      directionalArrows : false, // Large performance loss when used with highlight types tool. Also looks ugly. Should be made into an option in settings.
 
       // Object viewer
       objectViewerEnabled : true,
@@ -260,7 +262,7 @@ class App extends Component {
           <FaMousePointer/>
         </Tool>,
         <Tool name="Highlight Types"
-              description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type."
+              description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
               callback={(bool) => this._setHighlightTypesMode(bool)}>
           <FaSearch/>
         </Tool>
@@ -455,7 +457,9 @@ class App extends Component {
           let types = element.type;
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
-            let material = (element.__lineObj || element.__threeObj).material; // : THREE.MeshLambertMaterial
+            let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
+            if (obj === undefined) return;
+            let material = obj.material; // : THREE.MeshLambertMaterial
             let color;
             let opacity;
             if (highlight) {
@@ -1188,11 +1192,27 @@ class App extends Component {
       ...props
     }
     if (this.state.curvedLinks && (this.state.visMode === '3D' || this.state.visMode === 'VR')) {
+      // 2D not supported
       props = {
         ...props,
         linkCurvature:"curvature",
         linkCurveRotation:"rotation",
         linkWidth:undefined
+      };
+    }
+    if (this.state.directionalParticles) {
+      props = {
+        ...props,
+        linkDirectionalParticles: 5,
+        linkDirectionalParticleResolution: 1 // Helps with performance
+      };
+    }
+    if (this.state.directionalArrows) {
+      props = {
+        ...props,
+        linkDirectionalArrowLength: 10,
+        linkDirectionalArrowColor: (link) => link.color,
+        linkDirectionalArrowRelPos: 1
       };
     }
     if (this.state.visMode === '3D') {
