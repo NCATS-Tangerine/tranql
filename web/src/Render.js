@@ -1,5 +1,5 @@
 import Actor from './Actor.js';
-import { changeHue } from './Util.js';
+import { groupBy, changeHue } from './Util.js';
 
 class RenderInit extends Actor {
   handle (message, context) {
@@ -236,14 +236,20 @@ class LegendFilter extends Actor {
 
     if (!message.hasOwnProperty('hiddenTypes')) {
       // If this is the first time the message is processed by the render chain, give it the hiddenTypes property.
-      message.hiddenTypes = [];
+      message.hiddenTypes = {
+        "nodes":[],
+        "links":[]
+      };
+    }
+    else {
+      console.log(message);
     }
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
     var nodes = message.graph.nodes.reduce ((acc, node) => {
       //keep node if all of its types are visible
-      if (node.type.every(type => message.hiddenTypes.indexOf(type) === -1)) {
+      if (node.type.every(type => message.hiddenTypes.nodes.indexOf(type) === -1)) {
         acc.push (node);
       }
       return acc;
@@ -278,7 +284,7 @@ class LegendFilter extends Actor {
       links: message.graph.links.reduce (function (result, link) {
         link.type = typeof link.type === "string" ? [link.type] : link.type;
         link.type.forEach(type => {
-          if (message.hiddenTypes.indexOf(type) === -1) {
+          if (message.hiddenTypes.links.indexOf(type) === -1) {
             result.push (link);
             if (! node_ref.includes (link.source)) {
               node_ref.push (link.source);
@@ -315,10 +321,31 @@ class LegendFilter extends Actor {
     message.graph.hiddenTypes = message.hiddenTypes;
   }
 }
+class CurvatureAdjuster extends Actor {
+  handle (message, context) {
+    // Goes through and finds node pairs that have multiple links between them and gives them a curvature property so that each link is visible.
+    // Additionally, gives curvature to self-referencing Links
+    if (!context.curvedLinks) {
+      // Don't run when feature is turned off
+      return;
+    }
+    let groups = groupBy(message.graph.links,i=>[i.source,i.target]);
+    groups.forEach(group => {
+      group.forEach((link, i) => {
+        // Group length of 1 would result in curvature of 1, which generates a semicircle.
+        // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
+        link.curvature = i/group.length;
+        link.rotation = (Math.PI*2)/(i/group.length);
+      });
+    });
+  }
+}
+
 export {
   RenderInit,
   LegendFilter,
   LinkFilter,
   NodeFilter,
   SourceDatabaseFilter,
+  CurvatureAdjuster
 }

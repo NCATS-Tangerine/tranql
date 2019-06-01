@@ -28,7 +28,7 @@ import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
+import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -98,12 +98,14 @@ class App extends Component {
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
     this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
+    this._updateFg = this._updateFg.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
     this._handleNodeHover = this._handleNodeHover.bind(this);
     this._fgAdjustCharge = this._fgAdjustCharge.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
     this._handleLinkHover = this._handleLinkHover.bind(this);
+    this._handleLinkRightClick = this._handleLinkRightClick.bind(this);
     this._handleContextMenu = this._handleContextMenu.bind(this);
     this._updateGraphSize = this._updateGraphSize.bind(this);
     this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
@@ -174,7 +176,10 @@ class App extends Component {
         links : [],
 
         // Types that aren't rendered
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
         typeMappings: {}
       },
@@ -217,6 +222,7 @@ class App extends Component {
       },
       graphHeight : window.innerHeight,
       graphWidth : 0,
+      curvedLinks : false, // Can't change the width of curved links beyond 0 due to it using THREE.Line
 
       // Object viewer
       objectViewerEnabled : true,
@@ -227,7 +233,10 @@ class App extends Component {
         links : [],
 
         // Types that aren't rendered
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
         typeMappings: {}
       },
@@ -294,14 +303,16 @@ class App extends Component {
       new LinkFilter (),
       new NodeFilter (),
       new SourceDatabaseFilter (),
-      new LegendFilter ()
+      new LegendFilter (),
+      new CurvatureAdjuster ()
     ]);
 
     // Create rendering pipeline for schema
     this._schemaRenderChain = new Chain ([
       new RenderInit (),
       new NodeFilter (),
-      new LegendFilter ()
+      new LegendFilter (),
+      new CurvatureAdjuster ()
     ]);
   }
   /**
@@ -457,9 +468,11 @@ class App extends Component {
               opacity = element.prevOpacity;
               delete element.prevOpacity;
             }
-            // console.log(highlight ? "Highlight" : "Unhighlight", highlightType)
+
+            // console.log("Set",types.join(),"to",color.getHexString(),opacity || "undefined");
             material.color = color;
-            material.opacity = opacity;
+            // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
+            if (opacity !== undefined) material.opacity = opacity;
             // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
             break;
           }
@@ -582,7 +595,10 @@ class App extends Component {
         nodes : [],
         links : [],
 
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         typeMappings: {}
       },
       selectedNode: {},
@@ -960,7 +976,7 @@ class App extends Component {
    */
   _handleLinkClick (link) {
     if (this.state.highlightTypes) {
-      link !== null && this._updateGraphElementVisibility(link.type, true);
+      link !== null && this._updateGraphElementVisibility("links", link.type, true);
     }
     else if (link !== null &&
         this.state.selectedLink !== null &&
@@ -980,7 +996,37 @@ class App extends Component {
       this._updateGraphSize(width);
     }
   }
+  _handleLinkRightClick (link) {
+    if (this.state.highlightTypes && link !== null) {
+      let linkType = Array.isArray(link.type) ? link.type : [link.type];
+      let mappings;
+      if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
+        mappings = this.state.schema.typeMappings.links;
+      }
+      else {
+        mappings = this.state.graph.typeMappings.links;
+      }
+      if (mappings !== undefined) {
+        let hideTypes = Object.keys(mappings).filter(t => !linkType.includes(t));
+        this._updateGraphElementVisibility("links", hideTypes, true);
+      }
+    }
+  }
   _handleNodeRightClick (node) {
+    if (this.state.highlightTypes && node !== null) {
+      let nodeType = Array.isArray(node.type) ? node.type : [node.type];
+      let mappings;
+      if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
+        mappings = this.state.schema.typeMappings.nodes;
+      }
+      else {
+        mappings = this.state.graph.typeMappings.nodes;
+      }
+      if (mappings !== undefined) {
+        let hideTypes = Object.keys(mappings).filter(t => !nodeType.includes(t));
+        this._updateGraphElementVisibility("nodes", hideTypes, true);
+      }
+    }
     this.setState ({
       contextNode : node
     });
@@ -1015,24 +1061,30 @@ class App extends Component {
     this.setState (prevState => ({ graphWidth: width, graphHeight: this.state.graphHeight }));
   }
 
-
-
+  /**
+   * Update fg when it is changed or rerendered
+   *
+   * @private
+   */
+  _updateFg () {
+  }
   /**
    * Handle Legend callback on toggling of element type
    *
+   * @param {string} graphElementType - Graph element type ("nodes" or "links")
    * @param {string|string[]} type - Type of element (e.g. "gene" or "affects_response_to")
-   * @param {boolean} visibility - Determines the new visibility of the elements
+   * @param {boolean} hidden - Determines the new visibility of the elements
    * @private
    */
-  _updateGraphElementVisibility(type, visibility) {
+  _updateGraphElementVisibility(graphElementType, type, hidden) {
     let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph));
     if (!Array.isArray(type)) type = [type];
 
-    if (visibility) {
-      graph.hiddenTypes.push(...type);
+    if (hidden) {
+      graph.hiddenTypes[graphElementType].push(...type);
     } else {
       type.forEach(t => {
-        graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(t),1);
+        graph.hiddenTypes[graphElementType].splice(graph.hiddenTypes[graphElementType].indexOf(t),1);
       });
     }
 
@@ -1062,7 +1114,7 @@ class App extends Component {
   _handleNodeClick (node) {
     console.log (node);
     if (this.state.highlightTypes) {
-      node !== null && this._updateGraphElementVisibility(node.type, true);
+      node !== null && this._updateGraphElementVisibility("nodes", node.type, true);
     }
     else if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
@@ -1120,12 +1172,13 @@ class App extends Component {
        linkAutoColorBy:"type",
        nodeAutoColorBy:"type",
        d3AlphaDecay:0.2,
-       strokeWidth:2,
-       linkWidth:this.state.forceGraphOpts.linkWidth,
+       strokeWidth:10,
+       linkWidth:2,
        nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
        enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
        onLinkClick:this._handleLinkClick,
        onLinkHover:this._handleLinkHover,
+       onLinkRightClick:this._handleLinkRightClick,
        onNodeRightClick:this._handleNodeRightClick,
        onNodeClick:this._handleNodeClick,
        onNodeHover:this._handleNodeHover
@@ -1133,6 +1186,14 @@ class App extends Component {
     props = {
       ...defaultProps,
       ...props
+    }
+    if (this.state.curvedLinks && (this.state.visMode === '3D' || this.state.visMode === 'VR')) {
+      props = {
+        ...props,
+        linkCurvature:"curvature",
+        linkCurveRotation:"rotation",
+        linkWidth:undefined
+      };
     }
     if (this.state.visMode === '3D') {
       result = this._renderForceGraph3D (data, props);
@@ -1706,7 +1767,7 @@ class App extends Component {
                         this._renderForceGraph (
                           this.state.schema,
                           {
-                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el;},
+                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()},
 
                           // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
                           // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
@@ -1720,7 +1781,7 @@ class App extends Component {
                       (
                         this._renderForceGraph (
                           this.state.graph, {
-                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el;}
+                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
 
                           // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
                           // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})

@@ -7,6 +7,9 @@ import './Legend.css';
 
 // Legend button group component (TypeButton wrapper)
 class TypeButtonGroup extends React.Component {
+  /**
+   * @param {string[]} props.hiddenTypes - Either hiddenTypes.nodes or hiddenTypes.links
+   */
   constructor(props,context) {
     super(props,context);
 
@@ -32,7 +35,7 @@ class TypeButtonGroup extends React.Component {
       newState.push(newValue.type);
       turnedOn = true;
     }
-    typeof this.props.callback === "function" && this.props.callback(newValue.type,turnedOn); //call the callback and pass on/off to it
+    typeof this.props.callback === "function" && this.props.callback(this.props.graphElementType,newValue.type,turnedOn); //call the callback and pass on/off to it
     // this.setState({ value: newState });
   }
 
@@ -220,7 +223,7 @@ class Legend extends Component {
                 <div className="graph-element-type-container" key={i}>
                   <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h6>
                   <ButtonToolbar className="graph-element-content">
-                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes} callback={this.props.callback} types={types} />
+                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
                   </ButtonToolbar>
                 </div>
               )

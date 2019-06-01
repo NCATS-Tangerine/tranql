@@ -156,3 +156,22 @@ export function adjustTitle(title) {
   let newTitle = title.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   return newTitle;
 }
+
+/**
+ * Groups Object[] into Object[][] based on accessor function (e.g. groupBy(list, (i) => [i.foo, i.bar]))
+ * source: https://codereview.stackexchange.com/a/37132
+ *
+ */
+export function groupBy( array , f ) {
+  var groups = {};
+  array.forEach( function( o )
+  {
+    var group = JSON.stringify( f(o) );
+    groups[group] = groups[group] || [];
+    groups[group].push( o );
+  });
+  return Object.keys(groups).map( function( group )
+  {
+    return groups[group];
+  })
+}
