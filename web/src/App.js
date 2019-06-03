@@ -1132,7 +1132,10 @@ class App extends Component {
    * @private
    */
   _updateGraphElementVisibility(graphElementType, type, hidden) {
-    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph));
+    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph, function(key, value) {
+      // All connections is a self referencing array, so we must remove it in order to successfully serialize the graph
+      return key !== "allConnections" ? value : undefined;
+    }));
     if (!Array.isArray(type)) type = [type];
 
     if (hidden) {
