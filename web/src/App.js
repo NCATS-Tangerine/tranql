@@ -449,6 +449,7 @@ class App extends Component {
     }
 
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+    const vMode = this.state.visMode;
     type.forEach(highlightType => {
       for (let graphElementType of ["nodes","links"]) {
         let elements = graph[graphElementType];
@@ -458,27 +459,48 @@ class App extends Component {
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
             let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
-            if (obj === undefined) return;
-            let material = obj.material; // : THREE.MeshLambertMaterial
+            let material;
+            if (vMode !== "2D") {
+              if (obj === undefined) return;
+              material = obj.material; // : THREE.MeshLambertMaterial
+            }
             let color;
             let opacity;
             if (highlight) {
               color = new THREE.Color(0xff0000);
-              element.prevOpacity = material.opacity;
+              if (vMode !== "2D") {
+                element.prevOpacity = material.opacity;
+              }
+              else {
+                element.prevColor = element.color;
+              }
               opacity = 1;
             }
             else {
-              color = new THREE.Color(parseInt(element.color.slice(1),16));
-              opacity = element.prevOpacity;
-              delete element.prevOpacity;
+              if (vMode !== "2D") {
+                color = new THREE.Color(parseInt(element.color.slice(1),16));
+                opacity = element.prevOpacity;
+                delete element.prevOpacity;
+              }
+              else {
+                color = new THREE.Color(parseInt(element.prevColor.slice(1),16));
+                delete element.color;
+              }
             }
 
             // console.log("Set",types.join(),"to",color.getHexString(),opacity || "undefined");
-            material.color = color;
-            // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
-            if (opacity !== undefined) material.opacity = opacity;
-            // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
-            break;
+            if (vMode === "2D") {
+              element.color = "#" + color.getHexString();
+              // element.__indexColor = color.getHexString();
+
+            }
+            else {
+              material.color = color;
+              // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
+              if (opacity !== undefined) material.opacity = opacity;
+              // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
+              break;
+            }
           }
         };
       }

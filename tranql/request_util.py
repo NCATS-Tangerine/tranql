@@ -27,9 +27,12 @@ async def make_request_async (semaphore, **kwargs):
                     # logger.error (f"error {http_response.status} processing request: {message}")
                     # logger.error (http_response.text)
     except ServiceInvocationError as e:
-        raise e
+        logger.error (f"Service invocation error from {url}: {e}")
+    except TimeoutError as e:
+        logger.error (f"Timeout error requesting content from url: {url}")
     except Exception as e:
-        raise e
+        print(e)
+        # logger.error (f"Unhandled error in make_request_async: {e}")
         # logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
         #traceback.print_exc ()
         # logger.error (traceback.format_exc ())
