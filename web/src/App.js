@@ -193,7 +193,14 @@ class App extends Component {
       linkWeightRange : [0, 100],
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
-      legendRenderAmount : 10,
+      schemaLegendRenderAmount : {
+        nodes: 20,
+        links: 10
+      },
+      queryLegendRenderAmount : {
+        nodes: 10,
+        links: 10
+      },
       dataSources : [],
 
       charge : -100,
@@ -1426,9 +1433,15 @@ class App extends Component {
    * @param {number} value - The new legend display Limit
    * @private
    */
-  _onLegendDisplayLimitChange (event) {
+  _onLegendDisplayLimitChange (type, event) {
     let value = event.target.value;
-    value !== "" && this.setState({ legendRenderAmount : value });
+    let prop = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? "schemaLegendRenderAmount" : "queryLegendRenderAmount";
+    // Either this.state.schemaLegendRenderAmount or this.state.queryLegendRenderAmount
+    let renderAmountObj = this.state[prop];
+    // Either ...legendRenderAmount.nodes or ...legendRenderAmount.links = value
+    renderAmountObj[type] = value;
+    console.log(renderAmountObj,prop);
+    value !== "" && this.setState({ prop : renderAmountObj });
   }
   /**
    * Send graph message to backplane which annotates it and relays it back
@@ -1696,15 +1709,22 @@ class App extends Component {
               onChange={this._onChargeChange}
               onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
               />
-            </Form>
+            </Form><br/>
 
             <b>Legend Display Limit</b><br/>
-            Set number of node and link types that legend displays<br/>
             <Form>
+              <Form.Label>Set the number of nodes that the legend displays:</Form.Label>
               <Form.Control
               type="number"
-              defaultValue={this.state.legendRenderAmount}
-              onChange={this._onLegendDisplayLimitChange}
+              defaultValue={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schemaLegendRenderAmount.nodes : this.state.queryLegendRenderAmount.nodes}
+              onChange={(e) => (this._onLegendDisplayLimitChange('nodes',e))}
+              onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
+              />
+              <Form.Label>Set the number of links that the legend displays:</Form.Label>
+              <Form.Control
+              type="number"
+              defaultValue={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schemaLegendRenderAmount.links : this.state.queryLegendRenderAmount.links}
+              onChange={(e) => (this._onLegendDisplayLimitChange('links',e))}
               onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
               />
             </Form>
@@ -1793,14 +1813,14 @@ class App extends Component {
                       autoFocus={true} />
           <Legend typeMappings={this.state.graph.typeMappings}
                   hiddenTypes={this.state.graph.hiddenTypes}
-                  nodeTypeRenderAmount={this.state.legendRenderAmount}
-                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  nodeTypeRenderAmount={this.state.queryLegendRenderAmount.nodes}
+                  linkTypeRenderAmount={this.state.queryLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   render={(!this.state.schemaViewerActive || !this.state.schemaViewerEnabled) && this.state.colorGraph}/>
           <Legend typeMappings={this.state.schema.typeMappings}
                   hiddenTypes={this.state.schema.hiddenTypes}
-                  nodeTypeRenderAmount={this.state.legendRenderAmount}
-                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  nodeTypeRenderAmount={this.state.schemaLegendRenderAmount.nodes}
+                  linkTypeRenderAmount={this.state.schemaLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   render={this.state.schemaViewerActive && this.state.schemaViewerEnabled && this.state.colorGraph}/>
           <div id="graph"></div>
