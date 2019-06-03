@@ -9,7 +9,7 @@ class RenderInit extends Actor {
         nodes: message.knowledge_graph.nodes.map(function (node, index) {
           return {
             id: node.id,
-            type : node.type,
+            type : Array.isArray(node.type) ? node.type : [node.type],
             radius : 9,
             name: node.name,
             origin: node        // keep the origin node.
@@ -20,7 +20,7 @@ class RenderInit extends Actor {
           return {
             source: edge.source_id,
             target: edge.target_id,
-            type : edge.type,
+            type : Array.isArray(edge.type) ? edge.type : [edge.type],
             weight : weight,
             name : edge.type + " (w=" + weight + ")",
             linkOpacity: opacity,

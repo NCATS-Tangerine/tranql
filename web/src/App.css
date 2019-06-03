@@ -4,7 +4,11 @@
      height : 100%;
      width : 100%;
      background: black;
- }
+}
+body {
+  overflow : auto !important;
+
+}
 .divider {
      width: 100%;
      border: 1px solid lightgray;
@@ -249,7 +253,6 @@
 .rv-force {
     border: 1px solid gray;
  }
-
 
 
 
