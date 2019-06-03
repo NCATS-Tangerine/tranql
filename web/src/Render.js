@@ -241,9 +241,6 @@ class LegendFilter extends Actor {
         "links":[]
       };
     }
-    else {
-      console.log(message);
-    }
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
@@ -325,17 +322,23 @@ class CurvatureAdjuster extends Actor {
   handle (message, context) {
     // Goes through and finds node pairs that have multiple links between them and gives them a curvature property so that each link is visible.
     // Additionally, gives curvature to self-referencing Links
-    if (!context.curvedLinks) {
-      // Don't run when feature is turned off
-      return;
-    }
-    let groups = groupBy(message.graph.links,i=>[i.source,i.target]);
+    // if (!context.curvedLinks) {
+    //   // Don't run when feature is turned off
+    //   return;
+    // }
+    let groups = groupBy(message.graph.links,i=>[i.source,i.target].sort());
     groups.forEach(group => {
-      group.forEach((link, i) => {
+      // Join all the link names together
+      let allTypesString = group.map(link => link.name).join(",<br/>");
+      group.forEach((link, index) => {
         // Group length of 1 would result in curvature of 1, which generates a semicircle.
         // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
-        link.curvature = i/group.length;
-        link.rotation = (Math.PI*2)/(i/group.length);
+        link.concatName = allTypesString;
+        link.allConnections = group;
+        if (context.curvedLinks) {
+          link.curvature = index/group.length;
+          link.rotation = (Math.PI*2)/(index/group.length);
+        }
       });
     });
   }

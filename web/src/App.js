@@ -25,6 +25,7 @@ import AnswerViewer from './AnswerViewer.js';
 import Legend from './Legend.js';
 import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
+import LinkExaminer from './LinkExaminer.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
@@ -88,11 +89,16 @@ class App extends Component {
     this._configureMessage = this._configureMessage.bind (this);
     this._translateGraph = this._translateGraph.bind (this);
 
-    // The visualization
+    // Toolbar
     this._setNavMode = this._setNavMode.bind(this);
     this._setSelectMode = this._setSelectMode.bind(this);
+
     this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
     this._highlightType = this._highlightType.bind(this);
+
+    this._setConnectionExaminerActive = this._setConnectionExaminerActive.bind(this);
+
+    // The visualization
     this._renderForceGraph = this._renderForceGraph.bind (this);
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
@@ -250,6 +256,8 @@ class App extends Component {
 
       toolbarEnabled : true,
 
+      connectionExaminer : false, // Connection examiner tool state
+
       highlightTypes : false, // Highlight types tool state
       highlightedType : [], // Currently highlighted types
 
@@ -265,6 +273,11 @@ class App extends Component {
               description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
               callback={(bool) => this._setHighlightTypesMode(bool)}>
           <FaSearch/>
+        </Tool>,
+        <Tool name="Examine Connection"
+              description="Displays a connection between two nodes and all links between them"
+              callback={(bool) => this._setConnectionExaminerActive(bool)}>
+          <FaEye/>
         </Tool>
       ],
       buttons: [
@@ -425,7 +438,7 @@ class App extends Component {
   _setSchemaViewerActive (active) {
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
 
-    this.setState({ schemaViewerActive : active }, () => {
+    this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
     if (this.state.objectViewerEnabled) {
@@ -505,6 +518,16 @@ class App extends Component {
         };
       }
     });
+  }
+  /**
+   * Set the state of the connection examiner tool. Resets the selected node when toggled.
+   *
+   * @param {boolean} bool - Sets whether the tool is becoming active or not
+   *
+   * @private
+   */
+  _setConnectionExaminerActive(bool) {
+    this.setState({ selectedNode: {}, connectionExaminer: bool });
   }
   /**
    * Set the state of the highlight types tool and let it clean up when it is turned off
@@ -981,7 +1004,10 @@ class App extends Component {
       // Eliminate overhead by not deselecting all the types if going to reselect them immediately after
       // If new link is null don't bother trying to check
       if (prevLink !== null && (link === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type))) {
-        this._highlightType(prevLink.type, false);
+        if (true || !(prevLink.source === link.target && prevLink.target === link.source) || (prevLink.source === link.source && prevLink.target === link.target)) {
+          this._highlightType(prevLink.type, false);
+        }
+        // If the source and targets are synonymous don't unhighlight.
       }
       // Same goes for here but with the previous link
       // We still want to set newType though
@@ -1001,7 +1027,10 @@ class App extends Component {
    * @private
    */
   _handleLinkClick (link) {
-    if (this.state.highlightTypes) {
+    if (this.state.connectionExaminer) {
+      this.setState({ selectedNode : (link === null ? null : { link : link }) });
+    }
+    else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
     }
     else if (link !== null &&
@@ -1200,6 +1229,7 @@ class App extends Component {
        d3AlphaDecay:0.2,
        strokeWidth:10,
        linkWidth:2,
+       linkLabel: (l) => l.concatName,
        nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
        enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
        onLinkClick:this._handleLinkClick,
@@ -1782,7 +1812,7 @@ class App extends Component {
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
                          minSize={0}
-                         allowResize={this.state.objectViewerEnabled && Object.keys(this.state.selectedNode).length !== 0}
+                         allowResize={this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)}
                          maxSize={document.body.clientWidth}
                          style={{"backgroundColor":"black","position":"static"}}
                          ref={this._graphSplitPane}
@@ -1804,6 +1834,8 @@ class App extends Component {
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
+                    <LinkExaminer link={this.state.selectedNode}
+                                  render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                     {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                       (
                         this._renderForceGraph (

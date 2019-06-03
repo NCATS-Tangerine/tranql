@@ -31,8 +31,7 @@ async def make_request_async (semaphore, **kwargs):
     except TimeoutError as e:
         logger.error (f"Timeout error requesting content from url: {url}")
     except Exception as e:
-        print(e)
-        # logger.error (f"Unhandled error in make_request_async: {e}")
+        logger.error (f"Unhandled error in make_request_async: {e}")
         # logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
         #traceback.print_exc ()
         # logger.error (traceback.format_exc ())
