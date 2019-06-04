@@ -311,7 +311,10 @@ class SchemaGraph(StandardAPIResource):
         # logger.info(schemaGraph.graph_to_message())
 
         # return {"nodes":[],"links":[]}
-        return schemaGraph.graph_to_message()
+        return {
+            "schema": schemaGraph.graph_to_message(),
+            "errors": schema.loadErrors
+        }
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """

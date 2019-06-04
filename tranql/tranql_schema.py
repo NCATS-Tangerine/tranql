@@ -89,6 +89,9 @@ class Schema:
         Create a metadata map of the knowledge network.
         """
 
+        # String[] of errors encountered during loading.
+        self.loadErrors = []
+
         """ Load the schema, a map of reasoner systems to maps of their schemas. """
         self.config = None
         config_file = os.path.join (os.path.dirname(__file__), "conf", "schema.yaml")
@@ -96,13 +99,30 @@ class Schema:
             self.config = yaml.safe_load (stream)
 
         """ Resolve remote schemas. """
-        for schema_name, metadata in self.config['schema'].items ():
+        for schema_name, metadata in self.config['schema'].copy ().items ():
             schema_data = metadata['schema']
             if isinstance (schema_data, str) and schema_data.startswith ("/"):
                 schema_data = f"{backplane}{schema_data}"
-            metadata['schema'] = requests.get (schema_data).json () \
-                                 if isinstance(schema_data, str) and schema_data.startswith('http') \
-                                    else schema_data
+            if isinstance(schema_data, str) and schema_data.startswith('http'):
+                # If schema_data is a URL
+                try:
+                    response = requests.get (schema_data)
+                    schema_data = response.json()
+                except requests.exceptions.RequestException as e:
+                    # If the request errors for any number of reasons (likely a timeout), append an error message
+                    if isinstance(e,requests.exceptions.Timeout):
+                        error = 'Request timed out while fetching schema at "'+schema_data+'"'
+                    elif isinstance(e,requests.exceptions.ConnectionError):
+                        error = 'Request could not connect while fetching schema at "'+schema_data+'"'
+                    else:
+                        error = 'Request failed whlie fetching schema at "'+schema_data+'"'
+                    self.loadErrors.append(error)
+                    # Delete the key here because it has no data.
+                    del self.config['schema'][schema_name]
+                    continue
+            # Else, it must already be loaded
+            metadata['schema'] = schema_data
+            self.config['schema'][schema_name] = metadata
         self.schema = self.config['schema']
 
         """ Build a graph of the schema. """

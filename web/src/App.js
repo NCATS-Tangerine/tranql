@@ -840,15 +840,15 @@ class App extends Component {
                      delete result.answers;
                    }
 
-                   result.knowledge_graph = {
-                     nodes: result.knowledge_graph.nodes.map((node) => {
+                   result.schema.knowledge_graph = {
+                     nodes: result.schema.knowledge_graph.nodes.map((node) => {
                        return {
                          id: node,
                          type: node,
                          name: node
                        }
                      }),
-                     edges: result.knowledge_graph.edges.reduce((acc, edge) => {
+                     edges: result.schema.knowledge_graph.edges.reduce((acc, edge) => {
                        // TODO fix? Can't draw edges from a node to itself
                        if (edge[0] !== edge[1]) {
                          acc.push({
@@ -864,14 +864,18 @@ class App extends Component {
 
                    console.log("Fetched schema:", result);
 
-                   this._schemaRenderChain.handle (result, this.state);
+                   if (result.errors.length > 0) {
+                     this._handleMessageDialog ("Schema Load Error", result.errors.join("\n\n"), "");
+                   }
 
-                   this.setState({ schemaLoaded : true, schema : result.graph, schemaMessage : result });
+                   this._schemaRenderChain.handle (result.schema, this.state);
+
+                   this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
                    this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
                    this._cache.write ('schema', {
                      'id' : 0,
-                     'data' : result
+                     'data' : result.schema
                    });
                  }
                }
