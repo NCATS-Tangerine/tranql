@@ -1,11 +1,8 @@
 import asyncio
 import logging
-from asyncio import shield, TimeoutError
 from aiohttp import ClientSession
 from time import time as now
 from tranql.exception import ServiceInvocationError
-
-logger = logging.getLogger (__name__)
 
 async def make_request_async (semaphore, **kwargs):
     response = {}
@@ -16,7 +13,7 @@ async def make_request_async (semaphore, **kwargs):
                 # print(f"[{kwargs['method'].upper()}] requesting at url: {kwargs['url']}")
                 """ Check status and handle response. """
                 if http_response.status == 200 or http_response.status == 202:
-                    response = await shield(http_response.json ())
+                    response = await http_response.json ()
                     #logger.error (f" response: {json.dumps(response, indent=2)}")
                     status = response.get('status', None)
                     if status == "error":
@@ -31,8 +28,6 @@ async def make_request_async (semaphore, **kwargs):
                     # logger.error (http_response.text)
     except ServiceInvocationError as e:
         raise e
-    except TimeoutError as e:
-        logger.error ("Timeout error requesting content from url: {url}")
     except Exception as e:
         raise e
         # logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
