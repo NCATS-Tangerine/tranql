@@ -19,9 +19,9 @@ spec:
         value: "8099"
     resources:
       requests:
-        memory: 400Mi
+        memory: 200Mi
       limits:
-        memory: 2Gi
+        memory: 1Gi
   - name: tranql-app
     image: greentranslator/tranql-app
     command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--name=tranql", "--timeout=600", "tranql.api:app" ]
@@ -35,7 +35,7 @@ spec:
         value: http://tranql-backplane:8099
     resources:
       requests:
-        memory: 400Mi
+        memory: 200Mi
       limits:
-        memory: 2Gi
+        memory: 1Gi
   restartPolicy: OnFailure
