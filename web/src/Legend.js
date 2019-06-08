@@ -2,42 +2,18 @@ import React, { Component } from 'react';
 import ReactTooltip from 'react-tooltip'
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle } from 'react-icons/io';
 import { ButtonToolbar, ToggleButtonGroup, ToggleButton } from 'react-bootstrap';
+import { adjustTitle, shadeColor } from './Util.js';
 import './Legend.css';
-
-// Method for darkening the shade of a hex string
-//    source: https://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
-function shadeColor(color, percent) {
-    //negative percent => darker
-
-    var R = parseInt(color.substring(1,3),16);
-    var G = parseInt(color.substring(3,5),16);
-    var B = parseInt(color.substring(5,7),16);
-
-    R = parseInt(R * (100 + percent) / 100);
-    G = parseInt(G * (100 + percent) / 100);
-    B = parseInt(B * (100 + percent) / 100);
-
-    R = (R<255)?R:255;
-    G = (G<255)?G:255;
-    B = (B<255)?B:255;
-
-    var RR = ((R.toString(16).length===1)?"0"+R.toString(16):R.toString(16));
-    var GG = ((G.toString(16).length===1)?"0"+G.toString(16):G.toString(16));
-    var BB = ((B.toString(16).length===1)?"0"+B.toString(16):B.toString(16));
-
-    return "#"+RR+GG+BB;
-}
 
 // Legend button group component (TypeButton wrapper)
 class TypeButtonGroup extends React.Component {
+  /**
+   * @param {string[]} props.hiddenTypes - Either hiddenTypes.nodes or hiddenTypes.links
+   */
   constructor(props,context) {
     super(props,context);
 
     this._handleChange = this._handleChange.bind(this);
-
-    this.state = {
-      value:this.props.hiddenTypes
-    }
   }
 
   /**
@@ -46,36 +22,34 @@ class TypeButtonGroup extends React.Component {
    * @param {Array} value - Current value of ToggleButtonGroup (used to detect if the item should be added or removed).
    */
   _handleChange(value) {
-    // This is likely a poor method of going about this, but I could find no documentation on how to accomplish this simple task.
-    // It probably shouldn't be this ridiculously complicated to do such a simple thing.
     let newValue = value[value.length-1];
-    let newState = this.state.value.slice();
+    let newState = this.props.hiddenTypes.slice();
     let turnedOn = false;
-    this.state.value.forEach((value,i) => {
+    this.props.hiddenTypes.forEach((value,i) => {
       let type = value;
       if (type === newValue.type) {
         newState.splice(i,1);
       }
     });
-    if (newState.length === this.state.value.length) {
+    if (newState.length === this.props.hiddenTypes.length) {
       newState.push(newValue.type);
       turnedOn = true;
     }
-    typeof this.props.callback === "function" && this.props.callback(newValue.type,turnedOn); //call the callback and pass on/off to it
-    this.setState({ value: newState });
+    typeof this.props.callback === "function" && this.props.callback(this.props.graphElementType,newValue.type,turnedOn); //call the callback and pass on/off to it
+    // this.setState({ value: newState });
   }
 
   render() {
     return (
       <ToggleButtonGroup
         type="checkbox"
-        value={this.state.value}
+        value={this.props.hiddenTypes}
         onChange={this._handleChange}
       >
         {
           this.props.types.map((typeData,n) => {
             // How to generate unique id??
-            let checked = this.state.value.every(val => val !== typeData.type);
+            let checked = this.props.hiddenTypes.every(val => val !== typeData.type);
             let data = {
               type: typeData.type,
               quantity: typeData.quantity,
@@ -96,27 +70,14 @@ class TypeButton extends Component {
     super(props);
   }
 
-  /**
-   * Adjust the title from camel case to title format (e.g "camel_case" => "Camel Case")
-   *
-   * @param {string} title - The string to be converted to title format
-   *
-   * @returns {string} - The string in title format
-   */
-  static adjustTitle(title) {
-    // NOTE: This method of splitting by underscore will lead to adverse effects if types can have natural underscores in them
-    // (Can they?)
-    let newTitle = title.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    return newTitle;
-  }
-
   render() {
     //Bootstrap doesn't like custom coloring schemes, but it is necessary here to deviate from the bootstrap color theme as it is specifically color-coded.
     //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the css variable `--highlight-box-shadow-color`,
     //so that it is only applied when active.
     let style = {
       backgroundColor:this.props.data.color,
-      '--highlight-box-shadow-color':"rgb(50,50,50)"
+      '--highlight-box-shadow-color':'rgb(50,50,50)',
+      '--hover-background-color':shadeColor(this.props.data.color,-10)
     };
     //Set var '--highlight-color' in inline style property to be accessed when focused
 
@@ -131,7 +92,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.props.active ? <b>{TypeButton.adjustTitle(this.props.data.type)}</b> : TypeButton.adjustTitle(this.props.data.type)}
+        {this.props.active ? <b>{adjustTitle(this.props.data.type)}</b> : adjustTitle(this.props.data.type)}
         {this.props.active ? <b>({this.props.data.actualQuantity}/{this.props.data.quantity})</b> : "("+this.props.data.actualQuantity+"/"+this.props.data.quantity+")"}
       </ToggleButton>
     );
@@ -174,14 +135,14 @@ class Legend extends Component {
    *    This allows the Legend to make each type button the correct state (on/off) when rendering.
    * @returns {Object} - New sorted mapping object with zipped structure
    *    {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
-   * @private
+   * @static
    */
-  _sortMappings(typeMappings) {
+  static sortMappings(typeMappings, nodeTypeRenderAmount, linkTypeRenderAmount) {
     let newMappings = {};
     // (object properties in javascript are unordered and therefore cannot be effectively)
     for (let graphElementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[graphElementType]).sort((a,b) => b[1].quantity-a[1].quantity);
-      let min = Math.min(graphElementType === "nodes" ? this.props.nodeTypeRenderAmount : this.props.linkTypeRenderAmount, sortedTypes.length);
+      let min = Math.min(graphElementType === "nodes" ? nodeTypeRenderAmount : linkTypeRenderAmount, sortedTypes.length);
       for (let i=0;i<min;i++) {
         if (!newMappings.hasOwnProperty(graphElementType)) newMappings[graphElementType] = [];
         newMappings[graphElementType].push(Object.assign({type:sortedTypes[i][0]},sortedTypes[i][1]));
@@ -217,7 +178,7 @@ class Legend extends Component {
 
     let typeMappings = this.props.typeMappings;
 
-    let sortedMappings = this._sortMappings(typeMappings);
+    let sortedMappings = Legend.sortMappings(typeMappings, this.props.nodeTypeRenderAmount, this.props.linkTypeRenderAmount);
 
 
     let render = this.props.render;
@@ -262,7 +223,7 @@ class Legend extends Component {
                 <div className="graph-element-type-container" key={i}>
                   <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h6>
                   <ButtonToolbar className="graph-element-content">
-                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes} callback={this.props.callback} types={types} />
+                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
                   </ButtonToolbar>
                 </div>
               )

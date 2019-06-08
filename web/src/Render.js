@@ -1,4 +1,5 @@
 import Actor from './Actor.js';
+import { groupBy, changeHue } from './Util.js';
 
 class RenderInit extends Actor {
   handle (message, context) {
@@ -8,7 +9,7 @@ class RenderInit extends Actor {
         nodes: message.knowledge_graph.nodes.map(function (node, index) {
           return {
             id: node.id,
-            type : node.type,
+            type : Array.isArray(node.type) ? node.type : [node.type],
             radius : 9,
             name: node.name,
             origin: node        // keep the origin node.
@@ -19,7 +20,7 @@ class RenderInit extends Actor {
           return {
             source: edge.source_id,
             target: edge.target_id,
-            type : edge.type,
+            type : Array.isArray(edge.type) ? edge.type : [edge.type],
             weight : weight,
             name : edge.type + " (w=" + weight + ")",
             linkOpacity: opacity,
@@ -178,32 +179,74 @@ class LegendFilter extends Actor {
 
     let colors = [
       "#7ac984","#ffef89","#8ecccc","#f7a8d8","#9bafff","#fabebe","#ffe47c","#aaffc3","#f79b9b","#ffd24c",
-      "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff"
+      "#848ec9","#ff8eb4","#d195db","#cddc39","#c69393","#e6beff", "#cd546b", "#996ec3", "#7aa444", "#4cab98",
+      "#c27f3c", "#8cc8b1", "#aabbea", "#7bcaed", "#7bc950", "#df99f0"
     ];
 
+
+    // The following code iterates over first the nodes and then the links assigning every type a color.
+    // It does this by manipulating the hues of the `colors` array every time it iterates over them.
+    // Links are identical to node colors except in hue which they have `hueShift` more.
+    // Every n iteration of the colors array, it shifts the colors down by -n*hueShift hue.
+    // Everytime it shifts past 360 hue (the maximum hue in HSL) from the initial color is known as a cycle.
+    // Every k cycle it shifts by k * (hueShift/(k+1)) more.
+
+    const hueShift = 50;
+    let overallColors = [];
+    let index = 0;
     // (Zip structure ( [type, {quantity:x}] ))
     for (let elementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
-      sortedTypes.forEach(obj => {
+      sortedTypes.forEach((obj) => {
+        // let index = elementType === "nodes" ? i : colors.length-(i+1);
         let type = obj[0];
-        let color = colors.length > 0 ? colors.shift() : '#ffffff';
+
+        let color;
+
+        if (index >= colors.length) {
+          // If run out of colors, start recycling but shift the hues down. Make sure to shift the hues. Ensure that after multiple times iterating colors you continue to shift more.
+          // Note - this method runs out of colors and starts cycling after hue has been shifted over 360
+          let cycles = Math.ceil(index/colors.length);
+
+          let totalShift = cycles*hueShift;
+          let totalHueCycles = Math.floor(totalShift/360);
+
+          let hueCycleShift = totalHueCycles * (hueShift / (totalHueCycles + 1));
+
+          // console.log(totalHueCycles*hueCycleShift, totalShift, cycles);
+
+          let ind = index % colors.length; // Restart the index for color array
+          color = changeHue(colors[ind], -totalShift-(hueCycleShift));
+        }
+        else {
+          color = colors[index];
+        }
+        if (elementType === "links") {
+          // color = changeHue(color, hueShift*2); //reuse the same color but shift its hue by enough that it's distinguishable as a completely different color
+        }
         // Set colors of each type
         typeMappings[elementType][type].color = color;
+        overallColors.push(color);
+        index++;
       });
     }
+    // console.log(overallColors.length,new Set(overallColors).size);
     message.graph.nodes.forEach(node => {node.color = typeMappings.nodes[node.type[0]].color});
     message.graph.links.forEach(link => {link.color = typeMappings.links[link.type].color});
 
     if (!message.hasOwnProperty('hiddenTypes')) {
       // If this is the first time the message is processed by the render chain, give it the hiddenTypes property.
-      message.hiddenTypes = [];
+      message.hiddenTypes = {
+        "nodes":[],
+        "links":[]
+      };
     }
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
     var nodes = message.graph.nodes.reduce ((acc, node) => {
       //keep node if all of its types are visible
-      if (node.type.every(type => message.hiddenTypes.indexOf(type) === -1)) {
+      if (node.type.every(type => message.hiddenTypes.nodes.indexOf(type) === -1)) {
         acc.push (node);
       }
       return acc;
@@ -238,7 +281,7 @@ class LegendFilter extends Actor {
       links: message.graph.links.reduce (function (result, link) {
         link.type = typeof link.type === "string" ? [link.type] : link.type;
         link.type.forEach(type => {
-          if (message.hiddenTypes.indexOf(type) === -1) {
+          if (message.hiddenTypes.links.indexOf(type) === -1) {
             result.push (link);
             if (! node_ref.includes (link.source)) {
               node_ref.push (link.source);
@@ -275,10 +318,37 @@ class LegendFilter extends Actor {
     message.graph.hiddenTypes = message.hiddenTypes;
   }
 }
+class CurvatureAdjuster extends Actor {
+  handle (message, context) {
+    // Goes through and finds node pairs that have multiple links between them and gives them a curvature property so that each link is visible.
+    // Additionally, gives curvature to self-referencing Links
+    // if (!context.curvedLinks) {
+    //   // Don't run when feature is turned off
+    //   return;
+    // }
+    let groups = groupBy(message.graph.links,i=>[i.source,i.target].sort());
+    groups.forEach(group => {
+      // Join all the link names together
+      let allTypesString = group.map(link => link.name).join(",<br/>");
+      group.forEach((link, index) => {
+        // Group length of 1 would result in curvature of 1, which generates a semicircle.
+        // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
+        link.concatName = allTypesString;
+        link.allConnections = group;
+        if (context.curvedLinks) {
+          link.curvature = index/group.length;
+          link.rotation = (Math.PI*2)/(index/group.length);
+        }
+      });
+    });
+  }
+}
+
 export {
   RenderInit,
   LegendFilter,
   LinkFilter,
   NodeFilter,
   SourceDatabaseFilter,
+  CurvatureAdjuster
 }

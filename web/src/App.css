@@ -4,7 +4,11 @@
      height : 100%;
      width : 100%;
      background: black;
- }
+}
+body {
+  overflow : auto !important;
+
+}
 .divider {
      width: 100%;
      border: 1px solid lightgray;
@@ -87,6 +91,21 @@
     margin:5px !important;
     margin-bottom: 12.5px !important;
 }
+.typeChart {
+  width: 95%;
+  height: 100%;
+  max-height: none;
+  max-width: none;
+}
+#typeChartTitle {
+  display:flex;
+  align-items:center;
+}
+#swapBar {
+  margin-top:2px;
+  margin-left:12.5px;
+  font-size:24px;
+}
 
 .Resizer.disabled {
   cursor:auto !important;
@@ -131,8 +150,13 @@
     margin-right : 5px;
 }
 .App-control-toolbar {
-  font-size: 22px;
   color: rgba(220,220,220,.9);
+}
+.App-control-toolbar.ionic {
+  font-size: 22px;
+}
+.App-control-toolbar.fa {
+  font-size: 18px;
 }
 .answerNavigator {
     width: 95%;
@@ -229,7 +253,6 @@
 .rv-force {
     border: 1px solid gray;
  }
-
 
 
 

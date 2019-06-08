@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import ReactTooltip from 'react-tooltip';
 import './Toolbar.css'
 
 /**
@@ -42,7 +43,9 @@ export class ToolGroup extends Component {
          },
          toolbarCallback:this.props.toolbarCallback,
          key:index,
-         ref:React.createRef()
+         ref:React.createRef(),
+         tipProp: comp.props.name+" - "+comp.props.description,
+         name: undefined, // Gets in the way when menu is open so we'll conditionally render it on the container, rather than the tool
        });
      });
 
@@ -141,7 +144,8 @@ export class ToolGroup extends Component {
 
    render() {
      return (
-        <div className="tool-group" style={{position:"relative"}}>
+        <div className="tool-group" style={{position:"relative"}} data-html={true} data-tip={this.state.selectMenu === null ? this._activeTool.props.tipProp : undefined}>
+          {/* ^data-tip does not render if select menu is open */}
           {this._activeTool}
           {this.state.selectMenu}
           {/* This is really bad but they lose their refs when they're not rendered */}
@@ -200,7 +204,8 @@ export class Tool extends Component {
       <div className="Tool"
            onMouseUp={this.props.onMouseUp || (() => {this.setActive(true);})}
            onMouseDown={this.props.onMouseDown}
-           title={this.props.name}
+           data-tip={this.props.name !== undefined && this.props.description !== undefined ? this.props.name+" - "+this.props.description : undefined}
+           data-html={true}
            data-active-tool={this.state.active}>
         {
           /* this.props.children is a single component (not an array) when only one child is present */
@@ -272,6 +277,7 @@ export class Toolbar extends Component {
   render() {
     return (
       <div id={this.props.id} className="Toolbar">
+        <ReactTooltip place="left"/>
         <div className="toolbar-header"></div>
         <div className="toolbar-content toolbar-button-container">
         {

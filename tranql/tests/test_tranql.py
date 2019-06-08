@@ -247,113 +247,144 @@ def test_ast_generate_questions (requests_mock):
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
 
-# def test_ast_merge_results (requests_mock):
-#     set_mock(requests_mock, "workflow-5")
-#     """ Validate that
-#             -- Results from the query plan are being merged together correctly
-#     """
-#     print("test_ast_merge_answers ()")
-#     tranql = TranQL ()
-#     ast = tranql.parse ("""
-#         SELECT cohort_diagnosis:disease->diagnoses:disease
-#           FROM '/clinical/cohort/disease_to_chemical_exposure'
-#          WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
-#            AND Sex = '0'
-#            AND cohort = 'all_patients'
-#            AND max_p_value = '0.5'
-#            SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
-#     """)
-#
-#     select = ast.statements[0]
-#
-#     # What is the proper format for the name of a mock file? This should be made into one
-#     mock_responses = [
-#         {
-#             'knowledge_graph': {
-#                 'nodes': [
-#                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
-#                     {'id': 'HGNC:2597', 'type': 'gene'}
-#                 ],
-#                 'edges': [
-#                     {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
-#                 ]
-#             },
-#             'knowledge_map': [
-#                 {
-#                     'node_bindings': {
-#                         'chemical_substance': 'CHEBI:28177',
-#                         'gene': 'HGNC:2597'
-#                     },
-#                     'edge_bindings': {
-#                         'e1': [
-#                             'e0'
-#                         ],
-#                         's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
-#                     },
-#                     'score': 0.09722323258334348
-#                 }
-#             ]
-#         },
-#         {
-#             'knowledge_graph': {
-#                 'nodes': [
-#                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
-#                     {'id': 'TEST:00000', 'type': 'TEST'}
-#                 ],
-#                 'edges': [
-#                     {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
-#                 ]
-#             },
-#             'knowledge_map': [
-#                 {
-#                     'node_bindings': {
-#                         'chemical_substance': 'CHEBI:28177',
-#                         'gene': 'HGNC:2597'
-#                     },
-#                     'edge_bindings': {
-#                         'e1': [
-#                             'e0'
-#                         ],
-#                         's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
-#                     },
-#                     'score': 0.09722323258334348
-#                 }
-#             ]
-#         }
-#     ]
-#
-#     expected_result = {
-#         'knowledge_graph': {
-#             'nodes': [
-#                 {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
-#                 {'id': 'HGNC:2597', 'type': 'gene'},
-#                 {'id': 'TEST:00000', 'type':'TEST'}
-#             ],
-#             'edges': [
-#                 {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
-#             ]
-#         },
-#         'knowledge_map': [
-#             {
-#                 'node_bindings': {
-#                     'chemical_substance': 'CHEBI:28177',
-#                     'gene': 'HGNC:2597'
-#                 },
-#                 'edge_bindings': {
-#                     'e1': [
-#                         'e0'
-#                     ],
-#                     's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
-#                 },
-#                 'score': 0.09722323258334348
-#             }
-#         ]
-#     }
-#
-#     merged_results = select.merge_results (mock_responses, select.service)
-#
-#
-#     assert(merged_results == expected_result)
+def test_ast_merge_results (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    """ Validate that
+            -- Results from the query plan are being merged together correctly
+    """
+    print("test_ast_merge_answers ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT cohort_diagnosis:disease->diagnoses:disease
+          FROM '/clinical/cohort/disease_to_chemical_exposure'
+         WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
+           AND Sex = '0'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.5'
+           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+    """)
+
+    select = ast.statements[0]
+
+    # What is the proper format for the name of a mock file? This should be made into one
+    mock_responses = [
+        {
+            'knowledge_graph': {
+                'nodes': [
+                    {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
+                    {'id': 'HGNC:2597', 'type': 'gene'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+                ]
+            },
+            'knowledge_map': [
+                {
+                    'node_bindings': {
+                        'chemical_substance': 'CHEBI:28177',
+                        'gene': 'HGNC:2597'
+                    },
+                    'edge_bindings': {
+                        'e1': [
+                            'e0'
+                        ],
+                        's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
+                    },
+                    'score': 0.09722323258334348
+                }
+            ]
+        },
+        {
+            'knowledge_graph': {
+                'nodes': [
+                    {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
+                    {'id': 'TEST:00000', 'type': 'test'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+                ]
+            },
+            'knowledge_map': [
+                {
+                    'node_bindings': {
+                        'chemical_substance': 'CHEBI:28177',
+                        'gene': 'HGNC:2597',
+                        'test': 'TEST:00000'
+                    },
+                    'edge_bindings': {
+                        'e1': [
+                            'e0'
+                        ],
+                        's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
+                    },
+                    'score': 0.09722323258334348
+                }
+            ]
+        }
+    ]
+
+    expected_result = {
+        "knowledge_graph": {
+            "nodes": [
+                {
+                    "id": "CHEBI:28177",
+                    "type": "chemical_substance"
+                },
+                {
+                    "id": "HGNC:2597",
+                    "type": "gene"
+                },
+                {
+                    "id": "TEST:00000",
+                    "type": "test"
+                }
+            ],
+            "edges": [
+                {
+                    "id": "e0",
+                    "source_id": "n0",
+                    "target_id": "n1"
+                },
+                {
+                    "id": "e0",
+                    "source_id": "n0",
+                    "target_id": "n1"
+                }
+            ]
+        },
+        "knowledge_map": [
+            {
+                "node_bindings": {
+                    "chemical_substance": "CHEBI:28177",
+                    "gene": "HGNC:2597"
+                },
+                "edge_bindings": {
+                    "e1": [
+                        "e0"
+                    ],
+                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+                },
+                "score": 0.09722323258334348
+            },
+            {
+                "node_bindings": {
+                    "chemical_substance": "CHEBI:28177",
+                    "gene": "HGNC:2597",
+                    "test": "TEST:00000"
+                },
+                "edge_bindings": {
+                    "e1": [
+                        "e0"
+                    ],
+                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+                },
+                "score": 0.09722323258334348
+            }
+        ]
+    }
+    merged_results = select.merge_results (mock_responses, select.service)
+
+    assert(merged_results == expected_result)
 
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
