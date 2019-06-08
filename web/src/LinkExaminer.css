@@ -1,0 +1,49 @@
+.LinkExaminer {
+  position:absolute;
+  z-index:1;
+  transform:translate(10px, 10px);
+  background-color:rgba(50,50,50,.4); /* replace with rgb(20,20,30) to remove alpha layer */
+  max-height:400px;
+  color:rgba(220,220,220,1);
+  overflow-y:auto;
+  border: 2px solid rgba(125,125,125,1);
+}
+.link-examiner-header {
+  /* border-bottom: 1.5px solid rgba(240,240,240,1); */
+}
+.link-examiner-header-text {
+  margin:5px;
+  margin-bottom:0;
+  display:inline-block;
+  padding-bottom:2.5px;
+  position:relative;
+}
+.link-examiner-header-info {
+  font-size:12px;
+  margin: 7.5px 0 7.5px 0;
+  font-weight:bold;
+  position:relative;
+}
+.link-examiner-header-text::after {
+  content:'';
+  position:absolute;
+  bottom:0;
+  left: 0;
+  width:100%;
+  height:1.5px;
+  background-color:rgba(240,240,240,1);
+}
+.header-node {
+  margin:5px;
+}
+.header-node > *:first-child {
+  margin-right:5px;
+}
+.link-label {
+  font-size:12px;
+  padding:1px;
+  margin:5px;
+}
+.link-label > * {
+  margin:2px;
+}

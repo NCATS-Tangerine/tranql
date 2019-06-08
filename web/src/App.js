@@ -3,14 +3,17 @@ import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal, Form } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
+import * as THREE from 'three';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
+import { FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import ReactTable from "react-table";
+import ReactTable from 'react-table';
+import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
+import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
 import Slider, { Range } from 'rc-slider';
@@ -20,11 +23,13 @@ import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
 import Legend from './Legend.js';
+import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
+import LinkExaminer from './LinkExaminer.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter } from './Render.js';
+import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -84,17 +89,29 @@ class App extends Component {
     this._configureMessage = this._configureMessage.bind (this);
     this._translateGraph = this._translateGraph.bind (this);
 
-    // The visualization
+    // Toolbar
     this._setNavMode = this._setNavMode.bind(this);
+    this._setSelectMode = this._setSelectMode.bind(this);
+
+    this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
+    this._highlightType = this._highlightType.bind(this);
+
+    this._setConnectionExaminerActive = this._setConnectionExaminerActive.bind(this);
+
+    // The visualization
     this._renderForceGraph = this._renderForceGraph.bind (this);
     this._renderForceGraph2D = this._renderForceGraph2D.bind (this);
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
     this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
+    this._updateFg = this._updateFg.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
+    this._handleNodeHover = this._handleNodeHover.bind(this);
     this._fgAdjustCharge = this._fgAdjustCharge.bind(this);
     this._handleLinkClick = this._handleLinkClick.bind(this);
+    this._handleLinkHover = this._handleLinkHover.bind(this);
+    this._handleLinkRightClick = this._handleLinkRightClick.bind(this);
     this._handleContextMenu = this._handleContextMenu.bind(this);
     this._updateGraphSize = this._updateGraphSize.bind(this);
     this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
@@ -110,6 +127,12 @@ class App extends Component {
 
     // Visualization modifiers
     this._onChargeChange = this._onChargeChange.bind (this);
+
+    // Type chart
+    this._renderTypeChart = this._renderTypeChart.bind (this);
+
+    // Annotate graph
+    this._annotateGraph = this._annotateGraph.bind (this);
 
 
     // Settings management
@@ -159,7 +182,10 @@ class App extends Component {
         links : [],
 
         // Types that aren't rendered
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
         typeMappings: {}
       },
@@ -167,7 +193,14 @@ class App extends Component {
       linkWeightRange : [0, 100],
       nodeDegreeMax : 0,
       nodeDegreeRange : [0, 1000],
-      legendRenderAmount : 10,
+      schemaLegendRenderAmount : {
+        nodes: 20,
+        links: 10
+      },
+      queryLegendRenderAmount : {
+        nodes: 10,
+        links: 10
+      },
       dataSources : [],
 
       charge : -100,
@@ -178,6 +211,7 @@ class App extends Component {
       selectedLink : {},
       contextNode : null,
       navigateMode: false,
+      selectMode: false,
 
       // Set up CodeMirror settings.
       codeMirrorOptions : {
@@ -201,6 +235,9 @@ class App extends Component {
       },
       graphHeight : window.innerHeight,
       graphWidth : 0,
+      curvedLinks : false, // Can't change the width of curved links beyond 0 due to it using THREE.Line
+      directionalParticles : false, // Huge performance tank - basically unusable when viewing an entire graph
+      directionalArrows : false, // Large performance loss when used with highlight types tool. Also looks ugly. Should be made into an option in settings.
 
       // Object viewer
       objectViewerEnabled : true,
@@ -211,7 +248,10 @@ class App extends Component {
         links : [],
 
         // Types that aren't rendered
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         // Graph reference before being filtered to pass to the Legend component (filtered graph results in element types being omitted)
         typeMappings: {}
       },
@@ -223,22 +263,45 @@ class App extends Component {
 
       toolbarEnabled : true,
 
+      connectionExaminer : false, // Connection examiner tool state
+
+      highlightTypes : false, // Highlight types tool state
+      highlightedType : [], // Currently highlighted types
+
       // Tools for the toolbar component
       tools: [
-        <Tool name="Navigate" description="Navigate the graph" callback={(bool) => this._setNavMode(bool)}>
+        <Tool name="Navigate" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
-        <Tool name="Select" description="Select a node or link" callback={(bool) => this._setNavMode(!bool)}>
+        <Tool name="Select" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
           <FaMousePointer/>
+        </Tool>,
+        <Tool name="Highlight Types"
+              description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
+              callback={(bool) => this._setHighlightTypesMode(bool)}>
+          <FaSearch/>
+        </Tool>,
+        <Tool name="Examine Connection"
+              description="Displays a connection between two nodes and all links between them"
+              callback={(bool) => this._setConnectionExaminerActive(bool)}>
+          <FaEye/>
         </Tool>
       ],
       buttons: [
         <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance"
                          id="answerViewerToolbar"
-                         className="App-control-toolbar"
+                         className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
-        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar" onClick={this._handleShowModal} />
+        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
+        <FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
+                    className="App-control-toolbar fa"
+                    onClick={() => this.setState ({ showTypeChart : true })} />,
+        <FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>
       ],
+
+      // Type chart
+      showTypeNodes : true, // When false, shows link types (prevents far too many types being shown at once)
+      showTypeChart : false,
 
       // Settings modal
       showSettingsModal : false,
@@ -262,14 +325,16 @@ class App extends Component {
       new LinkFilter (),
       new NodeFilter (),
       new SourceDatabaseFilter (),
-      new LegendFilter ()
+      new LegendFilter (),
+      new CurvatureAdjuster ()
     ]);
 
     // Create rendering pipeline for schema
     this._schemaRenderChain = new Chain ([
       new RenderInit (),
       new NodeFilter (),
-      new LegendFilter ()
+      new LegendFilter (),
+      new CurvatureAdjuster ()
     ]);
   }
   /**
@@ -380,7 +445,7 @@ class App extends Component {
   _setSchemaViewerActive (active) {
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
 
-    this.setState({ schemaViewerActive : active }, () => {
+    this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
     if (this.state.objectViewerEnabled) {
@@ -391,9 +456,121 @@ class App extends Component {
 
   }
   /**
-   * Set the navigation / selection mode.
+   * Highlight or unhighlight a given node or link type
    *
-   * @param {boolean} navigate - If true, mode will be set to navigate
+   * @param {string|string[]} - Type/Types which are highlighted or unhighlighted
+   * @param {boolean} highlight - Determines whether the nodes/links of the type will be highlighted or unhighlighted
+   *
+   * @private
+   */
+  _highlightType (type, highlight) {
+    if (!Array.isArray(type)) {
+      type = [type];
+    }
+
+    let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+    const vMode = this.state.visMode;
+    type.forEach(highlightType => {
+      for (let graphElementType of ["nodes","links"]) {
+        let elements = graph[graphElementType];
+        for (let i=0;i<elements.length;i++) {
+          let element = elements[i];
+          let types = element.type;
+          if (!Array.isArray(types)) types = [types];
+          if (types.includes(highlightType)) {
+            let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
+            let material;
+            if (vMode !== "2D") {
+              if (obj === undefined) return;
+              material = obj.material; // : THREE.MeshLambertMaterial
+            }
+            let color;
+            let opacity;
+            if (highlight) {
+              color = new THREE.Color(0xff0000);
+              if (vMode !== "2D") {
+                element.prevOpacity = material.opacity;
+              }
+              else {
+                element.prevColor = element.color;
+              }
+              opacity = 1;
+            }
+            else {
+              if (vMode !== "2D") {
+                color = new THREE.Color(parseInt(element.color.slice(1),16));
+                opacity = element.prevOpacity;
+                delete element.prevOpacity;
+              }
+              else {
+                color = new THREE.Color(parseInt(element.prevColor.slice(1),16));
+                delete element.color;
+              }
+            }
+
+            // console.log("Set",types.join(),"to",color.getHexString(),opacity || "undefined");
+            if (vMode === "2D") {
+              element.color = "#" + color.getHexString();
+              // element.__indexColor = color.getHexString();
+
+            }
+            else {
+              material.color = color;
+              // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
+              if (opacity !== undefined) material.opacity = opacity;
+              // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
+              break;
+            }
+          }
+        };
+      }
+    });
+  }
+  /**
+   * Set the state of the connection examiner tool. Resets the selected node when toggled.
+   *
+   * @param {boolean} bool - Sets whether the tool is becoming active or not
+   *
+   * @private
+   */
+  _setConnectionExaminerActive(bool) {
+    this.setState({ selectedNode: {}, connectionExaminer: bool });
+  }
+  /**
+   * Set the state of the highlight types tool and let it clean up when it is turned off
+   *
+   * @param {boolean} bool - Sets whether or not the highlight types tool is active
+   *
+   * @private
+   */
+  _setHighlightTypesMode (bool) {
+    if (!bool && this.state.highlightedType.length > 0) {
+      this._highlightType(this.state.highlightedType, false);
+    }
+    this.setState({ highlightTypes : bool, highlightedType : [] });
+  }
+  /**
+   * Set if the select mode tool is active.
+   *
+   * @param {boolean} select - Sets if active or not.
+   * @private
+   */
+  _setSelectMode (select) {
+    let width = this._graphSplitPane.current.splitPane.offsetWidth;
+    if (this.state.objectViewerEnabled) {
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+    }
+    this._updateGraphSize(width);
+    this.setState ({
+      selectMode: select,
+      selectedNode: {},
+      selectedLink: {}
+    });
+  }
+  /**
+   * Set if the navigation mode tool is active.
+   *
+   * @param {boolean} navigate - Sets if active or not.
    * @private
    */
   _setNavMode (navigate) {
@@ -474,7 +651,10 @@ class App extends Component {
         nodes : [],
         links : [],
 
-        hiddenTypes: [],
+        hiddenTypes: {
+          "nodes": [],
+          "links": []
+        },
         typeMappings: {}
       },
       selectedNode: {},
@@ -660,15 +840,15 @@ class App extends Component {
                      delete result.answers;
                    }
 
-                   result.knowledge_graph = {
-                     nodes: result.knowledge_graph.nodes.map((node) => {
+                   result.schema.knowledge_graph = {
+                     nodes: result.schema.knowledge_graph.nodes.map((node) => {
                        return {
                          id: node,
                          type: node,
                          name: node
                        }
                      }),
-                     edges: result.knowledge_graph.edges.reduce((acc, edge) => {
+                     edges: result.schema.knowledge_graph.edges.reduce((acc, edge) => {
                        // TODO fix? Can't draw edges from a node to itself
                        if (edge[0] !== edge[1]) {
                          acc.push({
@@ -684,14 +864,18 @@ class App extends Component {
 
                    console.log("Fetched schema:", result);
 
-                   this._schemaRenderChain.handle (result, this.state);
+                   if (result.errors.length > 0) {
+                     this._handleMessageDialog ("Schema Load Error", result.errors.join("\n\n"), "");
+                   }
 
-                   this.setState({ schemaLoaded : true, schema : result.graph, schemaMessage : result });
+                   this._schemaRenderChain.handle (result.schema, this.state);
+
+                   this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
                    this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
                    this._cache.write ('schema', {
                      'id' : 0,
-                     'data' : result
+                     'data' : result.schema
                    });
                  }
                }
@@ -797,18 +981,75 @@ class App extends Component {
       )
   }
   /**
+   * Handle a hover over a graph node
+   *
+   * @param {object} node - The node that is being hovered over in the graph
+   * @param {object} prevNode - The node that was previously being hovered over in the graph
+   *
+   * @private
+   */
+  _handleNodeHover (node, prevNode) {
+    if (this.state.highlightTypes) {
+      let newType = [];
+      if (prevNode !== null) {
+        this._highlightType(prevNode.type, false);
+      }
+      if (node !== null) {
+        this._highlightType(node.type, true);
+        newType = node.type;
+      }
+      this.setState({ highlightedType : newType });
+    }
+  }
+  /**
+   * Handle a hover over a graph link
+   *
+   * @param {object} link - The link that is being hovered over in the graph
+   * @param {object} prevLink - The link that was previously being hovered over in the graph
+   *
+   * @private
+   */
+  _handleLinkHover (link, prevLink) {
+    if (this.state.highlightTypes) {
+      let newType = [];
+      // Eliminate overhead by not deselecting all the types if going to reselect them immediately after
+      // If new link is null don't bother trying to check
+      if (prevLink !== null && (link === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type))) {
+        if (true || !(prevLink.source === link.target && prevLink.target === link.source) || (prevLink.source === link.source && prevLink.target === link.target)) {
+          this._highlightType(prevLink.type, false);
+        }
+        // If the source and targets are synonymous don't unhighlight.
+      }
+      // Same goes for here but with the previous link
+      // We still want to set newType though
+      if (link !== null) {
+        if (prevLink === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type)) {
+          this._highlightType(link.type, true);
+        }
+        newType = link.type;
+      }
+      this.setState({ highlightedType : newType });
+    }
+  }
+  /**
    * Handle a click on a graph link.
    *
    * @param {object} - A link in the force directed graph visualization.
    * @private
    */
   _handleLinkClick (link) {
-    if (link !== null &&
+    if (this.state.connectionExaminer) {
+      this.setState({ selectedNode : (link === null ? null : { link : link }) });
+    }
+    else if (this.state.highlightTypes) {
+      link !== null && this._updateGraphElementVisibility("links", link.type, true);
+    }
+    else if (link !== null &&
         this.state.selectedLink !== null &&
 //        this.state.selectedLink.source !== link.source_id &&
 //        this.state.selectedLink.target !== link.target_id &&
         this.state.selectMode &&
-        !this.state.navigateMode)
+        !this.state.selectMode)
     {
       // Select the node.
       this.setState ((prevState, props) => ({
@@ -821,7 +1062,37 @@ class App extends Component {
       this._updateGraphSize(width);
     }
   }
+  _handleLinkRightClick (link) {
+    if (this.state.highlightTypes && link !== null) {
+      let linkType = Array.isArray(link.type) ? link.type : [link.type];
+      let mappings;
+      if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
+        mappings = this.state.schema.typeMappings.links;
+      }
+      else {
+        mappings = this.state.graph.typeMappings.links;
+      }
+      if (mappings !== undefined) {
+        let hideTypes = Object.keys(mappings).filter(t => !linkType.includes(t));
+        this._updateGraphElementVisibility("links", hideTypes, true);
+      }
+    }
+  }
   _handleNodeRightClick (node) {
+    if (this.state.highlightTypes && node !== null) {
+      let nodeType = Array.isArray(node.type) ? node.type : [node.type];
+      let mappings;
+      if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
+        mappings = this.state.schema.typeMappings.nodes;
+      }
+      else {
+        mappings = this.state.graph.typeMappings.nodes;
+      }
+      if (mappings !== undefined) {
+        let hideTypes = Object.keys(mappings).filter(t => !nodeType.includes(t));
+        this._updateGraphElementVisibility("nodes", hideTypes, true);
+      }
+    }
     this.setState ({
       contextNode : node
     });
@@ -856,24 +1127,37 @@ class App extends Component {
     this.setState (prevState => ({ graphWidth: width, graphHeight: this.state.graphHeight }));
   }
 
-
-
+  /**
+   * Update fg when it is changed or rerendered
+   *
+   * @private
+   */
+  _updateFg () {
+  }
   /**
    * Handle Legend callback on toggling of element type
    *
-   * @param {string} type - Type of element (e.g. "gene" or "affects_response_to")
-   * @param {boolean} visibility - Determines the new visibility of the elements
+   * @param {string} graphElementType - Graph element type ("nodes" or "links")
+   * @param {string|string[]} type - Type of element (e.g. "gene" or "affects_response_to")
+   * @param {boolean} hidden - Determines the new visibility of the elements
    * @private
    */
-  _updateGraphElementVisibility(type,visibility) {
-    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerActive ? this.state.schema : this.state.graph));
-    if (visibility) {
-      graph.hiddenTypes.push(type);
+  _updateGraphElementVisibility(graphElementType, type, hidden) {
+    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph, function(key, value) {
+      // All connections is a self referencing array, so we must remove it in order to successfully serialize the graph
+      return key !== "allConnections" ? value : undefined;
+    }));
+    if (!Array.isArray(type)) type = [type];
+
+    if (hidden) {
+      graph.hiddenTypes[graphElementType].push(...type);
     } else {
-      graph.hiddenTypes.splice(graph.hiddenTypes.indexOf(type),1);
+      type.forEach(t => {
+        graph.hiddenTypes[graphElementType].splice(graph.hiddenTypes[graphElementType].indexOf(t),1);
+      });
     }
 
-    if (this.state.schemaViewerActive) {
+    if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
       let newMessage = this.state.schemaMessage;
       newMessage.hiddenTypes = graph.hiddenTypes;
       this._schemaRenderChain.handle(newMessage, this.state);
@@ -898,8 +1182,10 @@ class App extends Component {
    */
   _handleNodeClick (node) {
     console.log (node);
-    console.log(this.state.navigateMode);
-    if (this.state.navigateMode && this.state.visMode === '3D') {
+    if (this.state.highlightTypes) {
+      node !== null && this._updateGraphElementVisibility("nodes", node.type, true);
+    }
+    else if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
       // Aim at node from outside it
       const distance = 40;
@@ -909,7 +1195,7 @@ class App extends Component {
         node, // lookAt ({ x, y, z })
         3000  // ms transition duration
       );
-    } else if (node !== null && node.id !== undefined && node.id !== null &&
+    } else if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
                this.state.selectedNode !== null &&
                this.state.selectedNode.id !== node.id &&
                this.state.selectMode)
@@ -948,6 +1234,53 @@ class App extends Component {
    */
   _renderForceGraph (data, props) {
     var result = null;
+    let defaultProps = {
+      graphData:data,
+       width:this.state.graphWidth,
+       height:this.state.graphHeight,
+       linkAutoColorBy:"type",
+       nodeAutoColorBy:"type",
+       d3AlphaDecay:0.2,
+       strokeWidth:10,
+       linkWidth:2,
+       linkLabel: (l) => l.concatName,
+       nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
+       enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
+       onLinkClick:this._handleLinkClick,
+       onLinkHover:this._handleLinkHover,
+       onLinkRightClick:this._handleLinkRightClick,
+       onNodeRightClick:this._handleNodeRightClick,
+       onNodeClick:this._handleNodeClick,
+       onNodeHover:this._handleNodeHover
+    };
+    props = {
+      ...defaultProps,
+      ...props
+    }
+    if (this.state.curvedLinks && (this.state.visMode === '3D' || this.state.visMode === 'VR')) {
+      // 2D not supported
+      props = {
+        ...props,
+        linkCurvature:"curvature",
+        linkCurveRotation:"rotation",
+        linkWidth:undefined
+      };
+    }
+    if (this.state.directionalParticles) {
+      props = {
+        ...props,
+        linkDirectionalParticles: 5,
+        linkDirectionalParticleResolution: 1 // Helps with performance
+      };
+    }
+    if (this.state.directionalArrows) {
+      props = {
+        ...props,
+        linkDirectionalArrowLength: 10,
+        linkDirectionalArrowColor: (link) => link.color,
+        linkDirectionalArrowRelPos: 1
+      };
+    }
     if (this.state.visMode === '3D') {
       result = this._renderForceGraph3D (data, props);
     } else if (this.state.visMode === '2D') {
@@ -966,20 +1299,7 @@ class App extends Component {
    * nodeAutoColorBy="type"
    */
   _renderForceGraph3D (data, props) {
-      return <ForceGraph3D graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraph3D {...props} />
   }
   /**
    * Render in 3D
@@ -987,20 +1307,7 @@ class App extends Component {
    * @private
    */
   _renderForceGraph2D (data, props) {
-      return <ForceGraph2D graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraph2D {...props} />
   }
 
   /**
@@ -1009,20 +1316,7 @@ class App extends Component {
    * @private
    */
   _renderForceGraphVR (data, props) {
-      return <ForceGraphVR graphData={data}
-                           width={this.state.graphWidth}
-                           height={this.state.graphHeight}
-                           linkAutoColorBy="type"
-                           nodeAutoColorBy="type"
-                           d3AlphaDecay={0.2}
-                           strokeWidth={2}
-                           linkWidth={this.state.forceGraphOpts.linkWidth}
-                           nodeRelSize={this.state.forceGraphOpts.nodeRelSize}
-                           enableNodeDrag={this.state.forceGraphOpts.enableNodeDrag}
-                           onLinkClick={this._handleLinkClick}
-                           onNodeRightClick={this._handleNodeRightClick}
-                           onNodeClick={this._handleNodeClick}
-                           {...props} />
+      return <ForceGraphVR {...props} />
   }
   /**
    * Show the modal settings dialog.
@@ -1044,7 +1338,7 @@ class App extends Component {
     }
   }
   _handleMessageDialog (title, message, details) {
-    this._messageDialog.current.handleShow (title, message, details);
+    this._messageDialog.current.handleShow (title, message, details === undefined ? "" : details);
   }
   /**
    * Take appropriate actions on the closing of the modal settings dialog.
@@ -1143,9 +1437,205 @@ class App extends Component {
    * @param {number} value - The new legend display Limit
    * @private
    */
-  _onLegendDisplayLimitChange (event) {
+  _onLegendDisplayLimitChange (type, event) {
     let value = event.target.value;
-    value !== "" && this.setState({ legendRenderAmount : value });
+    let prop = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? "schemaLegendRenderAmount" : "queryLegendRenderAmount";
+    // Either this.state.schemaLegendRenderAmount or this.state.queryLegendRenderAmount
+    let renderAmountObj = this.state[prop];
+    // Either ...legendRenderAmount.nodes or ...legendRenderAmount.links = value
+    renderAmountObj[type] = value;
+    console.log(renderAmountObj,prop);
+    value !== "" && this.setState({ prop : renderAmountObj });
+  }
+  /**
+   * Send graph message to backplane which annotates it and relays it back
+   *
+   * @private
+   */
+  _annotateGraph () {
+    if (this.state.message === null) {
+      console.log("Can't annotate message if graph isn't loaded");
+      return;
+    }
+    let message = Object.assign({}, this.state.message);
+    delete message.graph;
+    delete message.hiddenTypes;
+    /*
+      Structure of Message object in schema is:
+        type: object
+        required:
+          - question_graph
+          - knowledge_graph
+          - knowledge_maps
+      So delete the useless information (graph is huge and contains a lot of data that slows the requests down)
+    */
+    this.setState({ loading : true });
+    fetch(this.tranqlURL + '/tranql/annotate', {
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify (message)
+    }).then(res => res.json())
+      .then(
+        (result) => {
+          if (result.message) {
+            this._handleMessageDialog ("Error", result.message, result.details);
+            console.log ("--error: " + result.message);
+            this.setState ({
+              loading : false,
+              error : result.message
+            });
+          } else {
+            for (let type in result.knowledge_graph) {
+              result.knowledge_graph[type].forEach(newElem => {
+                newElem.source_database = [];
+              });
+            }
+            // for (let type in result.knowledge_graph) {
+            //   result.knowledge_graph[type].forEach(newElem => {
+            //     message.knowledge_graph[type].forEach(oldElem => {
+            //       if (newElem.id === oldElem.id) {
+            //         for (let prop in newElem) {
+            //           oldElem[prop] = newElem[prop];
+            //         }
+            //       }
+            //     });
+            //   });
+            // }
+            this.setState({ loading : false });
+            console.log("Annotated result:", result);
+            console.log("Current message:", message);
+            this._translateGraph (result);
+            this._configureMessage (result);
+            this._setSchemaViewerActive(false);
+          }
+        },
+        (error) => {
+          this.setState({
+            error : error,
+            loading : false
+          });
+        }
+      );
+  }
+  /**
+   * Render the type bar chart
+   *
+   * @private
+   */
+  _renderTypeChart () {
+    const renderAmount = 9;
+    let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+    let mappings = Legend.sortMappings(graph.typeMappings, renderAmount, renderAmount);
+    if (!mappings.hasOwnProperty('nodes')) mappings.nodes = [];
+    if (!mappings.hasOwnProperty('links')) mappings.links = [];
+    let data = (this.state.showTypeNodes ? mappings.nodes : mappings.links).map(elem => (
+      {
+        type: adjustTitle(elem.type),
+        // A little confusing...
+        "Filtered Quantity": elem.hasOwnProperty('actualQuantity') ? elem.actualQuantity : 0,
+        "Actual Quantity": elem.quantity,
+        color: elem.color,
+        hidden: elem.hasOwnProperty('actualQuantity') ? false : true
+      }
+    ));
+    return (
+      <Modal show={this.state.showTypeChart}
+             onHide={() => this.setState ({ showTypeChart : false })}
+             dialogClassName="typeChart">
+        <Modal.Header closeButton>
+          <Modal.Title id="typeChartTitle">
+            {this.state.showTypeNodes ? 'Node' : 'Link'} Bar Graph
+            <IoIosSwap id="swapBar" onClick={() => this.setState({ showTypeNodes: !this.state.showTypeNodes })}/>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <ResponsiveContainer width={"100%"} height={"100%"}>
+            <BarChart data={data}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5
+                      }}
+                      barCategoryGap={10}>
+              <CartesianGrid strokeDasharray="3 3"/>
+              <XAxis dataKey="type"
+                     height={85}
+                     interval={0}
+                     tickMargin={0}
+                     tick={(props) => {
+                       const width = props.width/props.visibleTicksCount;
+                       return (
+                         <g transform={`translate(${props.x},${props.y})`}>
+                           <switch>
+                              {/* Translate x -50% of width to center it*/}
+                              <foreignObject style={{transform:`translateX(-${width/2}px)`}} x={0} y={0} dy={16} width={width} height="100%">
+                                <p style={{padding:"2px",fontSize:"14px",textAlign:"center"}} xmlns="http://www.w3.org/1999/xhtml">{props.payload.value}</p>
+                              </foreignObject>
+                            </switch>
+                            {/*
+                              props.payload.value.split(/((?:\w+\s+){1,5})/).map((block, i) => (
+                                <text x={0} y={0} dy={16+(i*16)} textAnchor="end" fill="#666" font-size="14px" transform="rotate(-35)">
+                                  {block}
+                                </text>
+                              ))
+                            */}
+                           </g>
+                       );
+                     }}
+              />
+              <YAxis />
+              <ChartTooltip content={
+                (props) => {
+                  /*const newPayload = props.payload !== null && props.payload.length > 0
+                    ? [
+                        {
+                          name: 'Filtered quantity',
+                          value: props.payload[0].payload.filtered
+                        },
+                        ...props.payload
+                      ]
+                    : [
+
+                      ];
+                  */
+                  const newPayload = props.payload;
+
+                  const label = props.payload !== null && props.payload.length > 0
+                    ? props.payload[0].payload.type + (props.payload[0].payload.hidden
+                      ? " (hidden)"
+                      : "")
+                    : ""
+
+                  return (<DefaultTooltipContent {...props} label={label} payload={newPayload}/>);
+                }
+              }
+              />
+              <Bar dataKey="Actual Quantity">
+                {
+                  data.map((entry, index) => {
+                    let color = entry.color;
+                    return <Cell key={index} fill={color} />
+                  })
+                }
+              </Bar>
+              <Bar dataKey="Filtered Quantity">
+                {
+                  data.map((entry, index) => {
+                    let color = entry.color;
+                    return <Cell key={index} fill={shadeColor(color,-20)} />
+                  })
+                }
+              </Bar>
+              {/*<Bar dataKey="Filtered Quantity" fill="#7fc1ff" />*/}
+            </BarChart>
+          </ResponsiveContainer>
+        </Modal.Body>
+      </Modal>
+    );
   }
   /**
    * Render the modal settings dialog.
@@ -1223,15 +1713,22 @@ class App extends Component {
               onChange={this._onChargeChange}
               onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
               />
-            </Form>
+            </Form><br/>
 
             <b>Legend Display Limit</b><br/>
-            Set number of node and link types that legend displays<br/>
             <Form>
+              <Form.Label>Set the number of nodes that the legend displays:</Form.Label>
               <Form.Control
               type="number"
-              defaultValue={this.state.legendRenderAmount}
-              onChange={this._onLegendDisplayLimitChange}
+              defaultValue={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schemaLegendRenderAmount.nodes : this.state.queryLegendRenderAmount.nodes}
+              onChange={(e) => (this._onLegendDisplayLimitChange('nodes',e))}
+              onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
+              />
+              <Form.Label>Set the number of links that the legend displays:</Form.Label>
+              <Form.Control
+              type="number"
+              defaultValue={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schemaLegendRenderAmount.links : this.state.queryLegendRenderAmount.links}
+              onChange={(e) => (this._onLegendDisplayLimitChange('links',e))}
               onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
               />
             </Form>
@@ -1277,12 +1774,14 @@ class App extends Component {
     // Render it.
     return (
       <div className="App" id="AppElement">
+      {this._renderModal () }
+      {this._renderTypeChart ()}
         <ReactTooltip place="left"/>
         <header className="App-header" >
           <div id="headerContainer">
-            <p style={{display:"inline-block",flex:1}}>TranQL</p> {this._renderModal () }
+            <p style={{display:"inline-block",flex:1}}>TranQL</p>
             <AnswerViewer show={true} ref={this._answerViewer} />
-            <Message show={false} id="messages" ref={this._messageDialog} />
+            <Message show={false} ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
               id={"spinner"}
@@ -1294,7 +1793,7 @@ class App extends Component {
               !this.state.toolbarEnabled &&
                 <Button id="navModeButton"
                         outline
-                        color="primary" onClick={() => {this._setNavMode(!this.state.navigateMode)}}>
+                        color="primary" onClick={() => {this._setNavMode(!this.state.navigateMode); this._setSelectMode(!this.state.selectMode)}}>
                   { this.state.navigateMode && (this.state.visMode === '3D' || this.state.visMode === '2D') ? "Navigate" : "Select" }
                 </Button>
             }
@@ -1318,14 +1817,14 @@ class App extends Component {
                       autoFocus={true} />
           <Legend typeMappings={this.state.graph.typeMappings}
                   hiddenTypes={this.state.graph.hiddenTypes}
-                  nodeTypeRenderAmount={this.state.legendRenderAmount}
-                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  nodeTypeRenderAmount={this.state.queryLegendRenderAmount.nodes}
+                  linkTypeRenderAmount={this.state.queryLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   render={(!this.state.schemaViewerActive || !this.state.schemaViewerEnabled) && this.state.colorGraph}/>
           <Legend typeMappings={this.state.schema.typeMappings}
                   hiddenTypes={this.state.schema.hiddenTypes}
-                  nodeTypeRenderAmount={this.state.legendRenderAmount}
-                  linkTypeRenderAmount={this.state.legendRenderAmount}
+                  nodeTypeRenderAmount={this.state.schemaLegendRenderAmount.nodes}
+                  linkTypeRenderAmount={this.state.schemaLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   render={this.state.schemaViewerActive && this.state.schemaViewerEnabled && this.state.colorGraph}/>
           <div id="graph"></div>
@@ -1340,7 +1839,7 @@ class App extends Component {
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
                          minSize={0}
-                         allowResize={this.state.objectViewerEnabled && Object.keys(this.state.selectedNode).length !== 0}
+                         allowResize={this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)}
                          maxSize={document.body.clientWidth}
                          style={{"backgroundColor":"black","position":"static"}}
                          ref={this._graphSplitPane}
@@ -1362,12 +1861,14 @@ class App extends Component {
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
+                    <LinkExaminer link={this.state.selectedNode}
+                                  render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                     {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                       (
                         this._renderForceGraph (
                           this.state.schema,
                           {
-                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el;},
+                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()},
 
                           // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
                           // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
@@ -1381,7 +1882,7 @@ class App extends Component {
                       (
                         this._renderForceGraph (
                           this.state.graph, {
-                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el;}
+                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
 
                           // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
                           // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})

@@ -133,10 +133,10 @@ class ICEESSchema(StandardAPIResource):
         return requests.get (
             self.schema_url,
             verify=False).json()['return value']
-    
+
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
-        
+
     def post(self):
         """
         query
@@ -189,7 +189,7 @@ class ICEESClusterQuery(StandardAPIResource):
             e['type'] = 'association'
         request.json['query_options'] = request.json.pop('options')
         request.json['machine_question'] = request.json.pop('question_graph')
-        
+
         #print (f"{json.dumps(request.json, indent=2)}")
         result = {}
 
@@ -199,12 +199,12 @@ class ICEESClusterQuery(StandardAPIResource):
         response = requests.post (icees_kg_url,
                                   json=request.json,
                                   verify=False)
-        
+
         with open ('icees.out', 'w') as stream:
             json.dump (response.json (), stream, indent=2)
         #print (f"-- response --> {json.dumps(response.json(), indent=2)}")
         #print (f"{json.dumps(response.json(), indent=2)}")
-        
+
         if response.status_code >= 300:
             result = {
                 "status" : "error",
@@ -216,9 +216,9 @@ class ICEESClusterQuery(StandardAPIResource):
 
         with open ('icees.out.norm', 'w') as stream:
             json.dump (result, stream, indent=2)
-            
+
         return result
-    
+
     def compile_options (self, options):
         """ Compile input options into icees appropriate format. """
         result = {}
@@ -238,12 +238,12 @@ class ICEESClusterQuery(StandardAPIResource):
                             'operator' : val[0],
                             'value'    : val[1]
                         }
-            else:                
+            else:
                 ''' assign directly. '''
                 result[k] = val[1]
         return result
 
-'''                
+'''
 class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
     """ ICEES Resource. """
     def __init__(self):
@@ -266,7 +266,7 @@ class PublishToNDEx(StandardAPIResource):
     """ Publish a graph to NDEx. """
     def __init__(self):
         super().__init__()
-        
+
     def post(self):
         """
         query
@@ -378,7 +378,7 @@ class PublishToGamma(GammaResource):
         Visualize
         ---
         tag: validation
-        description: Publish a graph to the Gamma viewer. 
+        description: Publish a graph to the Gamma viewer.
         requestBody:
             description: Input message
             required: true
@@ -418,7 +418,7 @@ class PublishToGamma(GammaResource):
             json=request.json)
         if view_post_response.status_code >= 300:
             print(f"{view_post_response}")
-            raise Exception("Bad response view post")        
+            raise Exception("Bad response view post")
         uid = json.loads(view_post_response.text)
         print(f"view-post-response: {view_post_response}")
         print(f"view-url: {self.view_url(uid)}")
@@ -464,16 +464,40 @@ class GNBRDecorator(StandardAPIResource):
                             type: string
 
         """
-        self.validate (request)
+        # self.validate (request)
+
+
+        knowledge_graph = request.json['knowledge_graph']
+
+        mapped_message = {
+            'result_graph': {
+                'edge_list': [],
+                'node_list': []
+            }
+        }
+
+        for edge in knowledge_graph['edges']:
+            edge['publications'] = ','.join(edge['publications'])
+            mapped_message['result_graph']['edge_list'].append(edge)
+
+        for node in knowledge_graph['nodes']:
+            mapped_message['result_graph']['node_list'].append(node)
+
+        rtx = {
+            'result_list': [
+                mapped_message
+            ]
+        }
 
         # Specify result number in range 0-4
         index = 0
-        
+
         rtx_result = rtx['result_list'][index]
         for edge in rtx_result['result_graph']['edge_list']:
-            edge['publications'] = list(edge['publications'].split(','))    
+            edge['publications'] = list(edge['publications'].split(','))
         for node in rtx_result['result_graph']['node_list']:
-            node['type'] = [node['type']]            
+            if not isinstance(node['type'], list):
+                node['type'] = [node['type']]
         node_list = rtx_result['result_graph']['node_list']
         edge_list = rtx_result['result_graph']['edge_list']
 
@@ -481,7 +505,7 @@ class GNBRDecorator(StandardAPIResource):
         return gnbr_reasoner.query ({
             "query_message": {
                 "query_graph": {
-                    'nodes': node_list, 
+                    'nodes': node_list,
                     'edges': edge_list
                 }
             }

@@ -68,7 +68,7 @@ class StandardAPIResource(Resource):
                 "details" : ''
             }
         return result
-    
+
 class WebAppRoot(Resource):
     def get(self):
         """
@@ -211,6 +211,61 @@ class TranQLQuery(StandardAPIResource):
         #    json.dump (result, stream)
         return result
 
+class AnnotateGraph(StandardAPIResource):
+    """ Request the message object to be annotated by the backplane and return the annotated message """
+
+    def __init__(self):
+        super().__init__()
+
+    def post(self):
+        """
+        tag: validation
+        description: Graph annotator.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        tranql = TranQL ()
+        messageObject = request.json
+        url = tranql.context.mem.get('backplane') + '/graph/gnbr/decorate'
+
+        logger.info(url)
+
+        resp = requests.post(
+            url = url,
+            json = messageObject,
+            headers = {
+                'accept': 'text/plain'
+            }
+        )
+
+        data = resp.json()
+
+        for result in data['results']:
+            type = result['result_type']
+            if type in messageObject:
+                messageObject[type] = result['result_graph']
+
+        return messageObject
+
 class SchemaGraph(StandardAPIResource):
     """ Graph of schema to display to the client """
 
@@ -241,7 +296,10 @@ class SchemaGraph(StandardAPIResource):
         # logger.info(schemaGraph.graph_to_message())
 
         # return {"nodes":[],"links":[]}
-        return schemaGraph.graph_to_message()
+        return {
+            "schema": schemaGraph.graph_to_message(),
+            "errors": schema.loadErrors
+        }
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """
@@ -339,7 +397,7 @@ class ModelRelationsQuery(StandardAPIResource):
             #traceback.print_exc (e)
             result = self.handle_exception (e)
         return result
-        
+
 ###############################################################################################
 #
 # Define routes.
@@ -348,6 +406,7 @@ class ModelRelationsQuery(StandardAPIResource):
 
 api.add_resource(TranQLQuery, '/tranql/query')
 api.add_resource(SchemaGraph, '/tranql/schema')
+api.add_resource(AnnotateGraph, '/tranql/annotate')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 
