@@ -542,6 +542,7 @@ class SelectStatement(Statement):
                     raise ServiceInvocationError (
                         message = message,
                         details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+                print (f"{values}")
         merged = self.merge_results (responses, self.service)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
