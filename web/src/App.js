@@ -293,10 +293,12 @@ class App extends Component {
                          className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
         <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
-        <FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
+        // Perfectly functional but does not provide enough functionality as of now to warrant its presence
+        /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
                     className="App-control-toolbar fa"
-                    onClick={() => this.setState ({ showTypeChart : true })} />,
-        <FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>
+                    onClick={() => this.setState ({ showTypeChart : true })} />,*/
+        // The tool works as intended but the annotator does not yet.
+        /*<FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>*/
       ],
 
       // Type chart
@@ -822,7 +824,7 @@ class App extends Component {
            if (result !== undefined) {
              console.log("Got schema from cache");
              let msg = result.data;
-             this._schemaRenderChain.handle (msg, this.state);
+             // this._schemaRenderChain.handle (msg, this.state);
              this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
@@ -869,6 +871,10 @@ class App extends Component {
                    }
 
                    this._schemaRenderChain.handle (result.schema, this.state);
+                   result.schema.graph.links.forEach((link) => {
+                     // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
+                     delete link.linkOpacity;
+                   });
 
                    this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
                    this.state.schemaViewerActive && this._setSchemaViewerActive(true);
@@ -1433,18 +1439,23 @@ class App extends Component {
     localStorage.setItem ("minNodeDegree", JSON.stringify (value));
   }
   /**
-   * Respond to changing the value of legend display Limit
-   * @param {number} value - The new legend display Limit
+   * Respond to changing the value of legend display limit
+   * @param {string} type - Type of element (either "nodes" or "links").
+   * @param {string} value - The new legend display limit (parsed as a base 10 integer)
    * @private
    */
   _onLegendDisplayLimitChange (type, event) {
-    let value = event.target.value;
+    let value = parseInt(event.target.value);
+    // parseInt returns NaN for anything that is not successfully parsed (e.g "foo" or "")
+    if (isNaN(value)) {
+      // Could possibly change this to be the max of said type (i.e. if there are 100 nodes value is set to 100)
+      value = 0;
+    }
     let prop = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? "schemaLegendRenderAmount" : "queryLegendRenderAmount";
     // Either this.state.schemaLegendRenderAmount or this.state.queryLegendRenderAmount
     let renderAmountObj = this.state[prop];
     // Either ...legendRenderAmount.nodes or ...legendRenderAmount.links = value
     renderAmountObj[type] = value;
-    console.log(renderAmountObj,prop);
     value !== "" && this.setState({ prop : renderAmountObj });
   }
   /**
@@ -1830,11 +1841,6 @@ class App extends Component {
           <div id="graph"></div>
           <div id="viewContainer">
             {
-              this.state.toolbarEnabled && (
-                <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons}/>
-              )
-            }
-            {
               /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
@@ -1846,23 +1852,31 @@ class App extends Component {
                          onDragFinished={(width) => this._updateGraphSplitPaneResize()}
               >
                 <div>
-                  <div id="schemaBanner" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
-                  {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) &&  <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
-                  {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
-                    <div id="schemaViewToggleButtonContainer">
-                      <Button color="primary"
-                              id="schemaViewToggleButton"
-                              outline
-                              size="sm"
-                              onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
-                      >
-                      {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
-                      </Button>
+                  <div id="graphOverlayContainer">
+                    {
+                      this.state.toolbarEnabled && (
+                        <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons}/>
+                      )
+                    }
+                    <div style={{display:"flex", flexGrow: 1, flexDirection:"column"}}>
+                      <div id="schemaBanner" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
+                        {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
+                        {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
+                        <div id="schemaViewToggleButtonContainer">
+                          <Button color="primary"
+                                  id="schemaViewToggleButton"
+                                  size="sm"
+                                  onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
+                          >
+                          {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
+                          </Button>
+                        </div>
+                      </div>
+                      <LinkExaminer link={this.state.selectedNode}
+                                    render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
-                    <LinkExaminer link={this.state.selectedNode}
-                                  render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                     {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                       (
                         this._renderForceGraph (

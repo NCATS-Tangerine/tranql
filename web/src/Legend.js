@@ -133,12 +133,15 @@ class Legend extends Component {
    * @param {Object} typeMappings.links - Link object mappings with structure `type` => {`color`,`quantity`}
    * @param {String[]} hiddenTypes - Array of strings specifying the hidden types contained within the typeMappings.
    *    This allows the Legend to make each type button the correct state (on/off) when rendering.
-   * @returns {Object} - New sorted mapping object with zipped structure
-   *    {`nodes` : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], `links` : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
    * @static
+   * @returns {Object} - New sorted mapping object with zipped structure
+   *    {'nodes' : [{"type":`type`,"color":`color`,"quantity":`quantity`},...], 'links' : [{"type":`type`,"color":`color`,"quantity",`quantity`},...]}
    */
   static sortMappings(typeMappings, nodeTypeRenderAmount, linkTypeRenderAmount) {
-    let newMappings = {};
+    let newMappings = {
+      nodes: [],
+      links: []
+    };
     // (object properties in javascript are unordered and therefore cannot be effectively)
     for (let graphElementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[graphElementType]).sort((a,b) => b[1].quantity-a[1].quantity);
@@ -182,25 +185,13 @@ class Legend extends Component {
 
 
     let render = this.props.render;
-
-    if (Object.keys(sortedMappings).length === 0) {
+    if (Object.keys(sortedMappings.nodes).length + Object.keys(sortedMappings.links).length === 0) {
       // 0 elements in both nodes and links
-      render = false;
+      //
+      // Commented as it can be confusing that the legend is gone. Instead displays text that indicates its emptiness
+      // render = false;
     }
-    if (this.state.collapse) {
-      return (
-          <div id={this.props.id} className="Legend" data-closed={true}>
-            {/*<h6 className="legendHeader">Legend</h6>*/}
-            <ReactTooltip place="left"/>
-            <IoIosArrowDropdownCircle data-tip="Open legend"
-                                      className="legend-vis-control-open"
-                                      onClick={(e) => this.setState({ collapse : false })}
-                                      color="rgba(40,40,40,1)"
-            />
-          </div>
-      )
-    }
-    else if (render && sortedMappings.nodes.length + sortedMappings.links.length > 0) {
+    if (render) {
       // // If implemented, type property should be changed to something such as [type,Enum TypeFlag]
       // // So that there is no possibility to run into naming conflicts
       // Object.values(sortedMappings).forEach(elementType => {
@@ -211,26 +202,41 @@ class Legend extends Component {
       //     quantity:total
       //   });
       // });
-      return (
-        <div id={this.props.id} className="Legend">
+      if (this.state.collapse) {
+        return (
+          <div id={this.props.id} className="Legend" data-closed={true}>
+          {/*<h6 className="legendHeader">Legend</h6>*/}
+          <ReactTooltip place="left"/>
+          <IoIosArrowDropdownCircle data-tip="Open legend"
+          className="legend-vis-control-open"
+          onClick={(e) => this.setState({ collapse : false })}
+          color="rgba(40,40,40,1)"
+          />
+          </div>
+        );
+      }
+      else {
+        return (
+          <div id={this.props.id} className="Legend">
           {/*+2px in margin-top is because of 2px border*/}
           <IoIosArrowDropupCircle onClick={(e) => this.setState({ collapse : true })} data-tip="Close legend" className="legend-vis-control"/>
           {
-            Object.keys(typeMappings).map((elementType,i) => {
+            Object.keys(sortedMappings).map((elementType,i) => {
               let types = sortedMappings[elementType];
               return (
                 // How to generate unique id??
                 <div className="graph-element-type-container" key={i}>
-                  <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1)}</h6>
-                  <ButtonToolbar className="graph-element-content">
-                    <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
-                  </ButtonToolbar>
+                <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1) + (types.length === 0 ? ' (empty)' : '')}</h6>
+                <ButtonToolbar className="graph-element-content">
+                <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
+                </ButtonToolbar>
                 </div>
               )
             })
           }
-        </div>
-      );
+          </div>
+        );
+      }
     }
     else {
       return null;
