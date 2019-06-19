@@ -1,0 +1,67 @@
+.example-queries-modal {
+  display:flex !important;
+  justify-content:center;
+  align-items:center;
+}
+.example-queries-modal-dialog {
+  height:75%;
+  margin:0;
+  width:65%;
+  max-height:75%;
+  max-width:65%;
+}
+.example-queries-modal-dialog > .modal-content {
+  height:100%;
+}
+.example-queries-modal-dialog > .modal-content > .modal-body {
+  display:flex;
+}
+.container {
+  height:100%;
+}
+.right-container {
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  max-height:100%;
+  margin-left:16px;
+  width:calc(80% - 16px);
+}
+.example-list {
+  width:20%;
+}
+.example-list > *:last-child {
+  flex-grow:1;
+}
+.example-query-button-container {
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:14px;
+  position:absolute;
+  z-index:5000;
+  right:25px;
+  top:5px;
+}
+.example-query-button-container > * {
+  font-size:14px;
+}
+.example-query-button-container > *:not(:last-child) {
+  margin-right:8px;
+}
+.example-query-code {
+  flex-grow:1;
+  height:100%;
+  max-height:100%;
+  display:flex;
+}
+.example-query-code .CodeMirror {
+  /* height:100% !important; */
+  flex-grow:1;
+  overflow:hidden;
+  height:100%;
+  max-height:100%;
+}
+.example-query-code .CodeMirror-scroll {
+  /* I don't know why this is necessary */
+  width:100%;
+}

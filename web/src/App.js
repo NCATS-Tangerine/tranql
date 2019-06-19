@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
-import { Modal, Form } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import * as THREE from 'three';
 import ReactJson from 'react-json-view'
@@ -10,7 +10,7 @@ import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { FaQuestionCircle, FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -23,6 +23,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
+import ExampleQueriesModal from './ExampleQueriesModal.js';
 import Legend from './Legend.js';
 import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
@@ -35,14 +36,11 @@ import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'codemirror/addon/hint/show-hint';
-import 'codemirror/addon/hint/sql-hint';
-import 'codemirror/addon/hint/show-hint.css'; // without this css hints won't show
 import './App.css';
+import { Controlled as CodeMirror } from 'react-codemirror2';
 require('create-react-class');
 require('codemirror/lib/codemirror.css');
 require('codemirror/mode/sql/sql');
-var CodeMirror = require('react-codemirror');
 
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
 Array.prototype.unique = function() {
@@ -132,6 +130,9 @@ class App extends Component {
     // Type chart
     this._renderTypeChart = this._renderTypeChart.bind (this);
 
+    // Help modal
+    this._renderHelpModal = this._renderHelpModal.bind (this);
+
     // Annotate graph
     this._annotateGraph = this._annotateGraph.bind (this);
 
@@ -158,11 +159,14 @@ class App extends Component {
     // Utility method for debouncing a function
     this._debounce = this._debounce.bind(this);
 
-    // Create code mirror reference.
+    // Create code mirror references.
     this._codemirror = React.createRef ();
     this._contextMenu = React.createRef ();
+
+    // Create modal references
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
+    this._exampleQueriesModal = React.createRef ();
 
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
@@ -300,6 +304,7 @@ class App extends Component {
                          id="answerViewerToolbar"
                          className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
+        <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
         <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
         // Perfectly functional but does not provide enough functionality as of now to warrant its presence
         /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
@@ -311,10 +316,11 @@ class App extends Component {
 
       // Type chart
       showTypeNodes : true, // When false, shows link types (prevents far too many types being shown at once)
-      showTypeChart : false,
 
-      // Settings modal
+      // Modals
       showSettingsModal : false,
+      showTypeChart : false,
+      showHelpModal : false
       //showAnswerViewer : true
     };
     this._cache.read ('cache', this.state.code).
@@ -1601,7 +1607,62 @@ class App extends Component {
     this._graphSplitPane.current.setState({prevWinWidth:window.innerWidth});
   }
   /**
-   * Render the type bar chart
+   * Render the help modal
+   *
+   * @private
+   */
+  _renderHelpModal () {
+    return (
+      <Modal show={this.state.showHelpModal}
+             onHide={() => this.setState({ showHelpModal : false })}
+             dialogClassName="help-modal">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Help and Information
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{padding:"0"}}>
+          <Container id="helpGrid">
+            <Row>
+              <Col>
+                <Card>
+                  <Card.Body>
+                    <Card.Title>
+                      Documentation
+                    </Card.Title>
+                    <Card.Text>
+                      Documentation for TranQL
+                    </Card.Text>
+                    <Card.Link target="_blank" href="https://researchsoftwareinstitute.github.io/data-translator/apps/tranql">Go</Card.Link>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col>
+                <Card>
+                  <Card.Body>
+                    <Card.Title>
+                      Examples
+                    </Card.Title>
+                    <Card.Text>
+                      Some example queries to help get you started.
+                    </Card.Text>
+                    <Card.Link href="javascript:void(0)" onClick={() => {
+                      this.setState({ showHelpModal : false });
+                      this._exampleQueriesModal.current.show();
+                    }}>View</Card.Link>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+            <Row>
+            </Row>
+          </Container>
+        </Modal.Body>
+      </Modal>
+    );
+  }
+  /**
+   * Render the type bar chart modal
    *
    * @private
    */
@@ -1624,7 +1685,7 @@ class App extends Component {
     return (
       <Modal show={this.state.showTypeChart}
              onHide={() => this.setState ({ showTypeChart : false })}
-             dialogClassName="typeChart">
+             dialogClassName="type-chart">
         <Modal.Header closeButton>
           <Modal.Title id="typeChartTitle">
             {this.state.showTypeNodes ? 'Node' : 'Link'} Bar Graph
@@ -1866,13 +1927,20 @@ class App extends Component {
     // Render it.
     return (
       <div className="App" id="AppElement">
-      {this._renderModal () }
-      {this._renderTypeChart ()}
+        {this._renderModal () }
+        {this._renderTypeChart ()}
+        {this._renderHelpModal ()}
+        <ExampleQueriesModal ref={this._exampleQueriesModal} setActiveCallback={(code, e) => {
+          this._exampleQueriesModal.current.hide();
+          this.setState({ code: code }, () => {
+            this._executeQuery();
+          });
+        }}/>
+        <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >
           <div id="headerContainer">
             <p style={{display:"inline-block",flex:1}}>TranQL</p>
-            <AnswerViewer show={true} ref={this._answerViewer} />
             <Message show={false} ref={this._messageDialog} />
             <GridLoader
               css={spinnerStyleOverride}
@@ -1902,9 +1970,9 @@ class App extends Component {
         </header>
         <div>
       	  <CodeMirror ref={this._codemirror}
+                      className="query-code"
                       value={this.state.code}
-                      onChange={this._updateCode}
-                      onKeyUp={this.handleKeyUpEvent}
+                      onBeforeChange={(editor, data, code) => this._updateCode(code)}
                       options={this.state.codeMirrorOptions}
                       autoFocus={true} />
           <Legend typeMappings={this.state.graph.typeMappings}
