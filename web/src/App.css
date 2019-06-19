@@ -73,6 +73,7 @@ body {
 #schemaBanner {
     /* background-color: rgb(30, 30, 30); */
     /* border-bottom: 4px solid rgb(50, 50, 50); */
+    width: 100%;
     background-color: transparent;
     padding: 10px;
     /* text-align: center; */
@@ -85,9 +86,7 @@ body {
     align-items: center;
 }
 .LinkExaminer {
-  /* position:absolute; */
-  /* z-index:1; */
-  /* transform:translate(10px, 0px); */
+  margin-left: 10px;
   max-height:400px;
 }
 .fa-spin {

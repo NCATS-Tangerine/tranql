@@ -152,6 +152,10 @@ class App extends Component {
 
     // Component rendering.
     this.render = this.render.bind(this);
+    this._updateDimensions = this._updateDimensions.bind(this);
+
+    // Utility method for debouncing a function
+    this._debounce = this._debounce.bind(this);
 
     // Create code mirror reference.
     this._codemirror = React.createRef ();
@@ -1203,8 +1207,7 @@ class App extends Component {
       );
     } else if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
                this.state.selectedNode !== null &&
-               this.state.selectedNode.id !== node.id &&
-               this.state.selectMode)
+               this.state.selectedNode.id !== node.id)
     {
       // Select the node.
       this.setState ((prevState, props) => ({
@@ -1532,6 +1535,50 @@ class App extends Component {
       );
   }
   /**
+   * Utility method to facilitate the debouncing of a function
+   *
+   * @param {function} func - Debounced function
+   * @param {number} time - Amount of time in ms since the function's last attempted invocation required to pass for the function to actually be invoked
+   * @param {...<T>} varargs - Any additional arguments to pass to the function
+   * @private
+   * @returns {function} - Debounced function that should be invoked rather than the actual one.
+   */
+  _debounce(func, time, ...args) {
+    let timer;
+    return function() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(func, time);
+    }
+  }
+  /**
+   * Invoked on window resize
+   *
+   * @private
+   */
+  _updateDimensions() {
+    let node = this.state.selectedNode.node || this.state.selectedLink;
+    let prevWinWidth = this._graphSplitPane.current.state.prevWinWidth;
+    if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
+               this.state.selectedNode !== null &&
+               this.state.selectedNode.id !== node.id)
+    {
+      let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - this._graphSplitPane.current.state.prevWinWidth);
+      if (this.state.objectViewerEnabled) {
+        // console.log(this._graphSplitPane.current.state.pane1Size);
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      }
+      this._updateGraphSize(width);
+    }
+    else {
+      let width = this._graphSplitPane.current.splitPane.offsetWidth;
+      if (this.state.objectViewerEnabled) {
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      }
+      this._updateGraphSize(width);
+    }
+    this._graphSplitPane.current.setState({prevWinWidth:window.innerWidth});
+  }
+  /**
    * Render the type bar chart
    *
    * @private
@@ -1764,11 +1811,23 @@ class App extends Component {
     );
   }
   /**
+   * Perform any necessary cleanup before being unmounted
+   *
+   * @private
+   */
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._updateDimensionsFunc);
+  }
+  /**
    * Handle events that can only occur once the component is mounted.
    *
    * @private
    */
   componentDidMount() {
+    // this._updateDimensionsFunc = this._debounce(this._updateDimensions, 100);
+    this._updateDimensionsFunc = this._updateDimensions;
+    window.addEventListener('resize', this._updateDimensionsFunc);
+
     this._hydrateState ();
 
     // Populate concepts and relations metadata.
@@ -1858,7 +1917,7 @@ class App extends Component {
                         <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons}/>
                       )
                     }
-                    <div style={{display:"flex", flexGrow: 1, flexDirection:"column"}}>
+                    <div style={{display:"flex", flexGrow: 1, flexDirection:"column", alignItems:"flex-start"}}>
                       <div id="schemaBanner" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                         {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
                         {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
