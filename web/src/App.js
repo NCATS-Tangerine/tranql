@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal, Form } from 'react-bootstrap';
@@ -162,7 +163,10 @@ class App extends Component {
     this._contextMenu = React.createRef ();
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
+
+    // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
+    this._toolbar = React.createRef ();
 
 
     // Cache graphs locally using IndexedDB web component.
@@ -1066,6 +1070,14 @@ class App extends Component {
         selectedNode : { link : link.origin }
       }));
       let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
+      // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
+      let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
+      if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
+        // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
+        // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
+        width += toolbar.offsetWidth / 2;
+      }
       if (this.state.objectViewerEnabled) {
         this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
       }
@@ -1214,6 +1226,14 @@ class App extends Component {
         selectedNode : { node: node.origin }
       }));
       let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
+      // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
+      let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
+      if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
+        // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
+        // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
+        width += toolbar.offsetWidth / 2;
+      }
       if (this.state.objectViewerEnabled) {
         this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
       }
@@ -1576,6 +1596,8 @@ class App extends Component {
       }
       this._updateGraphSize(width);
     }
+    // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
+    // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
     this._graphSplitPane.current.setState({prevWinWidth:window.innerWidth});
   }
   /**
@@ -1914,7 +1936,7 @@ class App extends Component {
                   <div id="graphOverlayContainer">
                     {
                       this.state.toolbarEnabled && (
-                        <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons}/>
+                        <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons} ref={this._toolbar}/>
                       )
                     }
                     <div style={{display:"flex", flexGrow: 1, flexDirection:"column", alignItems:"flex-start"}}>
