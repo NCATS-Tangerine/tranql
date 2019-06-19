@@ -320,7 +320,75 @@ class App extends Component {
       // Modals
       showSettingsModal : false,
       showTypeChart : false,
-      showHelpModal : false
+      // Help modal
+      showHelpModal : false,
+      exampleQueries : [
+        {
+          title: 'Drug-Disease Pair',
+          query:
+`--
+-- Produce clinial outcome pathways for this drug disease pair.
+--
+
+set drug = 'PUBCHEM:2083'
+set disease = 'MONDO:0004979'
+
+select chemical_substance->gene->anatomical_entity->phenotypic_feature<-disease
+  from '/graph/gamma/quick'
+ where chemical_substance = $drug
+   and disease = $disease`
+        },
+        {
+          title: 'Drug Targets Gene',
+          query:
+`--
+-- What drug targets some gene?
+--
+
+set target_gene = 'HGNC:6871' --mapk1
+select chemical_substance->gene
+  from '/graph/gamma/quick'
+ where gene = $target_gene`
+        },
+        {
+          title: 'Tissue-Disease Association',
+          query:
+`--
+-- What tissue types are associated with [disease]?
+--
+set disease = 'asthma'
+select disease->anatomical_feature->cell
+  from '/graph/gamma/quick'
+ where disease = $disease
+`
+        },
+        {
+          title: 'Workflow 5 v3',
+          query:
+`--
+-- Workflow 5
+--
+--   Modules 1-4: Chemical Exposures by Clinical Clusters
+--      For ICEES cohorts, eg, defined by differential population
+--      density, which chemicals are associated with these
+--      cohorts with a p_value lower than some threshold?
+--
+--   Modules 5-*: Knowledge Graph Phenotypic Associations
+--      For chemicals produced by steps 1-4, what phenotypes are
+--      associated with exposure to these chemicals?
+--
+
+SELECT population_of_individual_organisms->chemical_substance->gene->biological_process->phenotypic_feature
+  FROM "/schema"
+ WHERE icees.table = 'patient'
+   AND icees.year = 2010
+   AND icees.cohort_features.AgeStudyStart = '0-2'
+   AND icees.feature.EstResidentialDensity < 1
+   AND icees.maximum_p_value = 1
+   AND drug_exposure !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'`
+        }
+      ]
+
       //showAnswerViewer : true
     };
     this._cache.read ('cache', this.state.code).
@@ -1930,12 +1998,14 @@ class App extends Component {
         {this._renderModal () }
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
-        <ExampleQueriesModal ref={this._exampleQueriesModal} setActiveCallback={(code, e) => {
-          this._exampleQueriesModal.current.hide();
-          this.setState({ code: code }, () => {
-            this._executeQuery();
-          });
-        }}/>
+        <ExampleQueriesModal ref={this._exampleQueriesModal}
+                             setActiveCallback={(code, e) => {
+                               this._exampleQueriesModal.current.hide();
+                               this.setState({ code: code }, () => {
+                                 this._executeQuery();
+                               });
+                             }}
+                             examples={this.state.exampleQueries}/>
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >
