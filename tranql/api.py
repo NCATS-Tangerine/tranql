@@ -201,29 +201,14 @@ class TranQLQuery(StandardAPIResource):
             tranql = TranQL ()
             logging.debug (request.json)
             query = request.json['query'] if 'query' in request.json else ''
-            logging.debug (f"----------> query: {query}")
+            logging.debug (f"--> query: {query}")
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
         except Exception as e:
-            #traceback.print_exc (e)
             result = self.handle_exception (e)
-
-        '''
-        except TranQLException as e:
-            result = {
-                "status" : "error",
-                "message" : str(e),
-                "details" : e.details if e.details else ''
-            }
-        except Exception as e:
-            traceback.print_exc (e)
-            result = {
-                "status" : "error",
-                "message" : str(e),
-                "details" : ''
-            }
-        '''
+        #with open ('query.out', 'w') as stream:
+        #    json.dump (result, stream)
         return result
 
 class AnnotateGraph(StandardAPIResource):

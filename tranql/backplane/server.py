@@ -358,6 +358,7 @@ class GammaQuery(GammaResource):
         del request.json['knowledge_maps']
         del request.json['options']
         response = requests.post (self.quick_url, json=request.json)
+        print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
             result = {
                 "status" : "error",
