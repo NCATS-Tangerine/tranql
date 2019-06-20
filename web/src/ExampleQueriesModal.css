@@ -32,6 +32,8 @@
   /* height:max-content; */
   margin-bottom:16px;
 }
+/**
+To extend empty last child for entire height
 .example-list > *:nth-last-child(2) {
   border-bottom-width:0.5px;
 }
@@ -40,6 +42,7 @@
   flex-grow:1;
   padding:0;
 }
+*/
 .example-query-button-container {
   display:flex;
   justify-content:flex-end;

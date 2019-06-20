@@ -282,18 +282,20 @@ class App extends Component {
 
       // Tools for the toolbar component
       tools: [
-        <Tool name="Navigate" shortcut={[65,'f','G']} description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
+        <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
-        <Tool name="Select" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
+        <Tool name="Select" shortcut="g" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
           <FaMousePointer/>
         </Tool>,
         <Tool name="Highlight Types"
+              shortcut="h"
               description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
               callback={(bool) => this._setHighlightTypesMode(bool)}>
           <FaSearch/>
         </Tool>,
         <Tool name="Examine Connection"
+              shortcut="f"
               description="Displays a connection between two nodes and all links between them"
               callback={(bool) => this._setConnectionExaminerActive(bool)}>
           <FaEye/>

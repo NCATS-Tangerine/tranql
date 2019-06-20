@@ -98,7 +98,7 @@ export default class ExampleQueriesModal extends Component {
                   })
                 }
                 {/* This empty item is in order to add a border to the entire list group */}
-                <ListGroup.Item />
+                {/*<ListGroup.Item />*/}
               </ListGroup>
               <div className="right-container">
                 <div className="example-query-button-container">
