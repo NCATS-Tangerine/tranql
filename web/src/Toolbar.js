@@ -68,6 +68,7 @@ export class ToolGroup extends Component {
          throw new Error("ToolGroup must only contain components of type Tool, not type '"+(typeof comp.type === 'string' ? comp.type : comp.type.name)+"'");
        }
        return React.cloneElement(comp, {
+         ...comp.props,
          onMouseDown: (e) => {
            e.preventDefault();
            this._selectActive(index);
@@ -78,9 +79,10 @@ export class ToolGroup extends Component {
          toolbarCallback:this.props.toolbarCallback,
          key:index,
          ref:React.createRef(),
-         tipProp: comp.props.name+" - "+comp.props.description,
          onlyUseShortcutsWhen: this.props.onlyUseShortcutsWhen,
-         name: undefined, // Gets in the way when menu is open so we'll conditionally render it on the container, rather than the tool
+         tipProp:Tool.makeTip(comp.name,comp.description,comp.shortcut),
+         // Hide the tooltip
+         name:undefined
        });
      });
 
@@ -153,8 +155,7 @@ export class ToolGroup extends Component {
 
    render() {
      return (
-        <div className="tool-group" style={{position:"relative"}} data-html={true} data-tip={this._selectMenu.current && this._selectMenu.current.active === false ? this._activeTool.props.tipProp : undefined}>
-          {/* ^data-tip does not render if select menu is open */}
+        <div className="tool-group" style={{position:"relative"}}>
           {this._activeTool}
           <SelectMenu leaveCallback={() => this._selectMenu.current.setState({ active : false })}
                                        children={this.state.children}
@@ -186,7 +187,9 @@ export class Tool extends Component {
    * @param {string} props.description - Description of the tool (keep it short). Only functional when contained in a ToolGroup.
    * @param {onClick} props.callback - Callback invoked on click.
    * @param {Component} props.children - Icon of the child (e.g. <IoIosSettings />).
-   * @param {Number|Number[]} props.shortcut - Keycode for the shortcut. If an array, the shortcut will trigger if any of the key codes contained are pressed.
+   * @param {Number|String|Array<Number|String>} props.shortcut - Keycode or key for the shortcut. When a string, it is case sensitive.
+   *    If an array, the shortcut will trigger if any of the keys/key codes contained are pressed.
+   *    Array may be of mixed types.
    */
   constructor(props) {
     super(props);
@@ -218,10 +221,33 @@ export class Tool extends Component {
 
   _keyDownCallback(e) {
     if (this.props.onlyUseShortcutsWhen.some(type => document.activeElement instanceof type)) {
-      if (typeof this.props.shortcut !== "undefined" && this.state.shortcut.includes(e.keyCode)) {
-        this.setActive(true);
+      let char = String.fromCharCode(e.keyCode);
+      if (!e.shiftKey) {
+        char = char.toLowerCase();
+      }
+      if (typeof this.props.shortcut !== "undefined" && this.state.shortcut.includes(e.keyCode) || this.state.shortcut.includes(char)) {
+        this.props.onMouseUp ? this.props.onMouseUp() : this.setActive(true);
       }
     }
+  }
+
+  static makeTip(name,description,shortcut) {
+    return (name !== undefined && description !== undefined ? (
+      name +
+      " - "+description +
+      (typeof shortcut !== "undefined" ?
+        (" ("+(Array.isArray(shortcut) ?
+          shortcut :
+          [shortcut]).map(key=>(typeof key==="string" ?
+            (key === key.toUpperCase() ?
+              "shift+" + key :
+              key.toUpperCase()) :
+            String.fromCharCode(key)
+          ))
+          .join("/")+")") :
+        ""
+        )
+    ) : undefined);
   }
 
   componentDidMount() {
@@ -237,7 +263,7 @@ export class Tool extends Component {
       <div className="Tool"
            onMouseUp={this.props.onMouseUp || (() => {this.setActive(true);})}
            onMouseDown={this.props.onMouseDown}
-           data-tip={this.props.name !== undefined && this.props.description !== undefined ? this.props.name+" - "+this.props.description : undefined}
+           data-tip={Tool.makeTip(this.props.name,this.props.description,this.props.shortcut)}
            data-html={true}
            data-active-tool={this.state.active}>
         {
@@ -304,7 +330,6 @@ export class Toolbar extends Component {
   static _resize(e) {
     // Quite the hack but there doesn't seem to be any other alternative
     let menus = document.querySelectorAll('.select-menu');
-    console.log(menus);
     for (let i=0;i<menus.length;i++) {
       const menu = menus[i];
       menu.style.left = menu.parentElement.getBoundingClientRect().left + menu.parentElement.offsetWidth + "px";
