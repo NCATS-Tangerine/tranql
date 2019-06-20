@@ -226,7 +226,17 @@ class Legend extends Component {
               return (
                 // How to generate unique id??
                 <div className="graph-element-type-container" key={i}>
-                <h6 className="graph-element-header">{elementType.charAt(0).toUpperCase()+elementType.slice(1) + (types.length === 0 ? ' (empty)' : '')}</h6>
+                <h6 className="graph-element-header">
+                  {
+                    // If the legend has no types to display for said elementType, make clear that it is empty
+                    // Else, render how many currently aren't being displayed. If all are being display, do nothing.
+                    elementType.charAt(0).toUpperCase()+elementType.slice(1) + (types.length === 0 ?
+                      ' (empty)' :
+                      Object.keys(typeMappings[elementType]).length-types.length ?
+                        ` (and ${Object.keys(typeMappings[elementType]).length-types.length} more)` :
+                        '')
+                  }
+                </h6>
                 <ButtonToolbar className="graph-element-content">
                 <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
                 </ButtonToolbar>

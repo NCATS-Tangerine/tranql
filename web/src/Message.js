@@ -23,8 +23,8 @@ class Message extends Component {
       this.setState({
         show: true,
         title : title,
-        message : message.replace ("\n", "<br/>"),
-        details : details.replace ("\n", "<br/>"),
+        message : typeof message === "string" ? message.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : message,
+        details : typeof details === "string" ? details.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : details,
       });
     }
   }

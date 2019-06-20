@@ -763,6 +763,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           // Translate the knowledge graph given current settings.
           this._translateGraph (result[0].data)
           this._configureMessage (result[0].data)
+          if (result[0].data.knowledge_graph.nodes.length + result[0].data.knowledge_graph.edges.length === 0) {
+            this._handleMessageDialog (
+              "Warning",
+              "The query returned no results.",
+              <div style={{whiteSpace:'pre-wrap'}}>Message object: <br/>{JSON.stringify(result[0].data,undefined,4)}</div>
+            );
+          }
         } else {
           // We didn't find it in the cache. Run the query.
           this.setState ({
@@ -797,6 +804,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   this._configureMessage (result);
                   this._cacheWrite (result);
                   this._setSchemaViewerActive(false);
+                  if (result.knowledge_graph.nodes.length + result.knowledge_graph.edges.length === 0) {
+                    this._handleMessageDialog (
+                      "Warning",
+                      "The query returned no results.",
+                      <div style={{whiteSpace:'pre-wrap'}}>Message object: <br/>{JSON.stringify(result,undefined,4)}</div>
+                    );
+                  }
                 }
               },
               // Note: it's important to handle errors here
