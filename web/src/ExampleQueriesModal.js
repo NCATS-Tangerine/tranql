@@ -33,8 +33,6 @@ export default class ExampleQueriesModal extends Component {
     this.show = this.show.bind (this);
     this.hide = this.hide.bind (this);
 
-    this.currentExample = 0;
-
     this._modalBody = React.createRef();
   }
   /**

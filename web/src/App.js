@@ -282,7 +282,7 @@ class App extends Component {
 
       // Tools for the toolbar component
       tools: [
-        <Tool name="Navigate" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
+        <Tool name="Navigate" shortcut={70} description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
         <Tool name="Select" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
@@ -293,6 +293,14 @@ class App extends Component {
               callback={(bool) => this._setHighlightTypesMode(bool)}>
           <FaSearch/>
         </Tool>,
+        <ToolGroup default={1}>
+          <Tool name="Select" description="Select a node or link" callback={(e) => console.log("foobar",e)}>
+            <FaMousePointer/>
+          </Tool>
+          <Tool name="Testing" description="Testing tool" callback={(e) => console.log("test",e)}>
+            <FaBan/>
+          </Tool>
+        </ToolGroup>,
         <Tool name="Examine Connection"
               description="Displays a connection between two nodes and all links between them"
               callback={(bool) => this._setConnectionExaminerActive(bool)}>
@@ -2088,7 +2096,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   <div id="graphOverlayContainer">
                     {
                       this.state.toolbarEnabled && (
-                        <Toolbar id="toolbar" default={0} tools={this.state.tools} buttons={this.state.buttons} ref={this._toolbar}/>
+                        <Toolbar id="toolbar"
+                                 default={0}
+                                 tools={this.state.tools}
+                                 buttons={this.state.buttons}
+                                 onlyUseShortcutsWhen={[HTMLBodyElement]}
+                                 ref={this._toolbar}/>
                       )
                     }
                     <div style={{display:"flex", flexGrow: 1, flexDirection:"column", alignItems:"flex-start"}}>
