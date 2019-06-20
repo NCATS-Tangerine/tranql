@@ -85,7 +85,7 @@ export default class ExampleQueriesModal extends Component {
         <Modal.Body ref={this._modalBody}>
           <ReactTooltip place="right"/>
           <Container fluid={true} className="container">
-            <Row style={{flexWrap:"nowrap"}}>
+            <Row style={{flexWrap:"nowrap",height:"100%"}}>
               <ListGroup className="example-list">
                 {
                   this.state.examples.map((example, i) => {

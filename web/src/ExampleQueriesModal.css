@@ -6,9 +6,9 @@
 .example-queries-modal-dialog {
   height:75%;
   margin:0;
-  width:65%;
+  width:650px;
   max-height:75%;
-  max-width:65%;
+  max-width:none;
 }
 .example-queries-modal-dialog > .modal-content {
   height:100%;
@@ -21,7 +21,7 @@
   height:100%;
 }
 .right-container {
-  display:flex;
+  /* display:flex; */
   flex-direction:column;
   /* max-height:100%; */
   margin-left:16px;
@@ -30,7 +30,7 @@
 .example-list {
   width:20%;
   /* height:max-content; */
-  margin-bottom:16px;
+  /* margin-bottom:16px; */
 }
 /**
 To extend empty last child for entire height
@@ -49,8 +49,8 @@ To extend empty last child for entire height
   margin-bottom:14px;
   position:absolute;
   z-index:5000;
-  right:10px;
-  top:10px;
+  right:42.5px;
+  top:17.5px;
 }
 .example-query-button-container > * {
   font-size:14px;
@@ -59,8 +59,8 @@ To extend empty last child for entire height
   margin-right:8px;
 }
 .example-query-code {
-  flex-grow:1;
-  /* height:100%; */
+  /* flex-grow:1; */
+  height:100%;
   /* max-height:100%; */
   display:flex;
   margin-bottom:16px;
@@ -72,6 +72,9 @@ To extend empty last child for entire height
   height:auto;
   width:100%;
   /* max-height:100%; */
+}
+.example-query-code .CodeMirror-wrap {
+  height:100%;
 }
 .example-query-code .CodeMirror-scroll {
   width:100%;

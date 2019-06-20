@@ -9,7 +9,7 @@ import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
+import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
 import { FaQuestionCircle, FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
@@ -235,6 +235,7 @@ class App extends Component {
           'Ctrl-Space': this._codeAutoComplete
         }
       },
+      showCodeMirror : true,
 
       // Configure the 3d force directed graph visualization.
       visMode : '3D',
@@ -2055,12 +2056,28 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           </div>
         </header>
         <div>
-      	  <CodeMirror ref={this._codemirror}
-                      className="query-code"
-                      value={this.state.code}
-                      onBeforeChange={(editor, data, code) => this._updateCode(code)}
-                      options={this.state.codeMirrorOptions}
-                      autoFocus={true} />
+          {
+            this.state.showCodeMirror ?
+              (
+                <>
+                  <IoIosArrowDropupCircle onClick={(e) => this.setState({ showCodeMirror : false })} className="editor-vis-control legend-vis-control"/>
+                  <CodeMirror ref={this._codemirror}
+                  className="query-code"
+                  value={this.state.code}
+                  onBeforeChange={(editor, data, code) => this._updateCode(code)}
+                  options={this.state.codeMirrorOptions}
+                  autoFocus={true} />
+                </>
+              ) :
+              (
+                <div className="editor Legend" data-closed={true}>
+                <IoIosArrowDropdownCircle className="editor-vis-control legend-vis-control-open"
+                onClick={(e) => this.setState({ showCodeMirror : true })}
+                color="rgba(40,40,40,1)"
+                />
+                </div>
+              )
+          }
           <Legend typeMappings={this.state.graph.typeMappings}
                   hiddenTypes={this.state.graph.hiddenTypes}
                   nodeTypeRenderAmount={this.state.queryLegendRenderAmount.nodes}

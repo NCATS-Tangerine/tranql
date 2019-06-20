@@ -291,10 +291,15 @@ body {
     height: 50%!important;
     border-color: lightgray 1px solid;
  }
+.editor {
+  background-color:white;
+ }
+.editor-vis-control.legend-vis-control {
+  z-index:3 !important;
+}
 .rv-force {
     border: 1px solid gray;
  }
-
 /* ??? */
 .Resizer {
     background: #000;
