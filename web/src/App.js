@@ -300,7 +300,7 @@ class App extends Component {
         </Tool>
       ],
       buttons: [
-        <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance"
+        <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
                          id="answerViewerToolbar"
                          className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
@@ -2048,7 +2048,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             </Button>
             <div id="appControlContainer" style={{display:(this.state.toolbarEnabled ? "none" : "")}}>
               <IoIosSettings data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
-              <IoIosPlayCircle data-tip="Answer Viewer - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
+              <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
             </div>
           </div>
         </header>

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Modal } from 'react-bootstrap';
+import { FaSpinner } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 class AnswerViewer extends Component {
@@ -9,6 +10,7 @@ class AnswerViewer extends Component {
     this.state = {
       show: false,
       answerUrl : null,
+      loaded : false
     };
     this.handleHide = () => {
       this.setState({ show: false });
@@ -16,7 +18,7 @@ class AnswerViewer extends Component {
     this.handleShow = this.handleShow.bind (this);
   }
   handleShow (url) {
-    this.setState({ show: true, answerUrl : url });
+    this.setState({ show: true, answerUrl : url, loaded : false });
   }
   render() {
     return (
@@ -28,7 +30,8 @@ class AnswerViewer extends Component {
           aria-labelledby="example-custom-modal-styling-title"
         >
           <Modal.Header closeButton>
-            <Modal.Title id="example-custom-modal-styling-title">
+            <Modal.Title id="example-custom-modal-styling-title" style={{display:"flex",alignItems:"center"}}>
+              {!this.state.loaded && <FaSpinner style={{marginRight:"15px", marginLeft:"5px", fontSize:"24px"}} className="fa-spin"/>}
               Answer Navigator
             </Modal.Title>
           </Modal.Header>
@@ -36,6 +39,7 @@ class AnswerViewer extends Component {
             <iframe src={this.state.answerUrl}
                     height={"100%"} width={"100%"}
                     frameBorder={"0"}
+                    onLoad={()=>this.setState({ loaded : true })}
             />
           </Modal.Body>
         </Modal>
