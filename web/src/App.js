@@ -11,8 +11,14 @@ import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayCircle } from 'react-icons/io';
-import { FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import {
+  FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaEye, FaPen,
+  FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer,
+  FaBan, FaArrowsAlt, FaTrash, FaEdit
+} from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
@@ -133,6 +139,7 @@ class App extends Component {
 
     // Help modal
     this._renderHelpModal = this._renderHelpModal.bind (this);
+
 
     // Annotate graph
     this._annotateGraph = this._annotateGraph.bind (this);
@@ -327,6 +334,45 @@ class App extends Component {
       // Modals
       showSettingsModal : false,
       showTypeChart : false,
+      // Cached queries modal
+      cachedQueriesModalTools: [
+        <FaTrash data-tip="Delete from the cache"
+                 onClick={() => {
+                   // this._cachedQueriesModal.current.hide();
+                   confirmAlert({
+                     customUI: ({ onClose }) => (
+                       <div className="confirm-delete-cached-query">
+                        <h3>Delete cached query</h3>
+                        <p>Are you sure you want to delete this query?</p>
+                        <Button outline color="primary" onClick={() => {
+                          onClose();
+                          const currentQuery = this._cachedQueriesModal.current.currentQuery;
+                          // The `id` property is the cache's id of the query.
+                          this.state.cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
+                          this.setState({ cachedQueries : this.state.cachedQueries });
+                          this._cache.db.cache.delete(currentQuery.id);
+                        }}>Confirm</Button>
+                        <Button outline color="primary" onClick={() => {
+                          onClose();
+                          // this._cachedQueriesModal.current.show();
+                        }}>Cancel</Button>
+                       </div>
+                     )
+                     /*(title:"Delete cached query",
+                     message:"Are you sure you want to delete this query?",
+                     buttons:[
+                       {
+                         label: 'Confirm',
+                         onClick: () => {}
+                       },
+                       {
+                         label:'Cancel',
+                         onClick: () => {}
+                       }
+                     ]*/
+                   });
+                 }}/>
+      ],
       // Help modal
       showHelpModal : false,
       exampleQueries : [
@@ -455,10 +501,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
     this._updateCode (this.state.code);
     this._cache.db.cache.toArray().then((queries) => {
-      queries = queries.map((query,i) => ({
-        title: "Query "+(i+1),
-        query:query.key
-      }));
+      queries = queries.map((query,i) => {
+        const queryTitle = "Query "+(i+1);
+        return {
+          title: queryTitle,
+          query:query.key,
+          id: query.id
+        };
+      });
       this.setState({ cachedQueries : queries });
     });
   }
@@ -2027,7 +2077,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
         <QueriesModal ref={this._exampleQueriesModal}
-                             setActiveCallback={(code, e) => {
+                             runButtonCallback={(code, e) => {
                                this._exampleQueriesModal.current.hide();
                                this.setState({ code: code }, () => {
                                  this._executeQuery();
@@ -2036,7 +2086,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                              queries={this.state.exampleQueries}
                              title="Example queries"/>
         <QueriesModal ref={this._cachedQueriesModal}
-                             setActiveCallback={(code, e) => {
+                             runButtonCallback={(code, e) => {
                                this._cachedQueriesModal.current.hide();
                                this.setState({ code: code }, () => {
                                  this._executeQuery();
@@ -2044,6 +2094,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                              }}
                              queries={this.state.cachedQueries}
                              title="Cached queries"
+                             tools={this.state.cachedQueriesModalTools}
                              emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries{!this.state.useCache && " (caching is disabled)"}.</div>/>
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>

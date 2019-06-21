@@ -13,13 +13,26 @@ export default class QueriesModal extends Component {
    * Constructs the component
    *
    * @param {Object} props - The properties of the model
-   * @param {Object[]} props.queries - Array of queries with structure {`title`: string, `query`: string}. Will initially set the queries after mount.
-   *    NOTE: The modal will error and not function if props.queries is left empty
-   * @param {function} props.setActiveCallback - Invoked when the run button is pressed. Passed the arguments code<String> and event<MouseEvent>
-   * @param {String} props.title - Title of the modal.
-   * @param {String|React.Component} [props.emptyText=""] - Text displayed if there are no queries.
+   * @param {Object[]} props.queries - Array of query objects which must adhere to the structure {`title`: React.Component|string, `query`: string}.
+   *    NOTE: The query objects may also contain other arbitrary information such as identifiers as long as none are the property `_editedQuery,`
+   *          a private property automatically added to the object.
+   * @param {Function} props.runButtonCallback - Invoked when the run button is pressed. Passed the arguments code<String> and event<MouseEvent>
+   * @param {React.Component|String} props.title - Title of the modal.
+   * @param {React.Component|String} [props.emptyText=""] - Text displayed if there are no queries.
+   * @param {React.Component[]} [props.tools=[]] - Additional tools to add to the toolbar.
+   *    To add a tooltip to the tool, use the any react-tooltip properties.
+   * @param {number|null} [props.runButtonIndex=0] - Change the index in which the run button is inserted into the tool array. To hide it, set this to null.
+   * @param {number|null} [props.resetButtonIndex=1] - Change the index in which the reset button is inserted into the tool array. To hide it, set this to null.
    *
    */
+  static defaultProps = {
+    runButtonCallback: (code, e) => {},
+    title: '',
+    emptyText: '',
+    tools: [],
+    runButtonIndex: 0,
+    resetButtonIndex: 1
+  };
   constructor(props) {
     super(props);
 
@@ -32,12 +45,14 @@ export default class QueriesModal extends Component {
       currentQueryIndex: 0,
       queries: this.props.queries
     };
-    this.state.queries.forEach((ex) => ex.editedQuery = ex.query);
+    this.state.queries.forEach((ex) => ex._editedQuery = ex.query);
 
     this.show = this.show.bind (this);
     this.hide = this.hide.bind (this);
 
     this._modalBody = React.createRef();
+
+    this._getTools = this._getTools.bind(this);
   }
   /**
    * Show the modal
@@ -75,19 +90,44 @@ export default class QueriesModal extends Component {
     }
     this.setState({ currentQueryIndex : value });
   }
+  /**
+   * Returns the tools in formatted form.
+   *
+   * @private
+   * @returns {React.Component[]} - The tools in formatted form.
+   */
+  _getTools() {
+    let tools = this.props.tools.slice(); // Clone it
+    const runButton = <FaPlay data-tip="Run the query" onClick={(e) => this.props.runButtonCallback(this.currentQuery._editedQuery, e)}/>
+    const resetButton = (<FaUndo data-tip="Reset the query" onClick={() => {
+      this.currentQuery._editedQuery = this.currentQuery.query;
+      this.setState({ queries : this.state.queries });
+    }}/>);
+    // Insert the default tools
+    if (this.props.runButtonIndex !== null) {
+      tools.splice(this.props.runButtonIndex,0,runButton);
+    }
+    if (this.props.resetButtonIndex !== null) {
+      tools.splice(this.props.resetButtonIndex,0,resetButton);
+    }
+    return tools;
+  }
+  /**
+   * This should probably be replaced but it's very uninuitive to have to manually set the queries via ref.
+   */
   componentWillReceiveProps(newProps) {
-    let addQueries = [];
-    for (let i=0;i<newProps.queries.length;i++) {
-      let newQuery = newProps.queries[i];
-      // If every current query does not have the same exact title and body, it is new.
-      if (this.state.queries.every(query => query.title !== newQuery.title && query.query !== newQuery.query)) {
-        newQuery.editedQuery = newQuery.query;
-        addQueries.push(newQuery);
+    let addQueries = newProps.queries;
+    for (let i=0;i<addQueries.length;i++) {
+      let newQuery = addQueries[i];
+      let oldQuery = this.state.queries.filter(oldQuery => oldQuery.title === newQuery.title && oldQuery.query === newQuery.query);
+      if (oldQuery.length === 0) {
+        newQuery._editedQuery = newQuery.query;
+      }
+      else {
+        newQuery._editedQuery = oldQuery[0]._editedQuery;
       }
     }
-    if (addQueries.length > 0) {
-      this.setState({ queries : this.state.queries.concat(addQueries) });
-    }
+    this.setState({ queries : addQueries });
   }
   render() {
     return (
@@ -124,22 +164,20 @@ export default class QueriesModal extends Component {
                 <div className="query-title-container">
                   {
                     (() => {
-                      const title = this.currentQuery.title + (this.currentQuery.editedQuery !== this.currentQuery.query ? " (edited)" : "");
+                      const title = this.currentQuery.title + (this.currentQuery._editedQuery !== this.currentQuery.query ? " (edited)" : "");
                       return <span className="query-title" title={title}>{title}</span>;
                     })()
                   }
                   <div className="query-button-container">
-                    <FaPlay data-tip="Run the query" onClick={(e) => this.props.setActiveCallback(this.currentQuery.editedQuery, e)}/>
-                    <FaUndo data-tip="Reset the query" onClick={() => {
-                      this.currentQuery.editedQuery = this.currentQuery.query;
-                      this.setState({ queries : this.state.queries });
-                    }}/>
+                    {
+                      this._getTools()
+                    }
                   </div>
                 </div>
                 <CodeMirror className="query-modal-code"
-                            value={this.currentQuery.editedQuery}
+                            value={this.currentQuery._editedQuery}
                             onBeforeChange={(editor,data,code) => {
-                              this.currentQuery.editedQuery = code;
+                              this.currentQuery._editedQuery = code;
                               this.setState({ queries : this.state.queries });
                             }}
                             options={{

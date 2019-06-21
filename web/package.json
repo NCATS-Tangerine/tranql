@@ -51,6 +51,7 @@
   "devDependencies": {
     "@kadira/storybook": "^2.21.0",
     "react-codemirror2": "^6.0.0",
+    "react-confirm-alert": "^2.4.1",
     "react-icons": "^3.7.0"
   }
 }

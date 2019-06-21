@@ -23,19 +23,26 @@
   height:100%;
 }
 .right-container {
+  flex: 1 1 auto;
   position:relative;
   display:flex;
   flex-direction:column;
   /* max-height:100%; */
   margin-left:16px;
-  width:calc(80% - 16px);
+  max-width:75%;
+  /* width:100%; */
 }
 .query-list {
   overflow-y:auto;
-  /* direction:rtl; */
-  width:20%;
-  /* height:max-content; */
-  /* margin-bottom:16px; */
+  /* Can switch to
+   *   max-width: x%;
+   *   flex: 1 0 auto;
+   * And right-container to
+   *   flex-grow: 1;
+   * In order to allow this to grow to fit content up to x% and then stop. Just looks strange because right-container may require more width resulting in query-list shrinking
+   */
+  flex: 0 0 25%;
+  /* max-width:25%; */
 }
 /**
 To extend empty last child for entire height
@@ -49,7 +56,9 @@ To extend empty last child for entire height
 }
 */
 .query-list > button {
+  /* Make sure that a really long word won't result in a scroll bar due to overflow */
   word-wrap:break-word;
+  text-align:center;
 }
 .query-title-container {
   display:flex;
