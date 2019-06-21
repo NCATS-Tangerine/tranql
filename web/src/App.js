@@ -17,7 +17,6 @@ import {
   FaBan, FaArrowsAlt, FaTrash, FaEdit
 } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -31,6 +30,7 @@ import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
+import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
@@ -340,36 +340,24 @@ class App extends Component {
                  onClick={() => {
                    // this._cachedQueriesModal.current.hide();
                    confirmAlert({
-                     customUI: ({ onClose }) => (
-                       <div className="confirm-delete-cached-query">
-                        <h3>Delete cached query</h3>
-                        <p>Are you sure you want to delete this query?</p>
-                        <Button outline color="primary" onClick={() => {
-                          onClose();
-                          const currentQuery = this._cachedQueriesModal.current.currentQuery;
-                          // The `id` property is the cache's id of the query.
-                          this.state.cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
-                          this.setState({ cachedQueries : this.state.cachedQueries });
-                          this._cache.db.cache.delete(currentQuery.id);
-                        }}>Confirm</Button>
-                        <Button outline color="primary" onClick={() => {
-                          onClose();
-                          // this._cachedQueriesModal.current.show();
-                        }}>Cancel</Button>
-                       </div>
-                     )
-                     /*(title:"Delete cached query",
+                     title:"Delete cached query",
                      message:"Are you sure you want to delete this query?",
                      buttons:[
                        {
                          label: 'Confirm',
-                         onClick: () => {}
+                         onClick: () => {
+                           const currentQuery = this._cachedQueriesModal.current.currentQuery;
+                           // The `id` property is the cache's id of the query.
+                           this.state.cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
+                           this.setState({ cachedQueries : this.state.cachedQueries });
+                           this._cache.db.cache.delete(currentQuery.id);
+                         }
                        },
                        {
                          label:'Cancel',
                          onClick: () => {}
                        }
-                     ]*/
+                     ]
                    });
                  }}/>
       ],
