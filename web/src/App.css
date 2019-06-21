@@ -298,8 +298,31 @@ body {
   z-index:3 !important;
 }
 .rv-force {
-    border: 1px solid gray;
- }
+  border: 1px solid gray;
+}
+.title-edit {
+  text-overflow:ellipsis;
+  overflow:hidden;
+  white-space:nowrap;
+  color:#0088cc;
+  border-bottom:1px dashed #0088cc;
+}
+#cachedQueriesModal .query-title > input {
+  flex-grow:1;
+}
+/* Insert a fake space character since it is a flex box */
+#cachedQueriesModal .query-title > span + span::before {
+  /* margin-left: 7.5px; */
+  content:'\a0';
+}
+/* Elevate it by 1 pixel since the first has a border */
+#cachedQueriesModal .query-title > span + span {
+  margin-bottom: 1px;
+}
+/* When the inline editing is active hide the adjacent span because we want 100% width (displays if the query has been edited or not) */
+#cachedQueriesModal .query-title > input + span {
+  display:none;
+}
 /* ??? */
 .Resizer {
     background: #000;

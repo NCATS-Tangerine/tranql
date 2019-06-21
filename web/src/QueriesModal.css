@@ -29,20 +29,23 @@
   flex-direction:column;
   /* max-height:100%; */
   margin-left:16px;
-  max-width:75%;
+  /* max-width:75%; */
   /* width:100%; */
 }
 .query-list {
   overflow-y:auto;
-  /* Can switch to
+  /** Can switch to
    *   max-width: x%;
    *   flex: 1 0 auto;
    * And right-container to
    *   flex-grow: 1;
    * In order to allow this to grow to fit content up to x% and then stop. Just looks strange because right-container may require more width resulting in query-list shrinking
    */
-  flex: 0 0 25%;
-  /* max-width:25%; */
+  /**
+   * Currently it grows to a maximum of 22.5% but may shrink if the largest title is fairly short.
+   */
+  flex: 0 0 auto;
+  max-width:22.5%;
 }
 /**
 To extend empty last child for entire height
@@ -78,9 +81,11 @@ To extend empty last child for entire height
   /* top:6px; */
 }
 .query-title {
+  margin-right:7.5px;
   flex-grow:1;
   font-size:14px;
-  text-overflow:ellipsis;
+  display:flex;
+  align-items:center;
   /* font-weight:600; */
 }
 .query-button-container {

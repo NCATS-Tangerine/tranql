@@ -20,6 +20,7 @@ import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
+import InlineEdit from 'react-edit-inline2';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
@@ -488,11 +489,41 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       }
     }
     this._updateCode (this.state.code);
+
+    const updateQueryTitle = (query, queryTitle) => {
+      query.data.title = queryTitle;
+      this._cache.db.cache.update(query.id,query);
+      /* Gets a bit messy here but since it's directly modifying a property of the object, and these objects are all formatted and stored in the ref's state, we have to work around it a bit. */
+      this.setState({ cachedQueries : this.state.cachedQueries });
+      this._cachedQueriesModal.current.state.queries.forEach(q => {
+        if (q.id === query.id) {
+          q.title = query.data.title;
+        }
+      });
+      this._cachedQueriesModal.current.setState({ queries : this._cachedQueriesModal.current.state.queries });
+    }
     this._cache.db.cache.toArray().then((queries) => {
       queries = queries.map((query,i) => {
-        const queryTitle = "Query "+(i+1);
+        let queryTitle;
+        if (typeof query.data.title !== "undefined") {
+          queryTitle = query.data.title;
+        }
+        else {
+          queryTitle = "Query "+(i+1);
+          updateQueryTitle(query,queryTitle);
+        }
+        // This is a function so that it is rerendered everytime the parent is rerendered, allowing it to update the `text` property.
+        const editorTitle = () => (
+            <InlineEdit validate={(text) => text.length > 0}
+                        className="title-edit"
+                        text={query.data.title}
+                        paramName={'title'}
+                        style={{}}
+                        change={(data) => (updateQueryTitle(query,data.title))}></InlineEdit>
+        );
         return {
           title: queryTitle,
+          editorTitle: editorTitle,
           query:query.key,
           id: query.id
         };
@@ -2065,25 +2096,26 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
         <QueriesModal ref={this._exampleQueriesModal}
-                             runButtonCallback={(code, e) => {
-                               this._exampleQueriesModal.current.hide();
-                               this.setState({ code: code }, () => {
-                                 this._executeQuery();
-                               });
-                             }}
-                             queries={this.state.exampleQueries}
-                             title="Example queries"/>
+                      runButtonCallback={(code, e) => {
+                        this._exampleQueriesModal.current.hide();
+                        this.setState({ code: code }, () => {
+                          this._executeQuery();
+                        });
+                      }}
+                      queries={this.state.exampleQueries}
+                      title="Example queries"/>
         <QueriesModal ref={this._cachedQueriesModal}
-                             runButtonCallback={(code, e) => {
-                               this._cachedQueriesModal.current.hide();
-                               this.setState({ code: code }, () => {
-                                 this._executeQuery();
-                               });
-                             }}
-                             queries={this.state.cachedQueries}
-                             title="Cached queries"
-                             tools={this.state.cachedQueriesModalTools}
-                             emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries{!this.state.useCache && " (caching is disabled)"}.</div>/>
+                      id="cachedQueriesModal"
+                      runButtonCallback={(code, e) => {
+                        this._cachedQueriesModal.current.hide();
+                        this.setState({ code: code }, () => {
+                          this._executeQuery();
+                        });
+                      }}
+                      queries={this.state.cachedQueries}
+                      title="Cached queries"
+                      tools={this.state.cachedQueriesModalTools}
+                      emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries{!this.state.useCache && " (caching is disabled)"}.</div>/>
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >

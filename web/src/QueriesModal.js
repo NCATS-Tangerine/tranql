@@ -13,7 +13,15 @@ export default class QueriesModal extends Component {
    * Constructs the component
    *
    * @param {Object} props - The properties of the model
-   * @param {Object[]} props.queries - Array of query objects which must adhere to the structure {`title`: React.Component|string, `query`: string}.
+   * @param {String} props.id - Element id for the modal
+   * @param {Object[]} props.queries - Array of query objects which must adhere to the structure
+   *    {
+   *      `title`: React.Component|string,
+   *      `query`: string,
+   *      `editorTitle`: [React.Component|String|Function=undefined]
+   *    }
+   *    The property editorTitle may be set to change the title shown in the editor from the title shown in the query list.
+   *      It may also be a function which is passed the QueriesModal's current state
    *    NOTE: The query objects may also contain other arbitrary information such as identifiers as long as none are the property `_editedQuery,`
    *          a private property automatically added to the object.
    * @param {Function} props.runButtonCallback - Invoked when the run button is pressed. Passed the arguments code<String> and event<MouseEvent>
@@ -134,6 +142,7 @@ export default class QueriesModal extends Component {
       <Modal show={this.state.show}
              onHide={this.hide}
              dialogClassName="queries-modal-dialog"
+             id={this.props.id}
              className="queries-modal">
         <Modal.Header closeButton>
           <Modal.Title>
@@ -164,8 +173,19 @@ export default class QueriesModal extends Component {
                 <div className="query-title-container">
                   {
                     (() => {
-                      const title = this.currentQuery.title + (this.currentQuery._editedQuery !== this.currentQuery.query ? " (edited)" : "");
-                      return <span className="query-title" title={title}>{title}</span>;
+                      const title = typeof this.currentQuery.editorTitle !== "undefined" ?
+                        typeof this.currentQuery.editorTitle === "function" ?
+                          this.currentQuery.editorTitle() :
+                          this.currentQuery.editorTitle :
+                        this.currentQuery.title;
+                      const editedString = <span>{this.currentQuery._editedQuery !== this.currentQuery.query ? "(edited)" : ""}</span>;
+                      return (
+                        // If title is a string, set the title property on the div as well (can only take text). Otherwise, if desired, it should be set manually.
+                        <div className="query-title" {...(typeof title === "string" ? {title:title+editedString} : {})}>
+                          {title}
+                          {editedString}
+                        </div>
+                      );
                     })()
                   }
                   <div className="query-button-container">
