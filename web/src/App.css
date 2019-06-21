@@ -307,6 +307,9 @@ body {
   color:#0088cc;
   border-bottom:1px dashed #0088cc;
 }
+#cachedQueriesModal .query-title {
+  min-width:0; /* Need it because flex box changes min-width to auto */
+}
 #cachedQueriesModal .query-title > input {
   flex-grow:1;
 }

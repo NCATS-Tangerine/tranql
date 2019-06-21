@@ -22,30 +22,28 @@
 .container {
   height:100%;
 }
+.row {
+  display:block;
+}
 .right-container {
-  flex: 1 1 auto;
   position:relative;
   display:flex;
   flex-direction:column;
+  height:100%;
   /* max-height:100%; */
-  margin-left:16px;
   /* max-width:75%; */
   /* width:100%; */
+  /* flex:0; */
 }
 .query-list {
+  float:left;
+  margin-right:16px;
   overflow-y:auto;
-  /** Can switch to
-   *   max-width: x%;
-   *   flex: 1 0 auto;
-   * And right-container to
-   *   flex-grow: 1;
-   * In order to allow this to grow to fit content up to x% and then stop. Just looks strange because right-container may require more width resulting in query-list shrinking
-   */
   /**
-   * Currently it grows to a maximum of 22.5% but may shrink if the largest title is fairly short.
+   * Grows to a maximum of 22.5% but may shrink if the largest title is fairly short.
    */
-  flex: 0 0 auto;
   max-width:22.5%;
+  max-height:100%;
 }
 /**
 To extend empty last child for entire height
