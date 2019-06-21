@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
+import Dexie from 'dexie';
 import { Button } from 'reactstrap';
 import { Modal, Form, Card, Container, Row, Col } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
@@ -9,8 +10,8 @@ import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosSettings, IoIosPlayCircle } from 'react-icons/io';
-import { FaQuestionCircle, FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
+import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayCircle } from 'react-icons/io';
+import { FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaEye, FaPen, FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer, FaBan, FaArrowsAlt } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import ReactTable from 'react-table';
 import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
@@ -23,7 +24,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
-import ExampleQueriesModal from './ExampleQueriesModal.js';
+import QueriesModal from './QueriesModal.js';
 import Legend from './Legend.js';
 import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
@@ -167,6 +168,7 @@ class App extends Component {
     this._answerViewer = React.createRef ();
     this._messageDialog = React.createRef ();
     this._exampleQueriesModal = React.createRef ();
+    this._cachedQueriesModal = React.createRef ();
 
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
@@ -240,6 +242,7 @@ class App extends Component {
       // Configure the 3d force directed graph visualization.
       visMode : '3D',
       useCache : true,
+      cachedQueries : [],
       colorGraph : true,
       forceGraphOpts : {
         nodeRelSize : 7,
@@ -308,7 +311,8 @@ class App extends Component {
                          className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
         <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
-        <IoIosSettings data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar ionic" onClick={this._handleShowModal} />,
+        <FaDatabase data-tip="Search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
+        <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />,
         // Perfectly functional but does not provide enough functionality as of now to warrant its presence
         /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
                     className="App-control-toolbar fa"
@@ -450,6 +454,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       }
     }
     this._updateCode (this.state.code);
+    this._cache.db.cache.toArray().then((queries) => {
+      queries = queries.map((query,i) => ({
+        title: "Query "+(i+1),
+        query:query.key
+      }));
+      this.setState({ cachedQueries : queries });
+    });
   }
   /**
    * Read an object from the cache.
@@ -2015,14 +2026,25 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderModal () }
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
-        <ExampleQueriesModal ref={this._exampleQueriesModal}
+        <QueriesModal ref={this._exampleQueriesModal}
                              setActiveCallback={(code, e) => {
                                this._exampleQueriesModal.current.hide();
                                this.setState({ code: code }, () => {
                                  this._executeQuery();
                                });
                              }}
-                             examples={this.state.exampleQueries}/>
+                             queries={this.state.exampleQueries}
+                             title="Example queries"/>
+        <QueriesModal ref={this._cachedQueriesModal}
+                             setActiveCallback={(code, e) => {
+                               this._cachedQueriesModal.current.hide();
+                               this.setState({ code: code }, () => {
+                                 this._executeQuery();
+                               });
+                             }}
+                             queries={this.state.cachedQueries}
+                             title="Cached queries"
+                             emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries{!this.state.useCache && " (caching is disabled)"}.</div>/>
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >
@@ -2050,7 +2072,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               Run
             </Button>
             <div id="appControlContainer" style={{display:(this.state.toolbarEnabled ? "none" : "")}}>
-              <IoIosSettings data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
+              <FaCog data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
               <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
             </div>
           </div>
