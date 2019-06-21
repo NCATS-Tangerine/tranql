@@ -207,8 +207,8 @@ class TranQLQuery(StandardAPIResource):
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
         except Exception as e:
             result = self.handle_exception (e)
-        #with open ('query.out', 'w') as stream:
-        #    json.dump (result, stream)
+        with open ('query.out', 'w') as stream:
+            json.dump (result, stream, indent=2)
         return result
 
 class AnnotateGraph(StandardAPIResource):

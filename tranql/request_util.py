@@ -4,6 +4,8 @@ from aiohttp import ClientSession
 from time import time as now
 from tranql.exception import ServiceInvocationError
 
+logger = logging.getLogger (__name__)
+
 async def make_request_async (semaphore, **kwargs):
     response = {}
     unknown_service = False
