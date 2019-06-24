@@ -22,9 +22,6 @@
 .container {
   height:100%;
 }
-.row {
-  display:block;
-}
 .right-container {
   position:relative;
   display:flex;
@@ -105,6 +102,7 @@ To extend empty last child for entire height
 }
 .query-modal-code .CodeMirror {
   /* height:100% !important; */
+  font-size:13px;
   border:1px solid #ddd;
   flex-grow:1;
   /* overflow:hidden; */

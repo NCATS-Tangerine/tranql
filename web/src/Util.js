@@ -116,7 +116,10 @@ export function normalize_rgb_value(color, m) {
 }
 
 export function rgbToHex(r, g, b) {
-    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  r = Math.floor(r);
+  g = Math.floor(g);
+  b = Math.floor(b);
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
 // Method for darkening the shade of a hex string
@@ -175,3 +178,10 @@ export function groupBy( array , f ) {
     return groups[group];
   })
 }
+
+/**
+ * Linear interpolation
+ */
+export function lerp(a, b, u) {
+    return (1 - u) * a + u * b;
+};

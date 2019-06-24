@@ -1,5 +1,6 @@
 import Actor from './Actor.js';
 import { groupBy, changeHue } from './Util.js';
+import uuid from 'uuid/v4';
 
 class RenderInit extends Actor {
   handle (message, context) {
@@ -30,6 +31,31 @@ class RenderInit extends Actor {
 
 
     }
+  }
+}
+class IdFilter extends Actor {
+  /**
+   * Links do not possess unique identifiers and although the force graph seems to generate uuids for them I'm unsure if this they are persistent/safe to use.
+   * Some things may require that both nodes and links can be distinguished from one another, so this filter goes through and generates uuids for each link.
+   *
+   */
+  handle (message, context) {
+    const id = {
+      _ids: [],
+      get() {
+        const id = uuid();
+        if (this._ids.includes(id)) {
+          return this.get();
+        }
+        else {
+          this._ids.push(id);
+          return id;
+        }
+      }
+    };
+    message.graph.links.forEach((link) => {
+      link.id = id.get();
+    });
   }
 }
 class LinkFilter extends Actor {
@@ -346,6 +372,7 @@ class CurvatureAdjuster extends Actor {
 
 export {
   RenderInit,
+  IdFilter,
   LegendFilter,
   LinkFilter,
   NodeFilter,

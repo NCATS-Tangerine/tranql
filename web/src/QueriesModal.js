@@ -154,7 +154,7 @@ export default class QueriesModal extends Component {
           <Container fluid={true} className="container">
             {
             this.currentQuery !== undefined ?
-            <Row style={{flexWrap:"nowrap",height:"100%"}}>
+            <Row style={{display:"block",height:"100%"}}>
               <ListGroup className="query-list">
                 {
                   this.state.queries.map((query, i) => {

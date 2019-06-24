@@ -56,7 +56,7 @@ class TypeButtonGroup extends React.Component {
               actualQuantity: typeData.hasOwnProperty('actualQuantity') ? typeData.actualQuantity : 0,
               color: typeData.color
             };
-            return <TypeButton value={data} active={checked} data={data} key={n} />
+            return <TypeButton onContextMenu={this.props.onContextMenu} value={data} active={checked} data={data} key={n} />
           })
         }
       </ToggleButtonGroup>
@@ -88,6 +88,7 @@ class TypeButton extends Component {
         name={this.props.name}
         type={this.props.type}
         onChange={this.props.onChange}
+        onContextMenu={(e) => typeof this.props.onContextMenu === "function" && this.props.onContextMenu(e, this.props.active,this.props.data.type)}
         checked={this.props.active}
         value={this.props.value}
         size="sm"
@@ -114,6 +115,12 @@ class Legend extends Component {
    * @param {Object[]} props.typeMappings.links - Mappings of `type => number of link of type`
    * @param {int} props.nodeTypeRenderAmount - Amount of node types rendered on the legend
    * @param {int} props.linkTypeRenderAmount - Amount of link types rendered on the legend
+   * @param {Function} props.callback - Invoked when a button is left clicked.
+   * @param {Function} [props.onContextMenu=undefined] - Invoked when a context menu is opened on a button (right click).
+   *    Passes the arguments:
+   *      {MouseEvent} event - The mouse event emited when the contextmenu event is fired (can be prevented),
+   *      {Boolean} active - If the button is active or not.
+   *      {String} type - The type that the button represents.
    *
    */
   constructor(props) {
@@ -238,7 +245,7 @@ class Legend extends Component {
                   }
                 </h6>
                 <ButtonToolbar className="graph-element-content">
-                <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} />
+                <TypeButtonGroup hiddenTypes={this.props.hiddenTypes[elementType]} graphElementType={elementType} callback={this.props.callback} types={types} onContextMenu={this.props.onContextMenu}/>
                 </ButtonToolbar>
                 </div>
               )

@@ -33,13 +33,13 @@ import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
-import { shadeColor, adjustTitle } from './Util.js';
+import { shadeColor, rgbToHex, adjustTitle, lerp } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
+import { RenderInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -111,6 +111,7 @@ class App extends Component {
     this._renderForceGraph3D = this._renderForceGraph3D.bind (this);
     this._renderForceGraphVR = this._renderForceGraphVR.bind (this);
     this._updateGraphElementVisibility = this._updateGraphElementVisibility.bind(this);
+    this._legendButtonRightClick = this._legendButtonRightClick.bind(this);
     this._updateFg = this._updateFg.bind(this);
     this._handleNodeClick = this._handleNodeClick.bind(this);
     this._handleNodeRightClick = this._handleNodeRightClick.bind(this);
@@ -319,7 +320,7 @@ class App extends Component {
                          className="App-control-toolbar ionic"
                          onClick={this._handleShowAnswerViewer} />,
         <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
-        <FaDatabase data-tip="Search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
+        <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
         <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />,
         // Perfectly functional but does not provide enough functionality as of now to warrant its presence
         /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
@@ -444,10 +445,23 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       });
 
     /**
+     * We want to reset the interval if user highlights again. Stores `id`:`interval` Structure was too complicated so it is now separated into two objects.
+     */
+    this._highlightTypeFadeIntervals = {
+      nodes:{},
+      links:{}
+    };
+    this._highlightTypeFadeTimeouts = {
+      nodes:{},
+      links:{}
+    };
+
+    /**
      * Create the rendering pipeline, a chain of responsibility.
      */
     this._renderChain = new Chain ([
       new RenderInit (),
+      new IdFilter (),
       new LinkFilter (),
       new NodeFilter (),
       new SourceDatabaseFilter (),
@@ -458,6 +472,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Create rendering pipeline for schema
     this._schemaRenderChain = new Chain ([
       new RenderInit (),
+      new IdFilter (),
       new NodeFilter (),
       new LegendFilter (),
       new CurvatureAdjuster ()
@@ -625,15 +640,31 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   /**
    * Highlight or unhighlight a given node or link type
    *
-   * @param {string|string[]} - Type/Types which are highlighted or unhighlighted
-   * @param {boolean} highlight - Determines whether the nodes/links of the type will be highlighted or unhighlighted
+   * @param {String|String[]} - Type/Types which are highlighted or unhighlighted
+   * @param {false|String|Number} highlight - Determines the new color.
+   *    If false, it will be the original color.
+   *    Otherwise, it must be a valid first argument for the Three.Color constructor.
+   * @param {Boolean} [outline=true] - If true, the color will be an outline around the node. If false, it will directly modify the color of the node.
+   *    NOTE: Only affects nodes.
+   * @param {Object} [fade] - Determines the properties of the fading.
+   * @param {Number} [fade.duration=250] - If duration is greater than 0, it will take `duration` number of seconds for the old color to fade into the new color.
+   * @param {Number} [fade.offset=0] - Amount of time it takes before the fade begins.
    *
    * @private
+   *
+   * @returns {Promise[]} - (Only when using fade) Returns array of promises that each resolve when their respective graph element's fade timeout finishes. Resolves to another promise which resolves when the fade finishes.
    */
-  _highlightType (type, highlight) {
+  _highlightType (type, highlight, outline, fade) {
+    if (typeof fade === "undefined") fade = {duration:0,offset:0};
     if (!Array.isArray(type)) {
       type = [type];
     }
+
+    if (typeof outline !== "boolean") {
+      outline = true;
+    }
+
+    let promises = [];
 
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
     const vMode = this.state.visMode;
@@ -643,6 +674,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         for (let i=0;i<elements.length;i++) {
           let element = elements[i];
           let types = element.type;
+          let id = element.id;
+
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
             let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
@@ -653,8 +686,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             }
             let color;
             let opacity;
-            if (highlight) {
-              color = new THREE.Color(0xff0000);
+            if (highlight !== false) {
+              color = new THREE.Color(highlight);
               if (vMode !== "2D") {
                 element.prevOpacity = material.opacity;
               }
@@ -671,27 +704,106 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
               else {
                 color = new THREE.Color(parseInt(element.prevColor.slice(1),16));
-                delete element.color;
+                // delete element.color;
               }
             }
-
-            // console.log("Set",types.join(),"to",color.getHexString(),opacity || "undefined");
-            if (vMode === "2D") {
-              element.color = "#" + color.getHexString();
-              // element.__indexColor = color.getHexString();
-
+            if (fade.duration > 0) {
+              let start;
+              if (vMode === "2D") {
+                start = {
+                  r: parseInt(element.color.substr(1, 2), 16) / 255,
+                  g: parseInt(element.color.substr(3, 2), 16) / 255,
+                  b: parseInt(element.color.substr(5, 2), 16) / 255,
+                };
+              }
+              else {
+                start = {
+                  r:material.color.r,
+                  g:material.color.g,
+                  b:material.color.b
+                };
+              }
+              const end = {
+                r:color.r,
+                g:color.g,
+                b:color.b
+              };
+              if (typeof this._highlightTypeFadeIntervals[graphElementType][id] === "undefined") {
+                this._highlightTypeFadeIntervals[graphElementType][id] = {};
+              }
+              if (typeof this._highlightTypeFadeIntervals[graphElementType][id].timeout !== "undefined") {
+                // console.log('clear');
+                clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].timeout);
+                clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].interval);
+                delete this._highlightTypeFadeIntervals[graphElementType][id].timeout;
+                delete this._highlightTypeFadeIntervals[graphElementType][id].interval;
+              }
+              let timeoutPromise = new Promise((resolveTimeout) => {
+                let theTimeout = setTimeout(() => {
+                  if (typeof this._highlightTypeFadeIntervals[graphElementType][id].interval !== "undefined") {
+                    // console.log('clear');
+                    clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].interval);
+                    delete this._highlightTypeFadeIntervals[graphElementType][id].interval;
+                  }
+                  let intervalPromise = new Promise((resolveInterval) => {
+                    const duration = fade.duration;
+                    let interval = 15;
+                    let steps = duration / interval;
+                    let step_u = 1.0 / steps;
+                    let u = 0.0;
+                    // Slightly modified code from https://stackoverflow.com/a/11293378
+                    let theInterval = setInterval(() => {
+                      if (u >= 1.0) {
+                        if (vMode === "2D") {
+                          element.color = rgbToHex(end.r*255,end.g*255,end.b*255);
+                        }
+                        else {
+                          material.color = new THREE.Color(end.r,end.g,end.b);
+                        }
+                        // if (opacity !== undefined) material.opacity = opacity;
+                        clearInterval(theInterval);
+                        resolveInterval();
+                        return;
+                      }
+                      let r = lerp(start.r, end.r, u);
+                      let g = lerp(start.g, end.g, u);
+                      let b = lerp(start.b, end.b, u);
+                      if (vMode === "2D") {
+                        element.color = rgbToHex(r*255,g*255,b*255);
+                      }
+                      else {
+                        material.color = new THREE.Color(r,g,b);
+                        // if (opacity !== undefined) material.opacity = opacity;
+                      }
+                      u += step_u;
+                    }, interval);
+                    this._highlightTypeFadeIntervals[graphElementType][id].interval = theInterval;
+                  });
+                  resolveTimeout(intervalPromise);
+                }, fade.offset);
+                this._highlightTypeFadeIntervals[graphElementType][id].timeout = theTimeout;
+              });
+              promises.push(timeoutPromise);
             }
             else {
-              material.color = color;
-              // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
-              if (opacity !== undefined) material.opacity = opacity;
-              // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
-              break;
+              if (vMode === "2D") {
+                element.color = "#" + color.getHexString();
+              }
+              else {
+                material.color = color;
+                // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
+                // if (opacity !== undefined) material.opacity = opacity;
+                // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
+                break;
+              }
             }
           }
         };
       }
     });
+    if (fade.duration > 0) {
+      return promises;
+    }
   }
   /**
    * Set the state of the connection examiner tool. Resets the selected node when toggled.
@@ -1180,7 +1292,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         this._highlightType(prevNode.type, false);
       }
       if (node !== null) {
-        this._highlightType(node.type, true);
+        this._highlightType(node.type, 0xff0000);
         newType = node.type;
       }
       this.setState({ highlightedType : newType });
@@ -1209,7 +1321,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       // We still want to set newType though
       if (link !== null) {
         if (prevLink === null || JSON.stringify(prevLink.type) !== JSON.stringify(link.type)) {
-          this._highlightType(link.type, true);
+          this._highlightType(link.type, 0xff0000);
         }
         newType = link.type;
       }
@@ -1328,11 +1440,29 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _updateFg () {
   }
   /**
+   * Callback for when a legend button is right clicked
+   *
+   * @param {MouseEvent} e - The mouse event emited when the contextmenu event is fired (can be prevented),
+   * @param {Boolean} active - If the button is active or not.
+   * @param {String} type - The type that the button represents.
+   *
+   * @private
+   */
+  _legendButtonRightClick(e, active, type) {
+    e.preventDefault();
+    Promise.all(this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0})).then((fadePromises) => {
+      Promise.all(fadePromises).then(() => {
+        this._highlightType(type, false, undefined, {duration:500, offset:2000});
+      });
+    });
+  }
+  /**
    * Handle Legend callback on toggling of element type
    *
    * @param {string} graphElementType - Graph element type ("nodes" or "links")
    * @param {string|string[]} type - Type of element (e.g. "gene" or "affects_response_to")
    * @param {boolean} hidden - Determines the new visibility of the elements
+   *
    * @private
    */
   _updateGraphElementVisibility(graphElementType, type, hidden) {
@@ -2065,6 +2195,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   componentWillUnmount() {
     window.removeEventListener('resize', this._updateDimensionsFunc);
+    Object.values(this._highlightTypeFadeIntervals).forEach((val) => {
+      Object.values(val).forEach(interval=>clearInterval(interval))
+    });
+    Object.values(this._highlightTypeFadeTimeouts).forEach((val) => {
+      Object.values(val).forEach(interval=>clearInterval(interval))
+    });
   }
   /**
    * Handle events that can only occur once the component is mounted.
@@ -2176,12 +2312,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   nodeTypeRenderAmount={this.state.queryLegendRenderAmount.nodes}
                   linkTypeRenderAmount={this.state.queryLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
+                  onContextMenu={this._legendButtonRightClick}
                   render={(!this.state.schemaViewerActive || !this.state.schemaViewerEnabled) && this.state.colorGraph}/>
           <Legend typeMappings={this.state.schema.typeMappings}
                   hiddenTypes={this.state.schema.hiddenTypes}
                   nodeTypeRenderAmount={this.state.schemaLegendRenderAmount.nodes}
                   linkTypeRenderAmount={this.state.schemaLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
+                  onContextMenu={this._legendButtonRightClick}
                   render={this.state.schemaViewerActive && this.state.schemaViewerEnabled && this.state.colorGraph}/>
           <div id="graph"></div>
           <div id="viewContainer">
