@@ -7,12 +7,14 @@ from tranql.exception import ServiceInvocationError
 async def make_request_async (semaphore, **kwargs):
     response = {}
     unknown_service = False
+    errors = []
     try:
         async with ClientSession () as session:
             try:
                 async with session.request (**kwargs) as http_response:
                     # print(f"[{kwargs['method'].upper()}] requesting at url: {kwargs['url']}")
                     """ Check status and handle response. """
+                    errors.append (http_response.status)
                     if http_response.status == 200 or http_response.status == 202:
                         response = await http_response.json ()
                         #logger.error (f" response: {json.dumps(response, indent=2)}")
@@ -28,17 +30,20 @@ async def make_request_async (semaphore, **kwargs):
                         # logger.error (f"error {http_response.status} processing request: {message}")
                     # logger.error (http_response.text)
             except TimeoutError as e:
-                logger.error (f"Timeout error requesting content from url: {url}")
+                raise Exception(f"Timeout error requesting content from url: {url}")
     except ServiceInvocationError as e:
-        logger.error (f"Service invocation error from {url}: {e}")
+        errors.append (e)
     except Exception as e:
-        logger.error (f"Unhandled error in make_request_async: {e}")
+        errors.append (e)
         # logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
         #traceback.print_exc ()
         # logger.error (traceback.format_exc ())
     if unknown_service:
-        raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?")
-    return response
+        errors.append (UnknownServiceError (f"Service {url} was not found. Is it misspelled?"))
+    return {
+        "response" : response,
+        "errors" : errors
+    }
 
 """
 Concurrently makes all requests from a given pool of requests
@@ -49,7 +54,7 @@ Args:
     maxRequests (int, optional): Maximum number of requests that may be executing at any given time
 
 Returns:
-    List of returned responses
+    Dict containing `responses` and `errors`
 """
 def async_make_requests (requestPool, maxRequests=3):
 
@@ -73,7 +78,18 @@ def async_make_requests (requestPool, maxRequests=3):
 
     results = loop.run_until_complete(tasks)
 
-    return results
+    responses = []
+    errors = []
+
+    for response in results:
+        errors.extend (response["errors"])
+        if len(response["errors"]) == 0:
+            responses.append (response["response"])
+
+    return {
+        "responses" : responses,
+        "errors" : errors
+    }
 
 if __name__ == "__main__":
     reqs = [

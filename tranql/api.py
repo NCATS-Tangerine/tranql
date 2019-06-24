@@ -218,6 +218,10 @@ class TranQLQuery(StandardAPIResource):
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
+            if len(context.mem.get ('requestErrors', [])) > 0:
+                errors = self.handle_exception(context.mem['requestErrors'], warning=True)
+                for key in errors:
+                    result[key] = errors[key]
         except Exception as e:
             result = self.handle_exception (e)
         #with open ('query.out', 'w') as stream:

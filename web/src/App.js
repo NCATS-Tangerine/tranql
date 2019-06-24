@@ -869,7 +869,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     loading : false,
                     error : result.message
                   });
-                } else {
+                }
+                // If there was no error or if it's just a warning continue on as if nothing happened.
+                // Maybe remove caching on results with warnings?
+                if (!result.message || result.status === "Warning") {
                   /* Convert the knowledge graph to a renderable form. */
                   if (result.answers) {
                     // answers is not kgs 0.9 compliant. ... longer story.
@@ -879,6 +882,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   this._configureMessage (result);
                   this._cacheWrite (result);
                   this._setSchemaViewerActive(false);
+                  this.setState({ loading : false });
                   if (result.knowledge_graph.nodes.length + result.knowledge_graph.edges.length === 0) {
                     this._handleMessageDialog (
                       "Warning",
@@ -922,7 +926,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           this._cache.get ('cache', result,
                            (result) => {
                              this.setState ({
-                               loading : false,
                                record : result
                              })
                            })
@@ -2125,7 +2128,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >
-          <div id="headerContainer">
+          <div id="headerContainer" className="no-select">
             <p style={{display:"inline-block",flex:1}}>TranQL</p>
             <Message show={false} ref={this._messageDialog} />
             <GridLoader
@@ -2217,7 +2220,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       )
                     }
                     <div style={{display:"flex", flexGrow: 1, flexDirection:"column", alignItems:"flex-start"}}>
-                      <div id="schemaBanner" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
+                      <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                         {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
                         {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
                         <div id="schemaViewToggleButtonContainer">

@@ -465,10 +465,12 @@ class SelectStatement(Statement):
 
             # For each question, make a request to the service with the question
             # Only have a maximum of maximumParallelRequests requests executing at any given time
-            logger.setLevel (logging.DEBUG)
+            # logger.setLevel (logging.DEBUG)
             logger.debug (f"Starting queries on service: {service} (asynchronous={interpreter.asynchronous})")
-            logger.setLevel (logging.INFO)
+            # logger.setLevel (logging.INFO)
             prev = time.time ()
+            # We don't want to flood the service so we cap the maximum number of requests we can make to it.
+            maximumQueryRequests = 50
             if interpreter.asynchronous:
                 maximumParallelRequests = 4
                 responses = async_make_requests ([
@@ -478,10 +480,15 @@ class SelectStatement(Statement):
                         "json" : q,
                         "headers" : {
                             "accept": "application/json"
-                        }
+                        },
+                        "timeout" : 22
                     }
-                    for q in questions[:50]
+                    for q in questions[:maximumQueryRequests]
                 ],maximumParallelRequests)
+                errors = responses["errors"]
+                responses = responses["responses"]
+                if len(errors) > 0:
+                    interpreter.context.set('requestErrors', errors)
 
             else:
                 responses = []
@@ -490,7 +497,7 @@ class SelectStatement(Statement):
                     response = self.request (service, q)
                     # TODO - add a parameter to limit service invocations.
                     # Until we parallelize requests, cap the max number we attempt for performance reasons.
-                    if index > 50:
+                    if index >= maximumQueryRequests:
                         break
                     #logger.debug (f"response: {json.dumps(response, indent=2)}")
                     responses.append (response)
@@ -501,9 +508,9 @@ class SelectStatement(Statement):
                     f"query {self.query}. Unable to continue query. Exiting.")
                 #raise ServiceInvocationError (f"No responses received from {service}")
 
-            logger.setLevel (logging.DEBUG)
+            # logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
-            logger.setLevel (logging.INFO)
+            # logger.setLevel (logging.INFO)
 
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)

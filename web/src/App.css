@@ -18,11 +18,6 @@ body {
     display:flex;
     align-items:center;
     padding: 6.5px;
-    user-select:none;
-    -webkit-user-select:none;
-    -moz-user-select:none;
-    -o-user-select:none;
-    -ms-user-select:none;
 }
 #headerContainer > * {
   margin:0 auto;
@@ -382,6 +377,13 @@ body {
 }
 .Resizer.disabled:hover {
   border-color: transparent;
+}
+.no-select {
+  user-select:none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -o-user-select:none;
+  -ms-user-select:none;
 }
 
 @-ms-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
