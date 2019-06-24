@@ -115,7 +115,7 @@ class Schema:
                     elif isinstance(e,requests.exceptions.ConnectionError):
                         error = 'Request could not connect while fetching schema at "'+schema_data+'"'
                     else:
-                        error = 'Request failed whlie fetching schema at "'+schema_data+'"'
+                        error = 'Request failed while fetching schema at "'+schema_data+'"'
                     self.loadErrors.append(error)
                     # Delete the key here because it has no data.
                     del self.config['schema'][schema_name]

@@ -52,21 +52,34 @@ class StandardAPIResource(Resource):
         except jsonschema.exceptions.ValidationError as error:
             logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
-    def handle_exception (self, e):
+    def handle_exception (self, e, warning=False):
         result = {}
-        if isinstance (e, TranQLException):
+        if isinstance (e, list):
+            exceptions = [self.handle_exception(exception) for exception in e]
             result = {
-                "status" : "error",
+                "message" : "\n\n".join([exception["message"] for exception in exceptions]),
+                "details" : "\n\n".join([exception["details"] for exception in exceptions])
+            }
+        elif isinstance (e, TranQLException):
+            result = {
                 "message" : str(e),
                 "details" : e.details if e.details else ''
             }
         elif isinstance (e, Exception):
             traceback.print_exc ()
             result = {
-                "status" : "error",
                 "message" : str(e),
                 "details" : ''
             }
+        elif isinstance (e, str):
+            result = self.handle_exception(Exception(e))
+
+        if warning:
+            result["status"] = "Warning"
+        else:
+            result["status"] = "Error"
+
+
         return result
 
 class WebAppRoot(Resource):
@@ -296,10 +309,14 @@ class SchemaGraph(StandardAPIResource):
         # logger.info(schemaGraph.graph_to_message())
 
         # return {"nodes":[],"links":[]}
-        return {
+        obj = {
             "schema": schemaGraph.graph_to_message(),
-            "errors": schema.loadErrors
         }
+        if len(schema.loadErrors) > 0:
+            errors = self.handle_exception(schema.loadErrors, warning=True)
+            for key in errors:
+                obj[key] = errors[key]
+        return obj
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """

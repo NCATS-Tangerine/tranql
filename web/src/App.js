@@ -863,7 +863,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             .then(
               (result) => {
                 if (result.message) {
-                  this._handleMessageDialog ("Error", result.message, result.details);
+                  this._handleMessageDialog (result.status, result.message, result.details);
                   console.log ("--error: " + result.message);
                   this.setState ({
                     loading : false,
@@ -892,7 +892,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
-                this._handleMessageDialog ("Error", error.message, error.details);
+                this._handleMessageDialog (result.status, error.message, error.details);
                 this.setState ({
                   loading : false,
                   error : error
@@ -902,7 +902,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         }
       }.bind(this),
       function error (result) {
-        this._handleMessageDialog ("Error", result.message, result.details);
+        this._handleMessageDialog (result.status, result.message, result.details);
         //console.log ("-- error", result);
       }.bind(this));
   }
@@ -1006,61 +1006,56 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              .then(
                (result) => {
                  if (result.message) {
-                   this._handleMessageDialog ("Error", result.message, result.details);
+                   this._handleMessageDialog (result.status, result.message, result.details);
                    console.log ("--error: " + result.message);
-                 } else {
-                   if (result.answers) {
-                     delete result.answers;
-                   }
-
-                   result.schema.knowledge_graph = {
-                     nodes: result.schema.knowledge_graph.nodes.map((node) => {
-                       return {
-                         id: node,
-                         type: node,
-                         name: node
-                       }
-                     }),
-                     edges: result.schema.knowledge_graph.edges.reduce((acc, edge) => {
-                       // TODO fix? Can't draw edges from a node to itself
-                       if (edge[0] !== edge[1]) {
-                         acc.push({
-                           source_id: edge[0],
-                           target_id: edge[1],
-                           type: edge[2],
-                           weight: 1
-                         });
-                       }
-                       return acc;
-                     }, [])
-                  };
-
-                   console.log("Fetched schema:", result);
-
-                   if (result.errors.length > 0) {
-                     this._handleMessageDialog ("Schema Load Error", result.errors.join("\n\n"), "");
-                   }
-
-                   this._schemaRenderChain.handle (result.schema, this.state);
-                   result.schema.graph.links.forEach((link) => {
-                     // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
-                     delete link.linkOpacity;
-                   });
-
-                   this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
-                   this.state.schemaViewerActive && this._setSchemaViewerActive(true);
-
-                   this._cache.write ('schema', {
-                     'id' : 0,
-                     'data' : result.schema
-                   });
                  }
+                 if (result.answers) {
+                   delete result.answers;
+                 }
+
+                 result.schema.knowledge_graph = {
+                   nodes: result.schema.knowledge_graph.nodes.map((node) => {
+                     return {
+                       id: node,
+                       type: node,
+                       name: node
+                     }
+                   }),
+                   edges: result.schema.knowledge_graph.edges.reduce((acc, edge) => {
+                     // TODO fix? Can't draw edges from a node to itself
+                     if (edge[0] !== edge[1]) {
+                       acc.push({
+                         source_id: edge[0],
+                         target_id: edge[1],
+                         type: edge[2],
+                         weight: 1
+                       });
+                     }
+                     return acc;
+                   }, [])
+                };
+
+                 console.log("Fetched schema:", result);
+
+                 this._schemaRenderChain.handle (result.schema, this.state);
+                 result.schema.graph.links.forEach((link) => {
+                   // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
+                   delete link.linkOpacity;
+                 });
+
+                 this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
+                 this.state.schemaViewerActive && this._setSchemaViewerActive(true);
+
+                 this._cache.write ('schema', {
+                   'id' : 0,
+                   'data' : result.schema
+                 });
                }
              );
            }
          }.bind(this),
          function error (result) {
-           this._handleMessageDialog ("Error", result.message, result.details);
+           this._handleMessageDialog (result.status, result.message, result.details);
          }.bind(this));
      });
    }
@@ -1694,7 +1689,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       .then(
         (result) => {
           if (result.message) {
-            this._handleMessageDialog ("Error", result.message, result.details);
+            this._handleMessageDialog (result.status, result.message, result.details);
             console.log ("--error: " + result.message);
             this.setState ({
               loading : false,

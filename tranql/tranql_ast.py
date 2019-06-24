@@ -725,7 +725,7 @@ class Query:
             self.order.append (name)
             """ Verify the type name is in the model we have. """
             if self.concept_model.get (type_name) == None or type_name not in self.concept_model:
-                raise Exception(f"Concept {type_name} is not in the concept model.")
+                raise Exception(f'Concept "{type_name}" is not in the concept model.')
 
             self.concepts[name] = Concept (name=name, type_name=type_name)
     def __getitem__(self, key):
