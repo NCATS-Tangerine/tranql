@@ -52,6 +52,17 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
       delete this._highlightTypeFadeIntervals[id].timeout;
       delete this._highlightTypeFadeIntervals[id].interval;
     }
+    for (let i=0;i<elements.length;i++) {
+      let element = elements[i];
+      let graphElementType = element.graphElementType;
+      element = element.element;
+      if (highlight !== false) {
+        if (vMode === "2D") {
+          element.prevColor = element.color;
+        }
+      }
+    }
+    // Previous block is to set prevColor so that it functions correctly with 2D
     let timeoutPromise = new Promise((resolveTimeout) => {
       let theTimeout = setTimeout(() => {
         if (typeof this._highlightTypeFadeIntervals[id].interval !== "undefined") {
