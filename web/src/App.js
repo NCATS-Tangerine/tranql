@@ -5,7 +5,6 @@ import Dexie from 'dexie';
 import { Button } from 'reactstrap';
 import { Modal, Form, Card, Container, Row, Col } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
-import * as THREE from 'three';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
@@ -33,7 +32,8 @@ import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
-import { shadeColor, rgbToHex, adjustTitle, lerp } from './Util.js';
+import highlightTypes from './highlightTypes.js';
+import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import Message from './Message.js';
@@ -102,6 +102,7 @@ class App extends Component {
 
     this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
     this._highlightType = this._highlightType.bind(this);
+    this.__highlightTypes = highlightTypes.bind(this);
 
     this._setConnectionExaminerActive = this._setConnectionExaminerActive.bind(this);
 
@@ -448,12 +449,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
      * We want to reset the interval if user highlights again. Stores `id`:`interval` Structure was too complicated so it is now separated into two objects.
      */
     this._highlightTypeFadeIntervals = {
-      nodes:{},
-      links:{}
     };
     this._highlightTypeFadeTimeouts = {
-      nodes:{},
-      links:{}
     };
 
     /**
@@ -652,10 +649,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    *
    * @private
    *
-   * @returns {Promise[]} - (Only when using fade) Returns array of promises that each resolve when their respective graph element's fade timeout finishes. Resolves to another promise which resolves when the fade finishes.
+   * @returns {Promise} - (Only when using fade) Returns promise that resolves when the fade completes.
    */
   _highlightType (type, highlight, outline, fade) {
-    if (typeof fade === "undefined") fade = {duration:0,offset:0};
+    if (typeof fade === "undefined") fade = {duration:250,offset:0};
     if (!Array.isArray(type)) {
       type = [type];
     }
@@ -664,10 +661,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       outline = true;
     }
 
-    let promises = [];
+    let highlightElements = [];
 
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-    const vMode = this.state.visMode;
     type.forEach(highlightType => {
       for (let graphElementType of ["nodes","links"]) {
         let elements = graph[graphElementType];
@@ -678,132 +674,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
-            let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
-            let material;
-            if (vMode !== "2D") {
-              if (obj === undefined) return;
-              material = obj.material; // : THREE.MeshLambertMaterial
-            }
-            let color;
-            let opacity;
-            if (highlight !== false) {
-              color = new THREE.Color(highlight);
-              if (vMode !== "2D") {
-                element.prevOpacity = material.opacity;
-              }
-              else {
-                element.prevColor = element.color;
-              }
-              opacity = 1;
-            }
-            else {
-              if (vMode !== "2D") {
-                color = new THREE.Color(parseInt(element.color.slice(1),16));
-                opacity = element.prevOpacity;
-                delete element.prevOpacity;
-              }
-              else {
-                color = new THREE.Color(parseInt(element.prevColor.slice(1),16));
-                // delete element.color;
-              }
-            }
-            if (fade.duration > 0) {
-              let start;
-              if (vMode === "2D") {
-                start = {
-                  r: parseInt(element.color.substr(1, 2), 16) / 255,
-                  g: parseInt(element.color.substr(3, 2), 16) / 255,
-                  b: parseInt(element.color.substr(5, 2), 16) / 255,
-                };
-              }
-              else {
-                start = {
-                  r:material.color.r,
-                  g:material.color.g,
-                  b:material.color.b
-                };
-              }
-              const end = {
-                r:color.r,
-                g:color.g,
-                b:color.b
-              };
-              if (typeof this._highlightTypeFadeIntervals[graphElementType][id] === "undefined") {
-                this._highlightTypeFadeIntervals[graphElementType][id] = {};
-              }
-              if (typeof this._highlightTypeFadeIntervals[graphElementType][id].timeout !== "undefined") {
-                // console.log('clear');
-                clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].timeout);
-                clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].interval);
-                delete this._highlightTypeFadeIntervals[graphElementType][id].timeout;
-                delete this._highlightTypeFadeIntervals[graphElementType][id].interval;
-              }
-              let timeoutPromise = new Promise((resolveTimeout) => {
-                let theTimeout = setTimeout(() => {
-                  if (typeof this._highlightTypeFadeIntervals[graphElementType][id].interval !== "undefined") {
-                    // console.log('clear');
-                    clearInterval(this._highlightTypeFadeIntervals[graphElementType][id].interval);
-                    delete this._highlightTypeFadeIntervals[graphElementType][id].interval;
-                  }
-                  let intervalPromise = new Promise((resolveInterval) => {
-                    const duration = fade.duration;
-                    let interval = 15;
-                    let steps = duration / interval;
-                    let step_u = 1.0 / steps;
-                    let u = 0.0;
-                    // Slightly modified code from https://stackoverflow.com/a/11293378
-                    let theInterval = setInterval(() => {
-                      if (u >= 1.0) {
-                        if (vMode === "2D") {
-                          element.color = rgbToHex(end.r*255,end.g*255,end.b*255);
-                        }
-                        else {
-                          material.color = new THREE.Color(end.r,end.g,end.b);
-                        }
-                        // if (opacity !== undefined) material.opacity = opacity;
-                        clearInterval(theInterval);
-                        resolveInterval();
-                        return;
-                      }
-                      let r = lerp(start.r, end.r, u);
-                      let g = lerp(start.g, end.g, u);
-                      let b = lerp(start.b, end.b, u);
-                      if (vMode === "2D") {
-                        element.color = rgbToHex(r*255,g*255,b*255);
-                      }
-                      else {
-                        material.color = new THREE.Color(r,g,b);
-                        // if (opacity !== undefined) material.opacity = opacity;
-                      }
-                      u += step_u;
-                    }, interval);
-                    this._highlightTypeFadeIntervals[graphElementType][id].interval = theInterval;
-                  });
-                  resolveTimeout(intervalPromise);
-                }, fade.offset);
-                this._highlightTypeFadeIntervals[graphElementType][id].timeout = theTimeout;
-              });
-              promises.push(timeoutPromise);
-            }
-            else {
-              if (vMode === "2D") {
-                element.color = "#" + color.getHexString();
-              }
-              else {
-                material.color = color;
-                // Opacity will sometimes be undefined (happens when right click) because it is reloading the force graph.
-                // if (opacity !== undefined) material.opacity = opacity;
-                // Stores reference to material that is reused on every object - setting this thousands of times is a serious performance tank because it seems like it rerenders the mesh everytime
-                break;
-              }
-            }
+            highlightElements.push({
+              graphElementType: graphElementType,
+              element: element
+            });
           }
         };
       }
     });
-    if (fade.duration > 0) {
-      return promises;
-    }
+
+    return this.__highlightTypes(highlightElements, type, highlight, outline, fade);
   }
   /**
    * Set the state of the connection examiner tool. Resets the selected node when toggled.
@@ -1450,10 +1330,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _legendButtonRightClick(e, active, type) {
     e.preventDefault();
-    Promise.all(this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0})).then((fadePromises) => {
-      Promise.all(fadePromises).then(() => {
-        this._highlightType(type, false, undefined, {duration:500, offset:2000});
-      });
+    this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0}).then(() => {
+      this._highlightType(type, false, undefined, {duration:500, offset:2000});
     });
   }
   /**
@@ -2195,12 +2073,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   componentWillUnmount() {
     window.removeEventListener('resize', this._updateDimensionsFunc);
-    Object.values(this._highlightTypeFadeIntervals).forEach((val) => {
-      Object.values(val).forEach(interval=>clearInterval(interval))
-    });
-    Object.values(this._highlightTypeFadeTimeouts).forEach((val) => {
-      Object.values(val).forEach(interval=>clearInterval(interval))
-    });
+    Object.values(this._highlightTypeFadeIntervals).forEach((interval)=>clearInterval(interval));
+    Object.values(this._highlightTypeFadeTimeouts).forEach((timeout)=>clearTimeout(timeout));
+
   }
   /**
    * Handle events that can only occur once the component is mounted.
