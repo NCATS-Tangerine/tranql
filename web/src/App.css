@@ -17,7 +17,7 @@ body {
     width:100%;
     display:flex;
     align-items:center;
-    padding: 0 5px 0 5px;
+    padding: 6.5px;
     user-select:none;
     -webkit-user-select:none;
     -moz-user-select:none;
@@ -25,7 +25,9 @@ body {
     -ms-user-select:none;
 }
 #headerContainer > * {
-  margin:5px;
+  margin:0 auto;
+}
+#headerContainer > p {
 }
 #splitpane {
     position: relative;
@@ -165,7 +167,7 @@ body {
      align-items: center; /* center; */
      justify-content: left; /*center;*/
      color: white;
-     font-size: calc(9px + 2vmin);
+     font-size: 28px;
      font-style: italic;
      font-weight : bold;
  }
