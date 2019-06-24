@@ -18,6 +18,11 @@ body {
     display:flex;
     align-items:center;
     padding: 0 5px 0 5px;
+    user-select:none;
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -o-user-select:none;
+    -ms-user-select:none;
 }
 #headerContainer > * {
   margin:5px;
@@ -155,7 +160,7 @@ body {
 
 .App-header {
     background-color: #282c34;
-     min-height: 8vh;
+     /* min-height: 8vh; */
      display: flex;
      align-items: center; /* center; */
      justify-content: left; /*center;*/
