@@ -695,6 +695,7 @@ class Query:
         self.arrows = []
         self.concepts = {}
         self.disable = False
+        self.errors = [];
 
     def add(self, key):
         """ Add a token in the question graph to this query object. """
@@ -723,8 +724,9 @@ class Query:
                 name, type_name = key.split (':')
             self.order.append (name)
             """ Verify the type name is in the model we have. """
-            assert self.concept_model.get (type_name) != None
-            assert type_name in self.concept_model, f"Error: Concept {type_name} is not in the concept model."
+            if self.concept_model.get (type_name) == None or type_name not in self.concept_model:
+                raise Exception(f"Concept {type_name} is not in the concept model.")
+
             self.concepts[name] = Concept (name=name, type_name=type_name)
     def __getitem__(self, key):
         return self.concepts [key]

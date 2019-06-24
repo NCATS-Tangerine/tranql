@@ -641,7 +641,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @param {false|String|Number} highlight - Determines the new color.
    *    If false, it will be the original color.
    *    Otherwise, it must be a valid first argument for the Three.Color constructor.
-   * @param {Boolean} [outline=true] - If true, the color will be an outline around the node. If false, it will directly modify the color of the node.
+   * @param {Boolean} [outline=true] - (NOT IMPLEMENTED) If true, the color will be an outline around the node. If false, it will directly modify the color of the node.
    *    NOTE: Only affects nodes.
    * @param {Object} [fade] - Determines the properties of the fading.
    * @param {Number} [fade.duration=250] - If duration is greater than 0, it will take `duration` number of seconds for the old color to fade into the new color.

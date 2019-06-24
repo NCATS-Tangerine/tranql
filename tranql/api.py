@@ -61,7 +61,7 @@ class StandardAPIResource(Resource):
                 "details" : e.details if e.details else ''
             }
         elif isinstance (e, Exception):
-            traceback.print_exc (e)
+            traceback.print_exc ()
             result = {
                 "status" : "error",
                 "message" : str(e),
