@@ -39,7 +39,7 @@ import LinkExaminer from './LinkExaminer.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
-import { RenderInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
+import { RenderInit, RenderSchemaInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -472,6 +472,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     // Create rendering pipeline for schema
     this._schemaRenderChain = new Chain ([
+      new RenderSchemaInit (),
       new RenderInit (),
       new IdFilter (),
       new NodeFilter (),
@@ -924,9 +925,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   }
   _cacheWrite (message) {
     //this._cache.write (this.state.code, result);
+    // Clone message without bloat for storing inside the cache
+    let {graph, hiddenTypes, ...cacheMessage} = message;
     var obj = {
       'key' : this.state.code,
-      'data' : message
+      'data' : cacheMessage
     };
     if (this.state.record) {
       obj.id = this.state.record.id;
@@ -1011,7 +1014,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
            if (result !== undefined) {
              console.log("Got schema from cache");
              let msg = result.data;
-             // this._schemaRenderChain.handle (msg, this.state);
+             this._schemaRenderChain.handle (msg, this.state);
              this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
@@ -1029,28 +1032,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                    delete result.answers;
                  }
 
-                 result.schema.knowledge_graph = {
-                   nodes: result.schema.knowledge_graph.nodes.map((node) => {
-                     return {
-                       id: node,
-                       type: node,
-                       name: node
-                     }
-                   }),
-                   edges: result.schema.knowledge_graph.edges.reduce((acc, edge) => {
-                     // TODO fix? Can't draw edges from a node to itself
-                     if (edge[0] !== edge[1]) {
-                       acc.push({
-                         source_id: edge[0],
-                         target_id: edge[1],
-                         type: edge[2],
-                         weight: 1
-                       });
-                     }
-                     return acc;
-                   }, [])
-                };
-
                  console.log("Fetched schema:", result);
 
                  this._schemaRenderChain.handle (result.schema, this.state);
@@ -1062,9 +1043,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
                  this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
+                 let { graph, hiddenTypes, ...schemaCachedMessage } = result.schema;
+
                  this._cache.write ('schema', {
                    'id' : 0,
-                   'data' : result.schema
+                   'data' : schemaCachedMessage
                  });
                }
              );

@@ -33,6 +33,43 @@ class RenderInit extends Actor {
     }
   }
 }
+
+class RenderSchemaInit extends Actor {
+  handle(message, context) {
+    message.knowledge_graph = {
+      nodes: message.knowledge_graph.nodes.map((node) => {
+        if (typeof node === "string") {
+          return {
+            id: node,
+            type: node,
+            name: node
+          };
+        }
+        else {
+          return node;
+        }
+      }),
+      edges: message.knowledge_graph.edges.reduce((acc, edge) => {
+        // TODO fix? Can't draw edges from a node to itself
+        if (Array.isArray(edge)) {
+          if (edge[0] !== edge[1]) {
+            acc.push({
+              source_id: edge[0],
+              target_id: edge[1],
+              type: edge[2],
+              weight: 1
+            });
+          }
+        }
+        else {
+          acc.push(edge);
+        }
+        return acc;
+      }, [])
+   };
+  }
+}
+
 class IdFilter extends Actor {
   /**
    * Links do not possess unique identifiers and although the force graph seems to generate uuids for them I'm unsure if this they are persistent/safe to use.
@@ -377,6 +414,7 @@ class CurvatureAdjuster extends Actor {
 
 export {
   RenderInit,
+  RenderSchemaInit,
   IdFilter,
   LegendFilter,
   LinkFilter,
