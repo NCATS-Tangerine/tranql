@@ -836,8 +836,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       function success (result) {
         if (result.length > 0) {
           // Translate the knowledge graph given current settings.
-          this._translateGraph (result[0].data)
           this._configureMessage (result[0].data)
+          this._translateGraph (result[0].data)
           if (result[0].data.knowledge_graph.nodes.length + result[0].data.knowledge_graph.edges.length === 0) {
             this._handleMessageDialog (
               "Warning",
@@ -878,18 +878,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     // answers is not kgs 0.9 compliant. ... longer story.
                     delete result.answers;
                   }
-                  this._translateGraph (result);
-                  this._configureMessage (result);
-                  this._cacheWrite (result);
-                  this._setSchemaViewerActive(false);
-                  this.setState({ loading : false });
-                  if (result.knowledge_graph.nodes.length + result.knowledge_graph.edges.length === 0) {
+                  if ((result.knowledge_graph.nodes === undefined || result.knowledge_graph.edges === undefined) || (result.knowledge_graph.nodes.length + result.knowledge_graph.edges.length === 0)) {
                     this._handleMessageDialog (
                       "Warning",
                       "The query returned no results.",
                       <div style={{whiteSpace:'pre-wrap'}}>Message object: <br/>{JSON.stringify(result,undefined,4)}</div>
                     );
                   }
+                  else {
+                    this._configureMessage (result);
+                    this._translateGraph (result);
+                    this._cacheWrite (result);
+                  }
+                  this._setSchemaViewerActive(false);
+                  this.setState({ loading : false });
                 }
               },
               // Note: it's important to handle errors here
@@ -958,8 +960,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     return [dataSources,nodeDegrees];
   }
   _configureMessage (message) {
-    console.log(message);
-    if (message && message.knowledge_graph) {
+    if (message) {
       // Configure node degree range.
       let [dataSources, nodeDegrees] = this._configureMessageLogic(message);
       this.setState({
@@ -1223,8 +1224,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         this.state.selectedLink !== null &&
 //        this.state.selectedLink.source !== link.source_id &&
 //        this.state.selectedLink.target !== link.target_id &&
-        this.state.selectMode &&
-        !this.state.selectMode)
+        this.state.selectMode)
     {
       // Select the node.
       this.setState ((prevState, props) => ({
@@ -1342,10 +1342,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _updateGraphElementVisibility(graphElementType, type, hidden) {
-    let graph = JSON.parse(JSON.stringify(this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph, function(key, value) {
-      // All connections is a self referencing array, so we must remove it in order to successfully serialize the graph
-      return key !== "allConnections" ? value : undefined;
-    }));
+    let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
     if (!Array.isArray(type)) type = [type];
 
     if (hidden) {

@@ -16,7 +16,7 @@ class RenderInit extends Actor {
             origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
-          var weight = Math.round (edge.weight * 100) / 100;
+          var weight = edge.weight === undefined ? null : Math.round (edge.weight * 100) / 100;
           var opacity = (100 - (100 * weight) ) / 100;
           return {
             source: edge.source_id,
@@ -67,7 +67,7 @@ class LinkFilter extends Actor {
     var max = context.linkWeightRange[1] / 100;
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
-        if (link.weight >= min && link.weight <= max) {
+        if (link.weight === null || link.weight >= min && link.weight <= max) {
           result.push (link);
           if (! node_ref.includes (link.source)) {
             node_ref.push (link.source);
@@ -84,7 +84,7 @@ class LinkFilter extends Actor {
         }
         return result;
       }, [])
-    }
+    };
   }
 }
 class NodeFilter extends Actor {
@@ -133,16 +133,21 @@ class SourceDatabaseFilter extends Actor {
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
         var source_db = link.origin.source_database;
-        if (typeof source_db === "string") {
-          source_db = [ source_db ];
-          link.origin.source_database = source_db;
+        if (typeof source_db === "undefined") {
+          keep_it = true
         }
-        var keep_it = true;
-        for (var c = 0; c < dataSources.length; c++) {
-          if (source_db.includes (dataSources[c].label)) {
-            if (! dataSources[c].checked) {
-              keep_it = false;
-              break;
+        else {
+          if (typeof source_db === "string") {
+            source_db = [ source_db ];
+            link.origin.source_database = source_db;
+          }
+          var keep_it = true;
+          for (var c = 0; c < dataSources.length; c++) {
+            if (source_db.includes (dataSources[c].label)) {
+              if (! dataSources[c].checked) {
+                keep_it = false;
+                break;
+              }
             }
           }
         }

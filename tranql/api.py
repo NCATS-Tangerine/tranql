@@ -55,10 +55,9 @@ class StandardAPIResource(Resource):
     def handle_exception (self, e, warning=False):
         result = {}
         if isinstance (e, list):
-            exceptions = [self.handle_exception(exception) for exception in e]
             result = {
-                "message" : "\n\n".join([exception["message"] for exception in exceptions]),
-                "details" : "\n\n".join([exception["details"] for exception in exceptions])
+                "message" : "\n\n".join([str(exception) for exception in e]),
+                "details" : "\n\n".join([(str(exception.details) if hasattr(exception,'details') else '') for exception in e])
             }
         elif isinstance (e, TranQLException):
             result = {

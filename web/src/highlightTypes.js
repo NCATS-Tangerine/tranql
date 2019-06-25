@@ -7,6 +7,9 @@ import { lerp, rgbToHex } from './Util.js';
 export default function highlightTypes(elements, type, highlight, outline, fade) {
   const vMode = this.state.visMode;
   if (fade.duration > 0) {
+    if (elements.length === 0) {
+      return Promise.resolve(undefined);
+    }
     let start;
     if (vMode === "2D") {
       start = {

@@ -22,6 +22,10 @@ body {
 #headerContainer > * {
   margin:0 auto;
 }
+/* Add additional 5 pixels of margin to the loading icon when it is visible */
+#headerContainer > p ~ div {
+  margin-right: 5px;
+}
 #headerContainer > p {
 }
 #splitpane {

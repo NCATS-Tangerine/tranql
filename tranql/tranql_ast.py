@@ -465,9 +465,9 @@ class SelectStatement(Statement):
 
             # For each question, make a request to the service with the question
             # Only have a maximum of maximumParallelRequests requests executing at any given time
-            # logger.setLevel (logging.DEBUG)
+            logger.setLevel (logging.DEBUG)
             logger.debug (f"Starting queries on service: {service} (asynchronous={interpreter.asynchronous})")
-            # logger.setLevel (logging.INFO)
+            logger.setLevel (logging.INFO)
             prev = time.time ()
             # We don't want to flood the service so we cap the maximum number of requests we can make to it.
             maximumQueryRequests = 50
@@ -480,15 +480,13 @@ class SelectStatement(Statement):
                         "json" : q,
                         "headers" : {
                             "accept": "application/json"
-                        },
-                        "timeout" : 22
+                        }
                     }
                     for q in questions[:maximumQueryRequests]
                 ],maximumParallelRequests)
                 errors = responses["errors"]
                 responses = responses["responses"]
-                if len(errors) > 0:
-                    interpreter.context.set('requestErrors', errors)
+                interpreter.context.set('requestErrors', errors)
 
             else:
                 responses = []
@@ -508,9 +506,9 @@ class SelectStatement(Statement):
                     f"query {self.query}. Unable to continue query. Exiting.")
                 #raise ServiceInvocationError (f"No responses received from {service}")
 
-            # logger.setLevel (logging.DEBUG)
+            logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
-            # logger.setLevel (logging.INFO)
+            logger.setLevel (logging.INFO)
 
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)
