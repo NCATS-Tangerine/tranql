@@ -162,6 +162,7 @@ class App extends Component {
     this._cacheWrite = this._cacheWrite.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
     this._clearCache = this._clearCache.bind (this);
+    this._updateCacheViewer = this._updateCacheViewer.bind (this);
 
     // Component rendering.
     this.render = this.render.bind(this);
@@ -353,6 +354,9 @@ class App extends Component {
                            // The `id` property is the cache's id of the query.
                            this.state.cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
                            this.setState({ cachedQueries : this.state.cachedQueries });
+                           // Don't let the query go below 0
+                           let newCurrentQueryIndex = Math.max(0, this._cachedQueriesModal.current.state.currentQueryIndex - 1);
+                           this._cachedQueriesModal.current.setState({ currentQueryIndex : newCurrentQueryIndex });
                            this._cache.db.cache.delete(currentQuery.id);
                          }
                        },
@@ -502,6 +506,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
     this._updateCode (this.state.code);
 
+    this._updateCacheViewer ();
+  }
+  /**
+   * Updates the queries contained within the cache viewer modal.
+   *
+   */
+  _updateCacheViewer () {
     const updateQueryTitle = (query, queryTitle) => {
       query.data.title = queryTitle;
       this._cache.db.cache.update(query.id,query);
@@ -929,8 +940,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            (result) => {
                              this.setState ({
                                record : result
-                             })
-                           })
+                             });
+                             this._updateCacheViewer ();
+                           });
         }).catch ((error) => {
           this.setState ({
             error
