@@ -209,8 +209,8 @@ class TranQLQuery(StandardAPIResource):
         """
         #self.validate (request)
         result = {}
+        tranql = TranQL ()
         try:
-            tranql = TranQL ()
             logging.debug (request.json)
             query = request.json['query'] if 'query' in request.json else ''
             logging.debug (f"--> query: {query}")
@@ -222,7 +222,8 @@ class TranQLQuery(StandardAPIResource):
                 for key in errors:
                     result[key] = errors[key]
         except Exception as e:
-            result = self.handle_exception (e)
+            errors = [e, *tranql.context.mem.get ('requestErrors', [])]
+            result = self.handle_exception (errors)
         with open ('query.out', 'w') as stream:
             json.dump (result, stream, indent=2)
         return result

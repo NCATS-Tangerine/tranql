@@ -313,6 +313,9 @@ class IndigoQuery(StandardAPIResource):
         self.query_url = f'{self.indigo_url}/reasoner/api/v1/query'
     def post(self):
         """
+        Visualize
+        ---
+        tag: validation
         description: Query Indigo, given a question graph.
         requestBody:
             description: Input message
@@ -347,12 +350,24 @@ class IndigoQuery(StandardAPIResource):
             edge['edge_id'] = edge['id']
             del edge['id']
 
-        json = {
+        data = {
             "query_message": {
                 "query_graph": question_graph
             }
         }
+        print("input",json.dumps(data,indent=2))
+        response = requests.post(self.query_url, json=data)
 
+        if response.status_code >= 300:
+            result = {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad Indigo query response. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} response: \n{response.text}."
+            }
+        else:
+            result = self.normalize_message (response.json ())
+        print("result",json.dumps(result,indent=2))
+        return result
 
 #######################################################
 ##

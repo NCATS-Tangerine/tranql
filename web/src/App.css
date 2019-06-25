@@ -216,6 +216,10 @@ body {
     max-height: 90%;
     height: 90%;
 }
+.messageDialog react-tabs__tab-panel {
+  /* Retain the formatting from the message */
+  white-space:pre-wrap;
+}
 .help-modal {
   /* height:60%; */
 }
