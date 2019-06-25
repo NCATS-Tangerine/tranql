@@ -504,7 +504,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         console.log (" set " + this.state[key]);
       }
     }
-    this._updateCode (this.state.code);
 
     this._updateCacheViewer ();
   }
@@ -941,6 +940,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                              this.setState ({
                                record : result
                              });
+                             localStorage.setItem ('code', obj.key);
                              this._updateCacheViewer ();
                            });
         }).catch ((error) => {
