@@ -1649,6 +1649,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Either ...legendRenderAmount.nodes or ...legendRenderAmount.links = value
     renderAmountObj[type] = value;
     value !== "" && this.setState({ prop : renderAmountObj });
+    localStorage.setItem(prop, JSON.stringify(renderAmountObj));
   }
   /**
    * Send graph message to backplane which annotates it and relays it back
