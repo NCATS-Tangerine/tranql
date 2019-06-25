@@ -52,7 +52,7 @@ body {
 #viewContainer > .SplitPane {
     flex:1 !important;
 }
-#graphOverlayContainer {
+#bottomContainer {
   position: absolute;
   z-index: 1;
   width: 100%;
@@ -62,12 +62,19 @@ body {
   align-items:flex-start;
   pointer-events:none; /* So that the transparent container does not consume all the pointer events meant for the force graph */
 }
-#graphOverlayContainer > * {
+#bottomContainer > * {
   pointer-events:initial; /* So that the container's children can still receive pointer events */
 }
 #toolbar {
   background-color:rgba(30,30,30, 1);
   border-bottom-width:5px;
+}
+#graphOverlayContainer {
+  display:flex;
+  flex-grow: 1;
+  flex-direction:column;
+  align-items:flex-start;
+  pointer-events:none;
 }
 #schemaBanner {
     /* background-color: rgb(30, 30, 30); */
@@ -83,6 +90,7 @@ body {
     color: rgb(235, 235, 235);
     display:flex;
     align-items: center;
+    pointer-events:none;
 }
 .LinkExaminer {
   margin-left: 10px;
@@ -103,6 +111,7 @@ body {
   float: right;
   background-color: black;
   color: #007bff;
+  pointer-events:initial;
 }
 #info {
     /* position: absolute; */

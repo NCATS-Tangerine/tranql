@@ -2210,7 +2210,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                          onDragFinished={(width) => this._updateGraphSplitPaneResize()}
               >
                 <div>
-                  <div id="graphOverlayContainer">
+                  <div id="bottomContainer">
                     {
                       this.state.toolbarEnabled && (
                         <Toolbar id="toolbar"
@@ -2221,7 +2221,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                  ref={this._toolbar}/>
                       )
                     }
-                    <div style={{display:"flex", flexGrow: 1, flexDirection:"column", alignItems:"flex-start"}}>
+                    <div id="graphOverlayContainer">
                       <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                         {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
                         {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
