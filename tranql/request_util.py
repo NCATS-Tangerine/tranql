@@ -8,6 +8,8 @@ from tranql.exception import ServiceInvocationError, RequestTimeoutError
 
 logger = logging.getLogger (__name__)
 
+logger = logging.getLogger (__name__)
+
 async def make_request_async (semaphore, **kwargs):
     response = {}
     errors = []
