@@ -2087,6 +2087,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._getSchema ();
 
     this._updateGraphSize(document.body.offsetWidth);
+
+    this.setState({}, () => {
+      if (this.fg) {
+        if (this.state.visMode === "2D") {
+          // Loads too zoomed in. For some reason, if you set the first argument to `1`, it does nothing.
+          this.fg.zoom(.99);
+        }
+      }
+    });
   }
 
   render() {
