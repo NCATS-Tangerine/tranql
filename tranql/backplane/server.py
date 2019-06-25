@@ -306,6 +306,54 @@ class PublishToNDEx(StandardAPIResource):
                     "edges" : request.json['knowledge_graph']['edges']
                 })
 
+class IndigoQuery(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.indigo_url = 'https://indigo.ncats.io'
+        self.query_url = f'{self.indigo_url}/reasoner/api/v1/query'
+    def post(self):
+        """
+        description: Query Indigo, given a question graph.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Sucessfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        self.validate (request)
+
+        question_graph = request.json['question_graph']
+
+        for node in question_graph.get('nodes',[]):
+            node['node_id'] = node['id']
+            del node['id']
+        for edge in question_graph.get('edges',[]):
+            edge['edge_id'] = edge['id']
+            del edge['id']
+
+        json = {
+            "query_message": {
+                "query_graph": question_graph
+            }
+        }
+
+
 #######################################################
 ##
 ## Gamma - publish a graph to Gamma.
@@ -358,7 +406,7 @@ class GammaQuery(GammaResource):
         del request.json['knowledge_maps']
         del request.json['options']
         response = requests.post (self.quick_url, json=request.json)
-        print (f"{json.dumps(response.json (), indent=2)}")
+        # print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
             result = {
                 "status" : "error",
@@ -588,6 +636,7 @@ class BiolinkModelWalkerService(StandardAPIResource):
 api.add_resource(GammaQuery, '/graph/gamma/quick')
 api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
+api.add_resource(IndigoQuery, '/graph/indigo')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
