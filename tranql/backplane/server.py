@@ -78,6 +78,21 @@ class StandardAPIResource(Resource):
     def rename_key_list (self, node_list, old, new):
         for n in node_list:
             self.rename_key (n, old, new)
+    def format_as_query(self, message):
+        question_graph = message['question_graph']
+
+        for node in question_graph.get('nodes',[]):
+            node['node_id'] = node['id']
+            del node['id']
+        for edge in question_graph.get('edges',[]):
+            edge['edge_id'] = edge['id']
+            del edge['id']
+
+        return {
+            "query_message": {
+                "query_graph": question_graph
+            }
+        }
     def merge_results (self, message):
         results = message['results']
         del message['results']
@@ -327,11 +342,66 @@ class PublishToNDEx(StandardAPIResource):
                     "edges" : request.json['knowledge_graph']['edges']
                 })
 
+class RtxQuery(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.base_url = 'http://rtx.ncats.io'
+        self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
+    def post(self):
+        """
+        Visualize
+        ---
+        tag: validation
+        description: Query Rtx, given a question graph.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        self.validate(request)
+
+        data = self.format_as_query(request.json)
+
+        response = requests.post(self.query_url, json=data)
+        if not response.ok:
+            if response.status_code == 500:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Rtx Internal Server Error. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+            else:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Bad Rtx query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+        else:
+            result = self.normalize_message(response.json())
+        return result
+
 class IndigoQuery(StandardAPIResource):
     def __init__(self):
         super().__init__()
-        self.indigo_url = 'https://indigo.ncats.io'
-        self.query_url = f'{self.indigo_url}/reasoner/api/v1/query'
+        self.base_url = 'https://indigo.ncats.io'
+        self.query_url = f'{self.base_url}/reasoner/api/v1/query'
     def post(self):
         """
         Visualize
@@ -360,36 +430,24 @@ class IndigoQuery(StandardAPIResource):
                         schema:
                             type: string
         """
-        self.validate (request)
+        self.validate(request)
 
-        question_graph = request.json['question_graph']
+        data = self.format_as_query(request.json)
 
-        for node in question_graph.get('nodes',[]):
-            node['node_id'] = node['id']
-            del node['id']
-        for edge in question_graph.get('edges',[]):
-            edge['edge_id'] = edge['id']
-            del edge['id']
-
-        data = {
-            "query_message": {
-                "query_graph": question_graph
-            }
-        }
-        print("input",json.dumps(data,indent=2))
+        # print("input",json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
         if not response.ok:
             if response.status_code == 500:
                 result = {
                     "status" : "error",
                     "code"   : "service_invocation_failure",
-                    "message" : f"Indigo Internal Server Error. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                    "message" : f"Indigo Internal Server Error. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
                 }
             else:
                 result = {
                     "status" : "error",
                     "code"   : "service_invocation_failure",
-                    "message" : f"Bad Indigo query response. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                    "message" : f"Bad Indigo query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
                 }
         else:
             result = self.normalize_message(response.json())
@@ -678,6 +736,7 @@ api.add_resource(GammaQuery, '/graph/gamma/quick')
 api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
 api.add_resource(IndigoQuery, '/graph/indigo')
+api.add_resource(RtxQuery, '/graph/rtx')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
