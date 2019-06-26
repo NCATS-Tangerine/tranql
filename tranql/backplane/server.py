@@ -376,15 +376,21 @@ class IndigoQuery(StandardAPIResource):
                 "query_graph": question_graph
             }
         }
-        # print("input",json.dumps(data,indent=2))
+        print("input",json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
-
-        if response.status_code >= 300:
-            result = {
-                "status" : "error",
-                "code"   : "service_invocation_failure",
-                "message" : f"Bad Indigo query response. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} response: \n{response.text}."
-            }
+        if not response.ok:
+            if response.status_code == 500:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Indigo can only accept CHEMBL queries. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+            else:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Bad Indigo query response. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
         else:
             result = self.normalize_message(response.json())
         return result
