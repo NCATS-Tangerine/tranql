@@ -93,6 +93,7 @@ body {
     pointer-events:none;
 }
 .LinkExaminer {
+  pointer-events:initial;
   margin-left: 10px;
   max-height:400px;
 }
