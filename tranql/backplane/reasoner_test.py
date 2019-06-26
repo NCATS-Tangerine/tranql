@@ -1,7 +1,7 @@
 import requests
 
 # url = "https://indigo.ncats.io/reasoner/api/v1/query"
-url = "http://rtx.ncats.io/beta/api/rtx/v1/query"
+url = "https://rtx.ncats.io/beta/api/rtx/v1/query"
 
 data1 = {
   "edges": [
@@ -30,7 +30,7 @@ data2 = {
     {
       "edge_id": "e1",
       "source_id": "chemical_substance",
-      "target_id": "disease"
+      "target_id": "protein"
     }
   ],
   "nodes": [
@@ -40,7 +40,7 @@ data2 = {
       "curie": "CHEMBL:CHEMBL25"
     },
     {
-      "node_id": "disease",
+      "node_id": "protein",
       "type": "protein"
     }
   ]

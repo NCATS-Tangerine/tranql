@@ -101,8 +101,6 @@ class StandardAPIResource(Resource):
                 "edges": [],
                 "nodes": []
             }
-        if 'knowledge_map' not in message:
-            message['knowledge_map'] = []
         nodeIds = []
         for result in results:
             result = result['result_graph']
@@ -113,6 +111,8 @@ class StandardAPIResource(Resource):
                     nodeIds.append(node['id'])
         return message
     def normalize_message (self, message):
+        if 'knowledge_map' not in message:
+            message['knowledge_map'] = []
         if 'results' in message:
             return self.normalize_message(self.merge_results(message))
         elif 'answers' in message:
@@ -345,7 +345,7 @@ class PublishToNDEx(StandardAPIResource):
 class RtxQuery(StandardAPIResource):
     def __init__(self):
         super().__init__()
-        self.base_url = 'http://rtx.ncats.io'
+        self.base_url = 'https://rtx.ncats.io'
         self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
     def post(self):
         """
