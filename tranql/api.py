@@ -222,6 +222,7 @@ class TranQLQuery(StandardAPIResource):
                 for key in errors:
                     result[key] = errors[key]
         except Exception as e:
+            traceback.print_exc()
             errors = [e, *tranql.context.mem.get ('requestErrors', [])]
             result = self.handle_exception (errors)
         with open ('query.out', 'w') as stream:

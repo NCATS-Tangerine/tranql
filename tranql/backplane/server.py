@@ -78,8 +78,29 @@ class StandardAPIResource(Resource):
     def rename_key_list (self, node_list, old, new):
         for n in node_list:
             self.rename_key (n, old, new)
+    def merge_results (self, message):
+        results = message['results']
+        del message['results']
+        if 'knowledge_graph' not in message:
+            message['knowledge_graph'] = {
+                "edges": [],
+                "nodes": []
+            }
+        if 'knowledge_map' not in message:
+            message['knowledge_map'] = []
+        nodeIds = []
+        for result in results:
+            result = result['result_graph']
+            message['knowledge_graph']['edges'].extend(result['edges'])
+            for node in result['nodes']:
+                if not node['id'] in nodeIds:
+                    message['knowledge_graph']['nodes'].append(node)
+                    nodeIds.append(node['id'])
+        return message
     def normalize_message (self, message):
-        if 'answers' in message:
+        if 'results' in message:
+            return self.normalize_message(self.merge_results(message))
+        elif 'answers' in message:
             #message['knowledge_map'] = message['answers']
             message['knowledge_map'] = message.pop ('answers')
 
@@ -355,7 +376,7 @@ class IndigoQuery(StandardAPIResource):
                 "query_graph": question_graph
             }
         }
-        print("input",json.dumps(data,indent=2))
+        # print("input",json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
 
         if response.status_code >= 300:
@@ -365,8 +386,7 @@ class IndigoQuery(StandardAPIResource):
                 "message" : f"Bad Indigo query response. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} response: \n{response.text}."
             }
         else:
-            result = self.normalize_message (response.json ())
-        print("result",json.dumps(result,indent=2))
+            result = self.normalize_message(response.json())
         return result
 
 #######################################################
