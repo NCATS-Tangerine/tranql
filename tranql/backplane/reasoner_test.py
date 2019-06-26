@@ -1,4 +1,5 @@
 import requests
+import json as JSON
 
 # url = "https://indigo.ncats.io/reasoner/api/v1/query"
 url = "https://rtx.ncats.io/beta/api/rtx/v1/query"
@@ -37,7 +38,7 @@ data2 = {
     {
       "node_id": "chemical_substance",
       "type": "chemical_substance",
-      "curie": "CHEMBL:CHEMBL25"
+      "curie":"CHEMBL.COMPOUND:CHEMBL25"
     },
     {
       "node_id": "protein",
@@ -45,13 +46,25 @@ data2 = {
     }
   ]
 }
-
+# {
+#   "query_message": {
+#     "original_question": "What proteins are the target of acetaminophen",
+#     "query_type_id": "Q3",
+#     "restated_question": "What proteins are the target of acetaminophen",
+#     "terms": {
+#       "chemical_substance": "CHEMBL.COMPOUND:CHEMBL112",
+#       "rel_type": "physically_interacts_with",
+#       "target_label": "protein"
+#     }
+#   },
+#   "bypass_cache": "false",
+#   "max_results": 5
+# }
 json = {
     "query_message": {
         "query_graph": data2
     }
 }
-
 r = requests.post(url,json=json)
 
 print(r,r.text)

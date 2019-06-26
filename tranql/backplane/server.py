@@ -113,7 +113,7 @@ class StandardAPIResource(Resource):
     def normalize_message (self, message):
         if 'knowledge_map' not in message:
             message['knowledge_map'] = []
-        if 'results' in message:
+        if 'results' in message and 'knowledge_graph' not in message:
             return self.normalize_message(self.merge_results(message))
         elif 'answers' in message:
             #message['knowledge_map'] = message['answers']
@@ -347,6 +347,17 @@ class RtxQuery(StandardAPIResource):
         super().__init__()
         self.base_url = 'https://rtx.ncats.io'
         self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
+    @staticmethod
+    def convert_curies(message):
+        for i in message["question_graph"]:
+            for element in message["question_graph"][i]:
+                if 'curie' in element:
+                    curie = element['curie']
+                    identifierSource = curie.split(":")[0]
+                    if identifierSource == "CHEMBL":
+                        curie = "CHEMBL.COMPOUND:"+identifierSource[1]
+                    element['curie'] = curie
+        return message
     def post(self):
         """
         Visualize
@@ -377,8 +388,8 @@ class RtxQuery(StandardAPIResource):
         """
         self.validate(request)
 
-        data = self.format_as_query(request.json)
-
+        data = self.format_as_query(self.convert_curies(request.json))
+        print(json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
         if not response.ok:
             if response.status_code == 500:
