@@ -385,6 +385,16 @@ select metabolite->protein
 `
         },
         {
+          title: 'Phenotypic Feature-Disease Association',
+          query:
+`-- What diseases are associated with the phenotypic feature HP:0005978?
+
+select phenotypic_feature->disease
+	from "/graph/rtx"
+ where phenotypic_feature="HP:0005978"
+`
+        },
+        {
           title: 'Drug-Disease Pair',
           query:
 `--
@@ -1549,6 +1559,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
   }
   _handleMessageDialog (title, message, details) {
+    // Should make this a single field such as `activeModal`
+    this.setState({
+      showSettingsModal: false,
+      showTypeChart: false,
+      showHelpModal: false,
+    });
+    this._exampleQueriesModal.current.hide();
+
     this._messageDialog.current.handleShow (title, message, details === undefined ? "" : details);
   }
   /**
