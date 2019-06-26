@@ -111,8 +111,6 @@ class StandardAPIResource(Resource):
                     nodeIds.append(node['id'])
         return message
     def normalize_message (self, message):
-        if 'knowledge_map' not in message:
-            message['knowledge_map'] = []
         if 'results' in message and 'knowledge_graph' not in message:
             return self.normalize_message(self.merge_results(message))
         elif 'answers' in message:

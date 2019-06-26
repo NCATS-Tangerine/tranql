@@ -77,7 +77,31 @@ data3 = {
     }
 }
 
-active_query = data3
+data4 = {
+    "type":RTX,
+    "query": {
+        "edges": [
+          {
+            "edge_id": "e1",
+            "source_id": "disease",
+            "target_id": "phenotypic_feature"
+          }
+        ],
+        "nodes": [
+          {
+            "node_id": "disease",
+            "type": "disease"
+          },
+          {
+            "node_id": "phenotypic_feature",
+            "type": "phenotypic_feature",
+            "curie":"HP:0005978"
+          }
+        ]
+    }
+}
+
+active_query = data4
 
 if active_query["type"] == INDIGO or active_query["type"] == RTX:
     json = {
