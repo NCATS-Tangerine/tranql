@@ -347,15 +347,19 @@ class RtxQuery(StandardAPIResource):
         super().__init__()
         self.base_url = 'https://rtx.ncats.io'
         self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
+    """
+    Rtx seems to divulge from the normal identifer syntax in some places so our syntax to be compliant with theirs
+    """
     @staticmethod
     def convert_curies(message):
         for i in message["question_graph"]:
             for element in message["question_graph"][i]:
                 if 'curie' in element:
                     curie = element['curie']
-                    identifierSource = curie.split(":")[0]
-                    if identifierSource == "CHEMBL":
+                    identifierSource = curie.split(":")
+                    if identifierSource[0] == "CHEMBL":
                         curie = "CHEMBL.COMPOUND:"+identifierSource[1]
+                    print(element['curie'],curie)
                     element['curie'] = curie
         return message
     def post(self):
