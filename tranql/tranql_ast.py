@@ -29,12 +29,11 @@ def truncate (s, max_length=75):
 
 class Bionames:
     """ Resolve natural language names to ontology identifiers. """
-    def __init__(self):
-        """ Initialize the operator. """
-        self.url = "https://bionames.renci.org/lookup/{input}/{type}/"
+    url = "https://bionames.renci.org/lookup/{input}/{type}/"
 
-    def get_ids (self, name, type_name):
-        url = self.url.format (**{
+    @staticmethod
+    def get_ids (name, type_name):
+        url = Bionames.url.format (**{
             "input" : name,
             "type"  : type_name
         })
@@ -239,14 +238,15 @@ class SelectStatement(Statement):
         return result
 
     def resolve_name (self, name, type_name):
-        bionames = Bionames ()
-        result = [ r['id'] for r in bionames.get_ids (name, type_name) ]
+        result = [ r['id'] for r in Bionames.get_ids (name, type_name) ]
         #result += self.synonymize (value, type_name)
         if type_name == 'chemical_substance':
             response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
             for obj in response['hits']:
                 if 'chebi' in obj:
                     result.append (obj['chebi']['id'])
+                if 'chembl' in obj:
+                    result.append ("CHEMBL:"+obj['chembl']['molecule_chembl_id'])
         logger.debug (f"name resolution result: {name} => {result}")
         return result
 
