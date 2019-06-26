@@ -10,40 +10,6 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
     if (elements.length === 0) {
       return Promise.resolve(undefined);
     }
-    let start;
-    if (vMode === "2D") {
-      start = {
-        r: parseInt(elements[0].element.color.substr(1, 2), 16) / 255,
-        g: parseInt(elements[0].element.color.substr(3, 2), 16) / 255,
-        b: parseInt(elements[0].element.color.substr(5, 2), 16) / 255,
-      };
-    }
-    else {
-      let mat = (elements[0].element.__lineObj || elements[0].element.__threeObj).material;
-      start = {
-        r:mat.color.r,
-        g:mat.color.g,
-        b:mat.color.b
-      };
-    }
-    let color;
-    let opacity;
-    if (highlight !== false) {
-      color = new THREE.Color(highlight);
-    }
-    else {
-      if (vMode !== "2D") {
-        color = new THREE.Color(parseInt(elements[0].element.color.slice(1),16));
-      }
-      else {
-        color = new THREE.Color(parseInt(elements[0].element.prevColor.slice(1),16));
-      }
-    }
-    const end = {
-      r:color.r,
-      g:color.g,
-      b:color.b
-    };
     let id = type;
     if (typeof this._highlightTypeFadeIntervals[id] === "undefined") {
       this._highlightTypeFadeIntervals[id] = {};
@@ -79,13 +45,51 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
           let steps = duration / interval;
           let step_u = 1.0 / steps;
           let u = 0.0;
+
+          for (let i=0;i<elements.length;i++) {
+            let element = elements[i];
+            if (vMode === "2D") {
+              element.start = {
+                r: parseInt(element.element.color.substr(1, 2), 16) / 255,
+                g: parseInt(element.element.color.substr(3, 2), 16) / 255,
+                b: parseInt(element.element.color.substr(5, 2), 16) / 255,
+              };
+            }
+            else {
+              let mat = (element.element.__lineObj || element.element.__threeObj).material;
+              element.start = {
+                r:mat.color.r,
+                g:mat.color.g,
+                b:mat.color.b
+              };
+            }
+            let color;
+            let opacity;
+            if (highlight !== false) {
+              color = new THREE.Color(highlight);
+            }
+            else {
+              if (vMode !== "2D") {
+                color = new THREE.Color(parseInt(element.element.color.slice(1),16));
+              }
+              else {
+                color = new THREE.Color(parseInt(element.element.prevColor.slice(1),16));
+              }
+            }
+            element.end = {
+              r:color.r,
+              g:color.g,
+              b:color.b
+            };
+          }
+
           // Slightly modified code from https://stackoverflow.com/a/11293378
           let theInterval = setInterval(() => {
-            let r = lerp(start.r, end.r, u);
-            let g = lerp(start.g, end.g, u);
-            let b = lerp(start.b, end.b, u);
             for (let i=0;i<elements.length;i++) {
               let element = elements[i];
+              let r = lerp(element.start.r, element.end.r, u);
+              let g = lerp(element.start.g, element.end.g, u);
+              let b = lerp(element.start.b, element.end.b, u);
               let graphElementType = element.graphElementType;
               element = element.element;
               let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
@@ -96,10 +100,10 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
               }
               if (u >= 1.0) {
                 if (vMode === "2D") {
-                  element.color = rgbToHex(end.r*255,end.g*255,end.b*255);
+                  element.color = rgbToHex(element.end.r*255,element.end.g*255,element.end.b*255);
                 }
                 else {
-                  material.color = new THREE.Color(end.r,end.g,end.b);
+                  material.color = new THREE.Color(element.end.r,element.end.g,element.end.b);
                 }
                 // if (opacity !== undefined) material.opacity = opacity;
               }
