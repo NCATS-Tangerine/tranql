@@ -383,7 +383,7 @@ class IndigoQuery(StandardAPIResource):
                 result = {
                     "status" : "error",
                     "code"   : "service_invocation_failure",
-                    "message" : f"Indigo can only accept CHEMBL queries. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                    "message" : f"Indigo can only accept CHEMBL curies. url: {self.indigo_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
                 }
             else:
                 result = {
