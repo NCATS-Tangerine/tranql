@@ -371,6 +371,19 @@ class App extends Component {
       // Help modal
       showHelpModal : false,
       exampleQueries : [
+          {
+            title: 'Protein-Metabolite Interaction',
+            query:
+`-- What proteins are targetted by the metabolite KEGG:C00017?
+
+set metabolite = "KEGG:C00017"
+
+select metabolite->protein
+  from "/graph/rtx"
+ where metabolite=$metabolite
+
+`
+        },
         {
           title: 'Drug-Disease Pair',
           query:
