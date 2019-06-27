@@ -430,7 +430,7 @@ class RtxQuery(StandardAPIResource):
         self.validate(request)
 
         data = self.format_as_query(self.convert_curies_to_rtx(request.json))
-        print(json.dumps(data,indent=2))
+        # print(json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
         if not response.ok:
             if response.status_code == 500:

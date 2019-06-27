@@ -546,13 +546,16 @@ class SelectStatement(Statement):
                 # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
                 values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
-                first_concept.set_nodes (values)
-                if len(values) == 0:
-                    message = f"No valid results from service {statement.service} executing " + \
-                              f"query {statement.query}. Unable to continue query. Exiting."
-                    raise ServiceInvocationError (
-                        message = message,
-                        details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+                if statements[index].query.order == next_statement.query.order:
+                    first_concept.set_nodes (statements[index].query.concepts[name].nodes)
+                else:
+                    first_concept.set_nodes (values)
+                    if len(values) == 0:
+                        message = f"No valid results from service {statement.service} executing " + \
+                                  f"query {statement.query}. Unable to continue query. Exiting."
+                        raise ServiceInvocationError (
+                            message = message,
+                            details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
         merged = self.merge_results (responses, self.service)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']

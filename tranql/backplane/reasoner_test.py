@@ -45,7 +45,7 @@ data2 = {
         {
           "node_id": "chemical_substance",
           "type": "chemical_substance",
-          "curie":"CHEMBL.COMPOUND:CHEMBL25"
+          "curie":"CHEMBL.COMPOUND:CHEMBL3"
         },
         {
           "node_id": "protein",
@@ -154,7 +154,7 @@ data6 = {
     }
 }
 
-active_query = data5
+active_query = data2
 
 if active_query["type"] == INDIGO or active_query["type"] == RTX:
     json = {
