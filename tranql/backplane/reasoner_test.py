@@ -4,6 +4,7 @@ import json as JSON
 # This file is for testing reasoner APIs. It directly queries the selected API, not the backplane.
 # (Not a unit test)
 
+GAMMA = "https://robokop.renci.org/api/simple/quick/?max_connectivity=1000"
 INDIGO = "https://indigo.ncats.io/reasoner/api/v1/query"
 RTX = "https://rtx.ncats.io/beta/api/rtx/v1/query"
 data1 = {
@@ -101,6 +102,60 @@ data4 = {
     }
 }
 
+data5 = {
+    "type": GAMMA,
+    "query": {
+      "question_graph": {
+        "edges": [
+          {
+            "id": "e1",
+            "source_id": "chemical_substance",
+            "target_id": "gene"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "chemical_substance",
+            "type": "chemical_substance",
+            "curie": "MESH:D052638"
+          },
+          {
+            "id": "gene",
+            "type": "gene",
+            # "curie": {
+            #   "id": "gene",
+            #   "type": "gene"
+            # }
+          }
+        ]
+      }
+    }
+}
+
+data6 = {
+    "type": INDIGO,
+    "query": {
+        "edges": [
+            {
+              "source_id": "chemical_substance",
+              "target_id": "gene",
+              "edge_id": "e1"
+            }
+          ],
+          "nodes": [
+            {
+              "type": "chemical_substance",
+              "curie": "CHEMBL:CHEMBL3",
+              "node_id": "chemical_substance"
+            },
+            {
+              "type": "gene",
+              "node_id": "gene"
+            }
+          ]
+    }
+}
+
 active_query = data4
 
 if active_query["type"] == INDIGO or active_query["type"] == RTX:
@@ -109,6 +164,8 @@ if active_query["type"] == INDIGO or active_query["type"] == RTX:
             "query_graph": active_query["query"]
         }
     }
+elif active_query["type"] == GAMMA:
+    json = active_query["query"]
 r = requests.post(active_query["type"],json=json)
 
-print(r,r.text)
+print(r,JSON.dumps(r.json()))

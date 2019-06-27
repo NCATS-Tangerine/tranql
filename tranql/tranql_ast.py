@@ -471,6 +471,7 @@ class SelectStatement(Statement):
             prev = time.time ()
             # We don't want to flood the service so we cap the maximum number of requests we can make to it.
             maximumQueryRequests = 50
+            interpreter.context.set('requestErrors',[])
             if interpreter.asynchronous:
                 maximumParallelRequests = 4
                 responses = async_make_requests ([
@@ -486,7 +487,7 @@ class SelectStatement(Statement):
                 ],maximumParallelRequests)
                 errors = responses["errors"]
                 responses = responses["responses"]
-                interpreter.context.set('requestErrors', errors)
+                interpreter.context.mem.get('requestErrors', []).extend(errors)
 
             else:
                 responses = []
@@ -500,16 +501,18 @@ class SelectStatement(Statement):
                     #logger.debug (f"response: {json.dumps(response, indent=2)}")
                     responses.append (response)
 
-            if len(responses) == 0:
-                raise ServiceInvocationError (
-                    f"No valid results from service {self.service} executing " +
-                    f"query {self.query}. Unable to continue query. Exiting.")
-                #raise ServiceInvocationError (f"No responses received from {service}")
 
             logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
             logger.setLevel (logging.INFO)
-
+            if len(responses) == 0:
+                interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
+                    f"No valid results from {self.service} with query {self.query}"
+                ))
+                # raise ServiceInvocationError (
+                    # f"No valid results from service {self.service} executing " +
+                    # f"query {self.query}. Unable to continue query. Exiting.")
+                #raise ServiceInvocationError (f"No responses received from {service}")
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
@@ -524,6 +527,7 @@ class SelectStatement(Statement):
         plan = self.planner.plan (self.query)
         statements = self.plan (plan)
         responses = []
+        first_concept = None
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
             response = statement.execute (interpreter)
@@ -537,8 +541,9 @@ class SelectStatement(Statement):
                 name = next_statement.query.order [0]
                 #name = statement.query.order[-1]
                 #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
-                logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
+                # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
                 values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
+                prev_concept = first_concept
                 first_concept = next_statement.query.concepts[name]
                 first_concept.set_nodes (values)
                 if len(values) == 0:
@@ -547,7 +552,6 @@ class SelectStatement(Statement):
                     raise ServiceInvocationError (
                         message = message,
                         details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
-                print (f"{values}")
         merged = self.merge_results (responses, self.service)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
@@ -556,6 +560,14 @@ class SelectStatement(Statement):
     def merge_results (self, responses, service):
         """ Merge results. """
         result = responses[0] if len(responses) > 0 else None
+        if result == None:
+            return {
+                "knowledge_graph": {
+                    "nodes": [],
+                    "edges": []
+                },
+                "knowledge_map": []
+            }
         if not 'knowledge_graph' in result:
             message = "Malformed response does not contain knowledge_graph element."
             logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
