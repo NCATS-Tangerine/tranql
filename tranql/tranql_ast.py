@@ -233,8 +233,11 @@ class SelectStatement(Statement):
     def val(self, value, field="id"):
         """ Get the value of an object. """
         result = value
-        if isinstance(value, dict) and field in value:
-            result = value[field]
+        if isinstance(value, dict):
+            if field in value:
+                result = value[field]
+            else:
+                result = None
         return result
 
     def resolve_name (self, name, type_name):
@@ -506,13 +509,12 @@ class SelectStatement(Statement):
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
             logger.setLevel (logging.INFO)
             if len(responses) == 0:
-                interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
-                    f"No valid results from {self.service} with query {self.query}"
-                ))
-                # raise ServiceInvocationError (
-                    # f"No valid results from service {self.service} executing " +
-                    # f"query {self.query}. Unable to continue query. Exiting.")
-                #raise ServiceInvocationError (f"No responses received from {service}")
+                # interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
+                #     f"No valid results from {self.service} with query {self.query}"
+                # ))
+                raise ServiceInvocationError (
+                    f"No valid results from service {self.service} executing " +
+                    f"query {self.query}. Unable to continue query. Exiting.")
             result = self.merge_results (responses, service)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
@@ -543,7 +545,6 @@ class SelectStatement(Statement):
                 #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
                 # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
                 values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
-                prev_concept = first_concept
                 first_concept = next_statement.query.concepts[name]
                 first_concept.set_nodes (values)
                 if len(values) == 0:
@@ -577,6 +578,7 @@ class SelectStatement(Statement):
         answers = result['knowledge_map']
 
         node_map = { n['id'] : n for n in kg.get('nodes',[]) }
+
         for response in responses[1:]:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
@@ -584,7 +586,15 @@ class SelectStatement(Statement):
             # Edges, we may keep distinct and whole or merge to some tbd extent.
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
-                kg['edges'] += rkg['edges'] if 'edges' in rkg else []
+                other_edges = rkg['edges'] if 'edges' in rkg else []
+                for e in other_edges:
+                    exists = False
+                    for edge in kg['edges']:
+                        if edge['type'] == e['type'] and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
+                            exists = True
+                            break
+                    if not exists:
+                        kg['edges'].append (e)
                 #result['answers'] += response['answers']
                 result['knowledge_map'] += response['knowledge_map']
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []

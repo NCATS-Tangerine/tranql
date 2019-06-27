@@ -101,22 +101,37 @@ class StandardAPIResource(Resource):
                 "edges": [],
                 "nodes": []
             }
+        if 'knowledge_map' not in message:
+            message['knowledge_map'] = []
         nodeIds = []
         for result in results:
-            result = result['result_graph']
-            message['knowledge_graph']['edges'].extend(result['edges'])
-            for node in result['nodes']:
+            # Convert 0.9.0 equivalent of knowledge_map to the knowledge_map format we want
+            node_bindings = result.get('node_bindings',None)
+            edge_bindings = result.get('edge_bindings',None)
+            if node_bindings != None and edge_bindings != None:
+                message['knowledge_map'].append({
+                    "node_bindings": node_bindings,
+                    "edge_bindings": edge_bindings
+                })
+
+
+            result = result.get('result_graph', {})
+
+            nodes = result.get('nodes',[])
+            edges = result.get('edges',[])
+
+            message['knowledge_graph']['edges'].extend(edges)
+            for node in nodes:
                 if not node['id'] in nodeIds:
                     message['knowledge_graph']['nodes'].append(node)
                     nodeIds.append(node['id'])
         return message
     def normalize_message (self, message):
-        if 'results' in message and 'knowledge_graph' not in message:
+        if 'results' in message:
             return self.normalize_message(self.merge_results(message))
-        elif 'answers' in message:
+        if 'answers' in message:
             #message['knowledge_map'] = message['answers']
             message['knowledge_map'] = message.pop ('answers')
-
         #print (f"---- message ------------> {json.dumps(message, indent=2)}")
 
         ''' downcast 0.9.1 to 0.9 '''
@@ -128,7 +143,7 @@ class StandardAPIResource(Resource):
         ''' SPEC: for icees, it's machine_question going in and question_graph coming out (but in a return value)? '''
         ''' return value is only an issue for ICEES '''
         if not 'knowledge_map' in message:
-            message['knowledge_map'] = message.get('return value',{}).get('answers', {})
+            message['knowledge_map'] = message.get('return value',{}).get('answers', [])
         if not 'question_graph' in message:
             message['question_graph'] = message.get('return value',{}).get('question_graph', {})
         self.rename_key_list (message.get('question_graph',{}).get('nodes',[]),
@@ -346,10 +361,10 @@ class RtxQuery(StandardAPIResource):
         self.base_url = 'https://rtx.ncats.io'
         self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
     """
-    Rtx seems to divulge from the normal identifer syntax in some places so our syntax to be compliant with theirs
+    Rtx seems to divulge from the normal identifer syntax in some places so our syntax to be compliant with theirs.
     """
     @staticmethod
-    def convert_curies(message):
+    def convert_curies_to_rtx(message):
         for i in message["question_graph"]:
             for element in message["question_graph"][i]:
                 if 'curie' in element:
@@ -357,8 +372,32 @@ class RtxQuery(StandardAPIResource):
                     identifierSource = curie.split(":")
                     if identifierSource[0] == "CHEMBL":
                         curie = "CHEMBL.COMPOUND:"+identifierSource[1]
-                    print(element['curie'],curie)
+                    # print(element['curie'],curie)
                     element['curie'] = curie
+        return message
+    """
+    We must convert these curies back to the standard form when returning the response.
+    """
+    @staticmethod
+    def convert_curies_to_standard(message):
+        for i in message["knowledge_map"]:
+            for n in i:
+                for k in i[n]:
+                    for enum, binding in enumerate(i[n][k]):
+                        identifierSource = binding.split(":")
+                        if identifierSource[0] == "CHEMBL.COMPOUND":
+                            binding = "CHEMBL:"+identifierSource[1]
+                        # print(element['curie'],curie)
+                        i[n][k][enum] = binding
+        for element in message["knowledge_graph"]["nodes"]:
+            identifierSource = element["id"].split(":")
+            if identifierSource[0] == "CHEMBL.COMPOUND":
+                element["id"] = "CHEMBL:"+identifierSource[1]
+        for element in message["knowledge_graph"]["edges"]:
+            for prop in ["source_id","target_id"]:
+                identifierSource = element[prop].split(":")
+                if identifierSource[0] == "CHEMBL.COMPOUND":
+                    element[prop] = "CHEMBL:"+identifierSource[1]
         return message
     def post(self):
         """
@@ -390,7 +429,7 @@ class RtxQuery(StandardAPIResource):
         """
         self.validate(request)
 
-        data = self.format_as_query(self.convert_curies(request.json))
+        data = self.format_as_query(self.convert_curies_to_rtx(request.json))
         print(json.dumps(data,indent=2))
         response = requests.post(self.query_url, json=data)
         if not response.ok:
@@ -407,7 +446,7 @@ class RtxQuery(StandardAPIResource):
                     "message" : f"Bad Rtx query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
                 }
         else:
-            result = self.normalize_message(response.json())
+            result = self.convert_curies_to_standard(self.normalize_message(response.json()))
         return result
 
 class IndigoQuery(StandardAPIResource):

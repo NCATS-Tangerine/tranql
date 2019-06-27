@@ -105,31 +105,29 @@ data4 = {
 data5 = {
     "type": GAMMA,
     "query": {
-      "question_graph": {
+    "question_graph": {
         "edges": [
-          {
+            {
             "id": "e1",
             "source_id": "chemical_substance",
-            "target_id": "gene"
-          }
+            "target_id": "disease"
+            }
         ],
         "nodes": [
-          {
-            "id": "chemical_substance",
-            "type": "chemical_substance",
-            "curie": "MESH:D052638"
-          },
-          {
-            "id": "gene",
-            "type": "gene",
-            # "curie": {
-            #   "id": "gene",
-            #   "type": "gene"
-            # }
-          }
+            {
+                "id": "chemical_substance",
+                "type": "chemical_substance",
+                "curie": [
+                    "CHEMBL:CHEMBL3"
+                ]
+            },
+            {
+                "id": "disease",
+                "type": "disease"
+            }
         ]
-      }
     }
+}
 }
 
 data6 = {
@@ -156,7 +154,7 @@ data6 = {
     }
 }
 
-active_query = data4
+active_query = data5
 
 if active_query["type"] == INDIGO or active_query["type"] == RTX:
     json = {
@@ -168,4 +166,4 @@ elif active_query["type"] == GAMMA:
     json = active_query["query"]
 r = requests.post(active_query["type"],json=json)
 
-print(r,JSON.dumps(r.json()))
+print(r.status_code,r.ok,r.text)

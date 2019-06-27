@@ -4,16 +4,11 @@ doc : |
   describe transitions between biolink-model types. These transitions are
   expressed as predicates, also from the biolink-model.
 schema:
-  rtx :
-    doc: |
-      The Rtx reasoner provides an endpoint returning the transitions it supports.
-    url: /graph/rtx
-    schema: https://rtx.ncats.io/beta/api/rtx/v1/predicates
-  indigo :
-    doc: |
-      The Indigo reasoner provides an endpoint for returning the transitions it supports.
-    url: /graph/indigo
-    schema: https://indigo.ncats.io/reasoner/api/v1/predicates
+  # indigo :
+  #   doc: |
+  #     The Indigo reasoner provides an endpoint for returning the transitions it supports.
+  #   url: /graph/indigo
+  #   schema: https://indigo.ncats.io/reasoner/api/v1/predicates
   robokop :
     doc: |
       The Robokop reasoner provides an endpoint returning the transitions it supports.
@@ -27,6 +22,11 @@ schema:
       of in the backplane wrapper.
     url: /clinical/cohort/disease_to_chemical_exposure
     schema: /clincial/icees/schema
+  rtx :
+    doc: |
+      The Rtx reasoner provides an endpoint returning the transitions it supports.
+    url: /graph/rtx
+    schema: https://rtx.ncats.io/beta/api/rtx/v1/predicates
   implicit_conversion:
     doc: |
       Implicit conversions bridge segments of a query. If one reasoner can return a drug exposure
