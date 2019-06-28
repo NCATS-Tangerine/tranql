@@ -593,7 +593,9 @@ class SelectStatement(Statement):
                 for e in other_edges:
                     exists = False
                     for edge in kg['edges']:
-                        if edge['type'] == e['type'] and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
+                        edge_type = edge.get('type',None)
+                        e_type = e.get('type',None)
+                        if edge_type == e_type and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
                             exists = True
                             break
                     if not exists:

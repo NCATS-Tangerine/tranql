@@ -3,6 +3,7 @@ import pytest
 import os
 import requests
 import requests_mock as r_mock
+from pprint import pprint
 from deepdiff import DeepDiff
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
@@ -344,11 +345,6 @@ def test_ast_merge_results (requests_mock):
                     "id": "e0",
                     "source_id": "n0",
                     "target_id": "n1"
-                },
-                {
-                    "id": "e0",
-                    "source_id": "n0",
-                    "target_id": "n1"
                 }
             ]
         },
@@ -390,9 +386,10 @@ def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
     tranql = TranQL ()
+    # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
-          FROM '/clinical/cohort/disease_to_chemical_exposure'
+          FROM '/schema'
          WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
            AND Sex = '0'
            AND cohort = 'all_patients'
@@ -403,32 +400,33 @@ def test_ast_plan_strategy (requests_mock):
     select = ast.statements[0]
     plan = select.planner.plan (select.query)
 
-    expected = [
-        [
-            'robokop',
-            '/graph/gamma/quick',
-            [
-                [
-                    select.query.concepts['cohort_diagnosis'],
-                    select.query.arrows[0],
-                    select.query.concepts[select.query.order[1]]
-                ]
-            ]
-        ]
-    ]
-
-    assert_lists_equal(
-        plan,
-        expected
+    # Assert that it has planned to query both gamma and rtx
+    assert (
+        (plan[0][1] == "/graph/gamma/quick" and plan[1][1] == "/graph/rtx") or
+        (plan[1][1] == "/graph/rtx" and plan[1][1] == "/graph/gamma/quick")
     )
+    # Both should be querying the same thing (disease->diseasee), differing only in the sub_schema that they are querying
+    for sub_schema_plan in plan:
+        assert sub_schema_plan[2][0][0].type_name == "disease"
+        assert sub_schema_plan[2][0][0].name == "cohort_diagnosis"
+        assert sub_schema_plan[2][0][0].nodes == ["MONDO:0004979"]
+
+        assert sub_schema_plan[2][0][1].direction == "->"
+        assert sub_schema_plan[2][0][1].predicate == None
+
+        assert sub_schema_plan[2][0][2].type_name == "disease"
+        assert sub_schema_plan[2][0][2].name == "diagnoses"
+        assert sub_schema_plan[2][0][2].nodes == []
+
 
 def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_plan_statements ()")
     tranql = TranQL ()
+    # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
-          FROM '/clinical/cohort/disease_to_chemical_exposure'
+          FROM '/schema'
          WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
            AND Sex = '0'
            AND cohort = 'all_patients'
@@ -440,18 +438,26 @@ def test_ast_plan_statements (requests_mock):
     select = ast.statements[0]
     statements = select.plan (select.planner.plan (select.query))
 
-    assert len(statements) == 1
+    assert len(statements) == 2
 
-    statement = statements[0]
+    for statement in statements:
+        assert_lists_equal(
+            list(statement.query.concepts.keys()),
+            [
+                "cohort_diagnosis",
+                "diagnoses"
+            ]
+        )
 
-    assert len(statement.query.concepts) == 2
+        assert statement.query.concepts['cohort_diagnosis'].nodes == ["MONDO:0004979"]
+        assert statement.query.concepts['diagnoses'].nodes == []
+        assert statement.where == []
+        assert statement.set_statements == []
 
-    assert statement.query.concepts['cohort_diagnosis'].nodes == ["MONDO:0004979"]
-    assert statement.query.concepts['diagnoses'].nodes == []
-    assert statement.service == "/graph/gamma/quick"
-    assert statement.where == []
-    assert statement.set_statements == []
-
+    assert (
+        (statements[0].service == "/graph/gamma/quick" and statements[1].service == "/graph/rtx") or
+        (statements[0].service == "/graph/rtx" and statements[1].service == "/graph/gamma/quick")
+    )
 
 def test_ast_bidirectional_query (requests_mock):
     set_mock(requests_mock, "workflow-5")
@@ -509,7 +515,8 @@ def test_interpreter_set (requests_mock):
 def test_program (requests_mock):
     print ("test_program ()")
     mock_map = MockMap (requests_mock, "workflow-5")
-    tranql = TranQL (asynchronous=False)
+    tranql = TranQL ()
+    tranql.asynchronous = False
     ast = tranql.execute ("""
     --
     -- Workflow 5
