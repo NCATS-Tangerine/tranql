@@ -195,7 +195,7 @@ export class Tool extends Component {
     super(props);
 
     if (this.props.children === undefined) throw new Error("Tool must contain icon component");
-    if (Array.isArray(this.props.children)) throw new Error("Tool must contain icon component as the only child");
+    if (Array.isArray(this.props.children) && this.props.children.length > 1) throw new Error("Tool must contain icon component as the only child");
 
     this.state = {
       active: false,

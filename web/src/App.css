@@ -224,6 +224,61 @@ body {
 .help-modal {
   /* height:60%; */
 }
+.toolbar-help-modal {
+  display:flex !important;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  height:100%;
+}
+.toolbar-help-modal-dialog {
+  height:50%;
+  margin:0;
+  width:500px;
+  max-width:none;
+}
+.toolbar-help-tabs {
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
+.toolbar-help-tab-panel {
+  flex-grow:1;
+}
+.toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
+  display:none;
+}
+.toolbar-help-tool-group {
+  /* flex-grow:1; */
+  /* flex-wrap:wrap; */
+  float:left;
+  width:15%;
+  height:100%;
+}
+.toolbar-help-tool-group > * {
+  /* flex:0; */
+}
+.toolbar-help-tool-group > *:last-child {
+  flex-grow:1 !important;
+}
+.toolbar-help-tool-button {
+  padding-left:0;
+  padding-right:0;
+  flex-grow:0;
+  /* width:33.33%; */
+  /* flex: 1 1 0; */
+  /* padding-top:0; */
+  /* padding-bottom:0; */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  word-break:break-word;
+  /* white-space:nowrap; */
+  text-align:center;
+}
+.toolbar-help-tool-button > * {
+  padding:0;
+}
 #helpGrid > * {
   padding-left:7.5px;
   padding-right:7.5px;

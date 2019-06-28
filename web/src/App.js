@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import Dexie from 'dexie';
 import { Button } from 'reactstrap';
-import { Modal, Form, Card, Container, Row, Col } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col, ListGroup, Tab as BsTab } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
@@ -142,6 +142,7 @@ class App extends Component {
 
     // Help modal
     this._renderHelpModal = this._renderHelpModal.bind (this);
+    this._renderToolbarHelpModal = this._renderToolbarHelpModal.bind (this);
 
 
     // Annotate graph
@@ -296,7 +297,7 @@ class App extends Component {
       highlightedType : [], // Currently highlighted types
 
       // Tools for the toolbar component
-      tools: [
+      tools : [
         <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
@@ -316,7 +317,7 @@ class App extends Component {
           <FaEye/>
         </Tool>
       ],
-      buttons: [
+      buttons : [
         <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
                          id="answerViewerToolbar"
                          className="App-control-toolbar ionic"
@@ -370,6 +371,12 @@ class App extends Component {
       ],
       // Help modal
       showHelpModal : false,
+      showToolbarHelpModal : false,
+      toolbarHelpModalActiveType : 0,
+      toolbarHelpModalActiveToolType : {
+        buttons: 0,
+        tools: 0
+      },
       exampleQueries : [
           {
             title: 'Protein-Metabolite Interaction',
@@ -1848,6 +1855,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   </Card.Body>
                 </Card>
               </Col>
+              <Col>
+                <Card>
+                  <Card.Body>
+                    <Card.Title>
+                      Toolbar Help
+                    </Card.Title>
+                    <Card.Text>
+                      More in-depth explanations of Toolbar's functions and what they can be used for.
+                    </Card.Text>
+                    <Card.Link href="javascript:void(0)" onClick={() => {
+                      this.setState({ showHelpModal : false, showToolbarHelpModal : true });
+                    }}>View</Card.Link>
+                  </Card.Body>
+                </Card>
+              </Col>
             </Row>
             <Row>
             </Row>
@@ -1856,6 +1878,76 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       </Modal>
     );
   }
+  /**
+   * Render the toolbar help modal
+   *
+   * @private
+   */
+   _renderToolbarHelpModal () {
+     const obj = {
+       buttons:this.state.buttons,
+       tools:this.state.tools
+     };
+     return (
+       <Modal show={this.state.showToolbarHelpModal}
+              onHide={() => this.setState({ showHelpModal : true, showToolbarHelpModal : false })}
+              dialogClassName="toolbar-help-modal-dialog"
+              className="toolbar-help-modal">
+         <Modal.Header closeButton>
+           <Modal.Title>
+             Help and Information
+           </Modal.Title>
+         </Modal.Header>
+         <Modal.Body>
+           <Tabs className="toolbar-help-tabs">
+              <TabList>
+                {
+                  Object.keys(obj).map((key, index) => {
+                    return (
+                      <Tab>{key.charAt(0).toUpperCase()+key.slice(1)}</Tab>
+                    );
+                  })
+                }
+              </TabList>
+              {
+                Object.entries(obj).map((entry, i) => {
+                  let type = entry[0];
+                  let values = entry[1];
+                  return (
+                    <TabPanel className="toolbar-help-tab-panel">
+                      <ListGroup className="toolbar-help-tool-group">
+                        {
+                          values.map((val, n) => {
+                            return (
+                              <ListGroup.Item className="toolbar-help-tool-button" action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{this.state.toolbarHelpModalActiveToolType[type] = n; this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })}}>
+                                {
+                                  (() => {
+                                    const noProps = (element) => {
+                                      const newProps = {};
+                                      Object.keys(element.props).forEach((k) => {
+                                        newProps[k] = undefined
+                                      });
+                                      return newProps;
+                                    }
+                                    const el = type === "tools" ? val.props.children : val;
+                                    return React.cloneElement(el, noProps(el))
+                                  })()
+                                }
+                              </ListGroup.Item>
+                            );
+                          })
+                        }
+                        <ListGroup.Item/>
+                      </ListGroup>
+                    </TabPanel>
+                  );
+                })
+              }
+            </Tabs>
+         </Modal.Body>
+       </Modal>
+     );
+   }
   /**
    * Render the type bar chart modal
    *
@@ -2137,6 +2229,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderModal () }
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
+        {this._renderToolbarHelpModal ()}
         <QueriesModal ref={this._exampleQueriesModal}
                       runButtonCallback={(code, e) => {
                         this._exampleQueriesModal.current.hide();
