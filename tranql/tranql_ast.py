@@ -21,6 +21,7 @@ from tranql.exception import UnableToGenerateQuestionError
 from tranql.exception import MalformedResponseError
 from tranql.exception import IllegalConceptIdentifierError
 from tranql.exception import UnknownServiceError
+from tranql.exception import InvalidTransitionException
 
 logger = logging.getLogger (__name__)
 
@@ -447,31 +448,10 @@ class SelectStatement(Statement):
         else:
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
+            [self.ast.schema.validate_question(question) for question in questions]
             service = interpreter.context.resolve_arg (self.service)
 
             """ Invoke the service and store the response. """
-
-            """
-            Basic data from default query about asthma (in seconds):
-                Async (4 parallel requests at once):
-                    [
-                        8.950051546096802,
-                        8.789488792419434,
-                        8.992945432662964
-                    ]
-                    Average time: 8.910828590393066
-
-                Serial:
-                    [
-                        120.87169480323792,
-                        121.13019347190857,
-                        120.94755744934082
-                    ]
-                    Average time: 120.9831485748291
-
-                Average speed increase of async requests: 1357% (almost 13.6 times faster)
-            """
-
 
             # For each question, make a request to the service with the question
             # Only have a maximum of maximumParallelRequests requests executing at any given time
@@ -871,6 +851,7 @@ class QueryPlanStrategy:
         """
         edge = None
         schema = None
+        converted = False
         for schema_name, sub_schema_package in self.schema.schema.items ():
             """ Look for a path satisfying this edge in each schema. """
             sub_schema = sub_schema_package ['schema']
@@ -890,6 +871,7 @@ class QueryPlanStrategy:
                         plan.append ([ schema_name, sub_schema_url, [
                             [ source, predicate, target ]
                         ]])
+                    converted = True
             else:
                 """ No explicit matching plan for this edge. Do implicit conversions make it work? """
                 implicit_conversion = BiolinkModelWalker ()
@@ -913,3 +895,6 @@ class QueryPlanStrategy:
                                           include_patterns=source.include_patterns,
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
+                            converted = True
+        if not converted:
+            raise InvalidTransitionException (source, target, predicate)

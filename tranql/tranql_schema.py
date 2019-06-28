@@ -7,7 +7,7 @@ import requests_cache
 import os
 from tranql.concept import BiolinkModelWalker
 from collections import defaultdict
-from tranql.exception import TranQLException
+from tranql.exception import TranQLException, InvalidTransitionException
 from tranql.redis_graph import RedisGraph
 
 class NetworkxGraph:
@@ -257,7 +257,7 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            raise TranQLException (f"Invalid transition: {source_type}->{target_type}")
+            raise InvalidTransitionException (source_type, target_type)
 
     def validate_question (self, message):
         """

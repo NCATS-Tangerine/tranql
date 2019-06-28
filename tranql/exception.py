@@ -7,6 +7,10 @@ class UndefinedVariableError(TranQLException):
     def __init__(self, message):
         super().__init__(message)
 
+class InvalidTransitionException(TranQLException):
+    def __init__(self, source, target, edge=None):
+        super().__init__(f"Invalid transition between {str(source)} and {str(target)}{' with predicate ' + str(edge.predicate) if edge != None and edge.predicate != None else ''}")
+
 class UnableToGenerateQuestionError(TranQLException):
     def __init__(self, message):
         super().__init__(message)

@@ -161,24 +161,24 @@ data7 = {
           {
             "edge_id": "e1",
             "source_id": "disease",
-            "target_id": "biological_process"
+            "target_id": "chemical_substance"
           }
         ],
         "nodes": [
           {
-            "node_id": "disease",
-            "type": "chemical_substance",
-            "curie": "CHEMBL.COMPOUND:CHEMBL1261"
+            "node_id": "chemical_substance",
+            "type": "chemical_substance"
           },
           {
-            "node_id": "biological_process",
-            "type": "disease"
+            "node_id": "disease",
+            "type": "disease",
+            "curie": "DOID:2841"
           }
         ]
     }
 }
 
-active_query = data7
+active_query = data1
 
 if active_query["type"] == INDIGO or active_query["type"] == RTX:
     json = {
