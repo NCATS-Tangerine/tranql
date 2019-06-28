@@ -240,16 +240,23 @@ class SelectStatement(Statement):
                 result = None
         return result
 
-    def resolve_name (self, name, type_name):
-        result = [ r['id'] for r in Bionames.get_ids (name, type_name) ]
+    def resolve_name (self, name, type_names):
+        if not isinstance(type_names, list):
+            type_names = [type_names]
         #result += self.synonymize (value, type_name)
-        if type_name == 'chemical_substance':
-            response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
-            for obj in response['hits']:
-                if 'chebi' in obj:
-                    result.append (obj['chebi']['id'])
-                if 'chembl' in obj:
-                    result.append ("CHEMBL:"+obj['chembl']['molecule_chembl_id'])
+        result = []
+        for type_name in type_names:
+            equivalent_identifiers = Bionames.get_ids (name, type_name)
+            for i in equivalent_identifiers:
+                result.append(i["id"])
+        for type_name in type_names:
+            if type_name == 'chemical_substance':
+                response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
+                for obj in response['hits']:
+                    if 'chebi' in obj:
+                        result.append (obj['chebi']['id'])
+                    if 'chembl' in obj:
+                        result.append ("CHEMBL:"+obj['chembl']['molecule_chembl_id'])
         logger.debug (f"name resolution result: {name} => {result}")
         return result
 
@@ -563,6 +570,8 @@ class SelectStatement(Statement):
 
     def merge_results (self, responses, service):
         """ Merge results. """
+        USE_EQUIVALENT_IDENTIFIERS = True
+
         result = responses[0] if len(responses) > 0 else None
         if result == None:
             return {
@@ -582,6 +591,20 @@ class SelectStatement(Statement):
 
         node_map = { n['id'] : n for n in kg.get('nodes',[]) }
 
+        replace_edge_ids = []
+        if USE_EQUIVALENT_IDENTIFIERS:
+            logger.info ('Starting to fetch equivalent identifiers')
+            total_requests = 0
+            prev_time = time.time()
+            for response in responses:
+                if 'knowledge_graph' in response:
+                    for node in response['knowledge_graph']['nodes']:
+                        if 'equivalent_identifiers' not in node:
+                            node['equivalent_identifiers'] = self.resolve_name (node.get('name',None), node.get('type',''))
+                            total_requests += 1
+            logger.info (f'Finished fetching equivalent identifiers for {total_requests} nodes ({time.time()-prev_time}s).')
+
+        # TODO: This probably needs a rewrite. It should just construct an empty Message object and then iterate over the entire list of repsonses normally, rather than having to start with the first and using that as the starting Message object.
         for response in responses[1:]:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
@@ -604,9 +627,37 @@ class SelectStatement(Statement):
                 result['knowledge_map'] += response['knowledge_map']
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
-                    if not n['id'] in node_map:
-                        node_map[n['id']] = n
-                        kg['nodes'].append (n)
+                    """
+                    If possible, try to convert all nodes to a single identifier so that we don't end up with multiple separate nodes that are actually the same in the graph.
+                    Example: https://i.imgur.com/Z76R1wZ.png. The node on left is called "citric acid," and the node on right is called "anhydrous citric acid." The left node's id is "CHEBI:30769" and the right node's id is "CHEMBL:CHEMBL1261." These identifiers are actually equivalent to each other.
+                    """
+                    if USE_EQUIVALENT_IDENTIFIERS:
+                        ids = n['equivalent_identifiers']
+                        exists = False
+                        for id in ids:
+                            for node_id in node_map:
+                                node = node_map[node_id]
+                                if id == node_id or id in node['equivalent_identifiers']:
+                                    exists = True
+                                    break
+                            if exists:
+                                replace_edge_ids.append([n["id"], node["id"]])
+                                break
+                        if not exists:
+                            node_map[n['id']] = n
+                            kg['nodes'].append (n)
+                    else:
+                        if not n['id'] in node_map:
+                            node_map[n['id']] = n
+                            kg['nodes'].append (n)
+        if USE_EQUIVALENT_IDENTIFIERS:
+            # We need to update the edges' ids if we changed any node ids.
+            for old_id, new_id in replace_edge_ids:
+                for edge in result['knowledge_graph']['edges']:
+                    if old_id == edge['source_id']:
+                        edge['source_id'] = new_id
+                    if old_id == edge['target_id']:
+                        edge['target_id'] = new_id
         return result
 
 class TranQL_AST:
