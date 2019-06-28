@@ -1,0 +1,11 @@
+--
+-- This query utilizes both the Gamma and RTX reasoners to get transitions between chemical substances and diseases.
+-- It then utilizes solely the Gamma reasoner to get transitions between the unionized results of the previous transition and genes.
+-- This query serves as a good example of the merging of a transition spanning multiple reasoners and the ability of a single reasoner to then successfully utilize it.
+-- It is easy to observe the relatively homogeneous mixture of answers that arises from the query.
+--
+
+set chemical = "CHEMBL:CHEMBL1261" -- Citric acid
+SELECT chemical_substance->disease->gene
+	FROM "/schema"
+ WHERE chemical_substance=$chemical
