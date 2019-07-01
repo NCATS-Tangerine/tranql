@@ -222,6 +222,9 @@ export class Tool extends Component {
   _keyDownCallback(e) {
     if (this.props.onlyUseShortcutsWhen.some(type => document.activeElement instanceof type)) {
       let char = String.fromCharCode(e.keyCode);
+      if (e.ctrlKey) {
+        return;
+      }
       if (!e.shiftKey) {
         char = char.toLowerCase();
       }

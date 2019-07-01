@@ -97,6 +97,11 @@ body {
   margin-left: 10px;
   max-height:400px;
 }
+.FindTool {
+  position:absolute;
+  right:5px;
+  top:5px;
+}
 .fa-spin {
   /* Pseudo fa-spin class because react-icons doesn't seem to natively support it */
   -ms-animation:spin 2s linear infinite;
@@ -406,11 +411,6 @@ body {
 }
 #cachedQueriesModal .query-title > input {
   flex-grow:1;
-}
-/* Insert a fake space character since it is a flex box */
-#cachedQueriesModal .query-title > span + span::before {
-  /* margin-left: 7.5px; */
-  content:'\a0';
 }
 /* Elevate it by 1 pixel since the first has a border */
 #cachedQueriesModal .query-title > span + span {

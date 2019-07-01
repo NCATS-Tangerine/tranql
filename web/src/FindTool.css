@@ -1,0 +1,50 @@
+.FindTool {
+  pointer-events:initial;
+  background-color:white;
+  display:flex;
+  flex-direction:column;
+  border:1.5px solid rgb(215,215,215);
+  /* padding: 3px 0; */
+}
+.FindTool[data-hide="true"] {
+  display:none;
+  pointer-events:none;
+}
+.find-container {
+  display:flex;
+}
+.find-tool-input {
+  padding:5px;
+  border:none;
+  outline:none;
+  font-size:.75rem;
+  width:235px;
+}
+.find-tool-button-container {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.find-tool-button-container::before {
+  content:'';
+  position:relative;
+  width:1.25px;
+  height:70%;
+  left:0;
+  background-color:rgb(215,215,215);
+}
+.find-tool-button-container > * {
+  margin:5px;
+  font-size:22px;
+  color:rgb(50,50,50);
+  border-radius:50%;
+}
+.find-tool-button-container > *:hover {
+  background-color:rgb(240,240,240);
+}
+.find-tool-button-container > *:active {
+  background-color:rgb(220,220,220);
+}
+.result-container {
+  
+}

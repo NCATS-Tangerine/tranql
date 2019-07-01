@@ -11,7 +11,7 @@ import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses
 import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayCircle } from 'react-icons/io';
 import {
-  FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaEye, FaPen,
+  FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye, FaPen,
   FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer,
   FaBan, FaArrowsAlt, FaTrash, FaEdit, FaPlayCircle
 } from 'react-icons/fa';
@@ -36,6 +36,7 @@ import highlightTypes from './highlightTypes.js';
 import { shadeColor, adjustTitle } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
+import FindTool from './FindTool.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
@@ -169,9 +170,6 @@ class App extends Component {
     this.render = this.render.bind(this);
     this._updateDimensions = this._updateDimensions.bind(this);
 
-    // Utility method for debouncing a function
-    this._debounce = this._debounce.bind(this);
-
     // Create code mirror references.
     this._codemirror = React.createRef ();
     this._contextMenu = React.createRef ();
@@ -185,6 +183,7 @@ class App extends Component {
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
     this._toolbar = React.createRef ();
+    this._findTool = React.createRef ();
 
 
     // Cache graphs locally using IndexedDB web component.
@@ -308,7 +307,7 @@ class App extends Component {
               shortcut="h"
               description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
               callback={(bool) => this._setHighlightTypesMode(bool)}>
-          <FaSearch/>
+          <FaHighlighter/>
         </Tool>,
         <Tool name="Examine Connection"
               shortcut="f"
@@ -322,6 +321,7 @@ class App extends Component {
                          id="answerViewerToolbar"
                          className="App-control-toolbar fa"
                          onClick={this._handleShowAnswerViewer} />,
+        <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.show()}/>,
         <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
         <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
         <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />,
@@ -370,6 +370,13 @@ class App extends Component {
           {
             title: "Answer Navigator",
             description: "This button brings up Robokop's depth analysis of the answer. It also displays a variety of other data related to the graph."
+          },
+          {
+            title: "Find Tool",
+            description: `
+            This button brings up the find tool, which can also be opened with the keyboard shortcut control+F.
+            The find tool enables the user to use JSON-like attribute selectors to find certain objects in the graph.
+            `
           },
           {
             title: "Help & Information",
@@ -2433,6 +2440,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       </div>
                       <LinkExaminer link={this.state.selectedNode}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
+                      <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph} ref={this._findTool}/>
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>

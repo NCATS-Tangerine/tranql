@@ -178,10 +178,11 @@ export default class QueriesModal extends Component {
                           this.currentQuery.editorTitle() :
                           this.currentQuery.editorTitle :
                         this.currentQuery.title;
-                      const editedString = <span>{this.currentQuery._editedQuery !== this.currentQuery.query ? "(edited)" : ""}</span>;
+                      const editedStringText = this.currentQuery._editedQuery !== this.currentQuery.query ? "(edited)" : "";
+                      const editedString = <span>&nbsp;{editedStringText}</span>;
                       return (
                         // If title is a string, set the title property on the div as well (can only take text). Otherwise, if desired, it should be set manually.
-                        <div className="query-title" {...(typeof title === "string" ? {title:title+editedString} : {})}>
+                        <div className="query-title" {...(typeof title === "string" ? {title:title+" "+editedStringText} : {})}>
                           {title}
                           {editedString}
                         </div>
