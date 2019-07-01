@@ -29,6 +29,7 @@ def assert_parse_tree (code, expected):
     """ Parse a block of code into a parse tree. Then assert the equality
     of that parse tree to a list of expected tokens. """
     tranql = TranQL ()
+    tranql.resolve_names = False
     actual = tranql.parser.parse (code).parse_tree
     #print (f"{actual}")
     assert_lists_equal (
@@ -202,6 +203,7 @@ def test_ast_set_variable (requests_mock):
     """ Test setting a varaible to an explicit value. """
     print ("test_ast_set_variable ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     statement = SetStatement (variable="variable", value="x")
     statement.execute (tranql)
     assert tranql.context.resolve_arg ("$variable") == 'x'
@@ -210,6 +212,7 @@ def test_ast_set_graph (requests_mock):
     """ Set a variable to a graph passed as a result. """
     print ("test_ast_set_graph ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     statement = SetStatement (variable="variable", value=None, jsonpath_query=None)
     statement.execute (tranql, context={ 'result' : { "a" : 1 } })
     assert tranql.context.resolve_arg ("$variable")['a'] == 1
@@ -218,6 +221,7 @@ def test_ast_set_graph (requests_mock):
     """ Set a variable to the value returned by executing a JSONPath query. """
     print ("test_ast_set_graph ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     statement = SetStatement (variable="variable", value=None, jsonpath_query="$.nodes.[*]")
     statement.execute (tranql, context={
         'result' : {
@@ -235,6 +239,7 @@ def test_ast_generate_questions (requests_mock):
     """
     print ("test_ast_set_generate_questions ()")
     app = TranQL ()
+    app.resolve_names = False
     ast = app.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
           FROM '/clinical/cohort/disease_to_chemical_exposure'
@@ -255,6 +260,7 @@ def test_ast_merge_results (requests_mock):
     """
     print("test_ast_merge_answers ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
           FROM '/clinical/cohort/disease_to_chemical_exposure'
@@ -276,7 +282,7 @@ def test_ast_merge_results (requests_mock):
                     {'id': 'HGNC:2597', 'type': 'gene'}
                 ],
                 'edges': [
-                    {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'HGNC:2597'}
                 ]
             },
             'knowledge_map': [
@@ -302,14 +308,13 @@ def test_ast_merge_results (requests_mock):
                     {'id': 'TEST:00000', 'type': 'test'}
                 ],
                 'edges': [
-                    {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'TEST:00000'}
                 ]
             },
             'knowledge_map': [
                 {
                     'node_bindings': {
                         'chemical_substance': 'CHEBI:28177',
-                        'gene': 'HGNC:2597',
                         'test': 'TEST:00000'
                     },
                     'edge_bindings': {
@@ -326,66 +331,79 @@ def test_ast_merge_results (requests_mock):
 
     expected_result = {
         "knowledge_graph": {
+            "edges": [
+                {
+                    "id": "e0",
+                    "source_id": "CHEBI:28177",
+                    "target_id": "HGNC:2597"
+                },
+                {
+                    "id": "e0",
+                    "source_id": "CHEBI:28177",
+                    "target_id": "TEST:00000"
+                }
+            ],
             "nodes": [
                 {
+                    "equivalent_identifiers": [
+                        "CHEBI:28177"
+                    ],
                     "id": "CHEBI:28177",
                     "type": "chemical_substance"
                 },
                 {
+                    "equivalent_identifiers": [
+                        "HGNC:2597"
+                    ],
                     "id": "HGNC:2597",
                     "type": "gene"
                 },
                 {
+                    "equivalent_identifiers": [
+                        "TEST:00000"
+                    ],
                     "id": "TEST:00000",
                     "type": "test"
-                }
-            ],
-            "edges": [
-                {
-                    "id": "e0",
-                    "source_id": "n0",
-                    "target_id": "n1"
                 }
             ]
         },
         "knowledge_map": [
             {
+                "edge_bindings": {
+                    "e1": [
+                        "e0"
+                    ],
+                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+                },
                 "node_bindings": {
                     "chemical_substance": "CHEBI:28177",
                     "gene": "HGNC:2597"
                 },
-                "edge_bindings": {
-                    "e1": [
-                        "e0"
-                    ],
-                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
-                },
                 "score": 0.09722323258334348
             },
             {
-                "node_bindings": {
-                    "chemical_substance": "CHEBI:28177",
-                    "gene": "HGNC:2597",
-                    "test": "TEST:00000"
-                },
                 "edge_bindings": {
                     "e1": [
                         "e0"
                     ],
                     "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+                },
+                "node_bindings": {
+                    "chemical_substance": "CHEBI:28177",
+                    "test": "TEST:00000"
                 },
                 "score": 0.09722323258334348
             }
         ]
     }
-    merged_results = select.merge_results (mock_responses, select.service)
-
+    merged_results = select.merge_results (mock_responses, select.service, tranql)
     assert(merged_results == expected_result)
 
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -423,6 +441,7 @@ def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_plan_statements ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -464,6 +483,7 @@ def test_ast_bidirectional_query (requests_mock):
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     print ("test_ast_bidirectional_query ()")
     app = TranQL ()
+    app.resolve_names = False
     disease_id = "MONDO:0004979"
     chemical = "PUBCHEM:2083"
     app.context.set ("drug", chemical)
@@ -497,6 +517,7 @@ def test_interpreter_set (requests_mock):
     """ Test set statements by executing a few and checking values after. """
     print ("test_interpreter_set ()")
     tranql = TranQL ()
+    tranql.resolve_names = False
     tranql.execute ("""
         -- Test set statements.
         SET disease = 'asthma'
@@ -515,8 +536,9 @@ def test_interpreter_set (requests_mock):
 def test_program (requests_mock):
     print ("test_program ()")
     mock_map = MockMap (requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = tranql = TranQL ()
     tranql.asynchronous = False
+    tranql.resolve_names = False
     ast = tranql.execute ("""
     --
     -- Workflow 5

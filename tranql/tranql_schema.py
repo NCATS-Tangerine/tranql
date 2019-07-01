@@ -257,7 +257,8 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            raise InvalidTransitionException (source_type, target_type)
+            pass
+            # raise InvalidTransitionException (source_type, target_type)
 
     def validate_question (self, message):
         """

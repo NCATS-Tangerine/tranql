@@ -179,6 +179,7 @@ class TranQL:
         asynchronous = self.config.get('ASYNCHRONOUS_REQUESTS',asynchronous)
 
         self.asynchronous = asynchronous
+        self.resolve_names = False
 
     def parse (self, program):
         """ If we just want the AST. """
