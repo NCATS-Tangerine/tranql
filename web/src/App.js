@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import Dexie from 'dexie';
 import { Button } from 'reactstrap';
-import { Modal, Form, Card, Container, Row, Col, ListGroup, Tab as BsTab } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col, ListGroup, Tab as BsTab, Navbar } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
@@ -13,7 +13,7 @@ import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayC
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaEye, FaPen,
   FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer,
-  FaBan, FaArrowsAlt, FaTrash, FaEdit
+  FaBan, FaArrowsAlt, FaTrash, FaEdit, FaPlayCircle
 } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
@@ -318,9 +318,9 @@ class App extends Component {
         </Tool>
       ],
       buttons : [
-        <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
+        <FaPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
                          id="answerViewerToolbar"
-                         className="App-control-toolbar ionic"
+                         className="App-control-toolbar fa"
                          onClick={this._handleShowAnswerViewer} />,
         <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
         <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
@@ -332,6 +332,63 @@ class App extends Component {
         // The tool works as intended but the annotator does not yet.
         /*<FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>*/
       ],
+      toolHelpDescriptions : {
+        tools : [
+          {
+            title: "Navigate",
+            description: `
+            This tool is intended to make navigating the force graph more easy to do. Left clicking a node will pan the camera to it and zoom in on it.
+            It will also make it the center of rotation for the camera.
+            Left clicking and holding a node will not trigger this tool and will instead drag the node like normal.
+            Right clicking and dragging will shift the center of rotation away from the node selected with this tool.`
+          },
+          {
+            title: "Select",
+            description: `
+            This tool allows you to view the additional data that nodes and links may possess. To use it, left click a node or link, which will bring up the object viewer.
+            From there, you can navigate the tree view of the selected object and view all the properties that it has.`
+          },
+          {
+            title: "Highlight Types",
+            description: `
+            This tool allows you to highlight all the nodes or links that share a type. It will highlight the type of the node or link that the cursor is currently hovering over.
+            For nodes and links of multiple types, it will highlight all other nodes or links that share any types with it.
+            Left clicking a node or link with this tool will hide all highlighted elements. Right clicking a node or link with this tool will hide all non-highlighted elements.`
+          },
+          {
+            title: "Examine Connection",
+            description: `
+            This tool allows you to view all links, and the direction of each link, existing betweeen two nodes.
+            To use the tool, left click any link between a pair of desired nodes.
+            This will bring up the connection viewer interface.
+            It will display each node's name as an abbreviation. It also colors codes their names according to the node's color in the force graph.
+            If you forget a node's name, you can hover over the abbreviation, and it will display its name in full.
+            `
+          }
+        ],
+        buttons: [
+          {
+            title: "Answer Navigator",
+            description: "This button brings up Robokop's depth analysis of the answer. It also displays a variety of other data related to the graph."
+          },
+          {
+            title: "Help & Information",
+            description: `
+            This button brings up the help and information center, where you can find various references for using TranQL.`
+          },
+          {
+            title: "Cache Viewer",
+            description: `
+            This button brings up the cache viewer interface, which displays all queries which have been locally cached.
+            It allows for you to find previous queries and quickly view them, edit them, or delete them.`
+          },
+          {
+            title: "Settings",
+            description: `
+            This button brings up the settings interface, which allows you to customize the behavior of TranQL.`
+          }
+        ]
+      },
 
       // Type chart
       showTypeNodes : true, // When false, shows link types (prevents far too many types being shown at once)
@@ -1890,7 +1947,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
      };
      return (
        <Modal show={this.state.showToolbarHelpModal}
-              onHide={() => this.setState({ showHelpModal : true, showToolbarHelpModal : false })}
+              onHide={() => this.setState({ showToolbarHelpModal : false })}
               dialogClassName="toolbar-help-modal-dialog"
               className="toolbar-help-modal">
          <Modal.Header closeButton>
@@ -1925,6 +1982,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                     const noProps = (element) => {
                                       const newProps = {};
                                       Object.keys(element.props).forEach((k) => {
+                                        // I don't know why this is necessary but it is.
                                         newProps[k] = undefined
                                       });
                                       return newProps;
@@ -1939,6 +1997,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         }
                         <ListGroup.Item/>
                       </ListGroup>
+                      <Card className="toolbar-help-content">
+                        <Card.Body className="toolbar-help-content-body">
+                          <Card.Header className="toolbar-help-content-title">
+                          {this.state.toolHelpDescriptions[type][this.state.toolbarHelpModalActiveToolType[type]].title}
+                          </Card.Header>
+                          <Card.Text>
+                            <div>
+                              {
+                                this.state.toolHelpDescriptions[type][this.state.toolbarHelpModalActiveToolType[type]].description
+                              }
+                            </div>
+                          </Card.Text>
+                        </Card.Body>
+                      </Card>
                     </TabPanel>
                   );
                 })
@@ -2279,7 +2351,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             </Button>
             <div id="appControlContainer" style={{display:(this.state.toolbarEnabled ? "none" : "")}}>
               <FaCog data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
-              <IoIosPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
+              <FaPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />
             </div>
           </div>
         </header>

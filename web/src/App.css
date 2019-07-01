@@ -237,28 +237,47 @@ body {
   width:500px;
   max-width:none;
 }
+.toolbar-help-modal-dialog .modal-body {
+  display:flex;
+}
 .toolbar-help-tabs {
+  flex-grow:1;
   display:flex;
   flex-direction:column;
   height:100%;
 }
 .toolbar-help-tab-panel {
+  display:flex;
   flex-grow:1;
 }
 .toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
   display:none;
 }
-.toolbar-help-tool-group {
-  /* flex-grow:1; */
-  /* flex-wrap:wrap; */
-  float:left;
-  width:15%;
+.toolbar-help-content {
+  flex-grow:1;
+  margin-left:10px;
+}
+.toolbar-help-content-body {
   height:100%;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+.toolbar-help-content-body > .card-text {
+  overflow-y:auto;
+  padding:.75rem 1.25rem;
+}
+.toolbar-help-tool-group {
+  flex:0 0 15%;
+  height:100%;
+  overflow-y:auto;
 }
 .toolbar-help-tool-group > * {
   /* flex:0; */
 }
 .toolbar-help-tool-group > *:last-child {
+  /* No padding allows it to essentially go invisible, meaning that it will not show up if there is any overflow */
+  padding:0;
   flex-grow:1 !important;
 }
 .toolbar-help-tool-button {
