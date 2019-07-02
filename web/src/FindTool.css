@@ -4,6 +4,7 @@
   display:flex;
   flex-direction:column;
   border:1.5px solid rgb(215,215,215);
+  max-height:100%;
   /* padding: 3px 0; */
 }
 .FindTool[data-hide="true"] {

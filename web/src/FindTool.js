@@ -128,16 +128,26 @@ export default class FindTool extends Component {
     // Custom attribute flags (e.g. `type:foo("bar")`)
     const flags = {
       // Tests a regex pattern against the value
-      regex: function(elementValue, value) {
-        return elementValue.match(value);
+      "regex": function(elementValue, value) {
+        try {
+          return elementValue.match(value);
+        }
+        catch {
+          return false;
+        }
       },
       // Run a given function on the attribute
-      func: function(elementValue, value) {
+      "func": function(elementValue, value) {
         // This allows for unrestrained access of the object but is not recommended unless necessary.
-        if (typeof value === "string") {
-          value = eval(value);
+        try {
+          if (typeof value === "string") {
+            value = eval(value);
+          }
+          return value(elementValue);
         }
-        return value(elementValue);
+        catch {
+          return false;
+        }
       }
     };
 
@@ -150,7 +160,8 @@ export default class FindTool extends Component {
       attributeValue
     ];
 
-    let flag = attributeName.match(/(?<=:)(?<!\\:).*/);
+    let flag = attributeName.match(/(?<=:)(?<!\\:).*/g);
+
     if (flag !== null) {
       flag = flag[0];
 
@@ -169,7 +180,107 @@ export default class FindTool extends Component {
 
     return parsedAttribute;
   }
-  static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector) {
+  static parseAttributesString(attributes) {
+    // Special case - providing no dict is a shorthand for saying `{selector}{}`, which selects everything from that selector (e.g. `nodes{}` or `nodes` will select all nodes)
+    if (attributes === undefined) {
+      attributes = {};
+    }
+    else {
+      try {
+        // Invalid
+        attributes = JSON.parse(attributes);
+      }
+      catch (e) {
+        return -1;
+      }
+    }
+    return attributes;
+  }
+  static handleSelector(graph, selector, attribs={}, magicVariables={}) {
+    const results = {
+      nodes: [],
+      links: []
+    };
+    const { selectorType, transition, transitionSelector, nextSelector } = selector;
+    let { selectorAttributes: attributes } = selector;
+    // console.log(selectors);
+    // nodes{"type:includes":"drug_exposure"}->links{}->nodes{"type:includes":"chemical_substance"}
+
+    attributes = FindTool.parseAttributesString(attributes);
+    if (attributes === -1) {
+      return -1;
+    }
+
+    attributes = {...attributes, ...attribs};
+
+    let elements = FindTool.findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables);
+
+    if (elements === -1) {
+      return -1;
+    }
+    else {
+      results.nodes = results.nodes.concat(elements.nodes);
+      results.links = results.links.concat(elements.links);
+    }
+
+    // If nextSelector is defined, that means that this is a node pair and therefore has a link transition.
+    if (nextSelector) {
+      // We want to add the results of the next selector first. Then we can take any links with a source id of any nodes from the first selector and a target id of any nodes from the last selector.
+      let {nextSelector: nextSelectorNextSelector, ...nextSel} = nextSelector;
+      let nextSelResults = FindTool.handleSelector(graph, nextSel);
+
+      if (nextSelResults === -1) {
+        return -1;
+      }
+
+      let transitionAttributes = {};
+      let source_re;
+      let target_re;
+      if (transition === "->") {
+        // Compile regex that matches any nodes with a source id of any nodes in the first selector and a target id of any nodes in the second selector
+        source_re = new RegExp(results.nodes.map((n)=>n.id).join("|"));
+        target_re = new RegExp(nextSelResults.nodes.map((n)=>n.id).join("|"));
+        transitionAttributes = {
+          "origin:func": `(origin)=>origin.source_id.match(${source_re}) && origin.target_id.match(${target_re})`
+        };
+      }
+      let nextTransitionResults = FindTool.handleSelector(graph, transitionSelector, transitionAttributes, {
+        "__sourceNodes__" : source_re,
+        "__targetNodes__" : target_re
+      });
+      if (nextTransitionResults === -1) {
+        return -1;
+      }
+      // Nodes should always be empty here but it is here anyways for consistency.
+      results.nodes = results.nodes.concat(nextTransitionResults.nodes);
+      results.links = results.links.concat(nextTransitionResults.links);
+
+      // Links should always be empty here but it is here anyways for consistency.
+      results.nodes = results.nodes.concat(nextSelResults.nodes);
+      results.links = results.links.concat(nextSelResults.links);
+
+
+      // Filter out any nodes which do not have any links connecting them
+      results.nodes = results.nodes.filter((node) => {
+        return results.links.reduce((acc,link) => {
+          // findElems returns elements' origins
+          return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
+        },0);
+      });
+      let nodeIds = [];
+      results.nodes = results.nodes.filter((node) => {
+        if (!nodeIds.includes(node.id)) {
+          nodeIds.push(node.id);
+          return true;
+        }
+        return false;
+      });
+
+    }
+
+    return results;
+  }
+  static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables) {
     let elements = {
       nodes: [],
       links: []
@@ -218,6 +329,8 @@ export default class FindTool extends Component {
                 }
               }
             }
+            // Replace any magic variables
+            attributeValue = attributeValue.replace(/(?<!\\)__.*?__(?!\\)/g, (val) => magicVariables[val]);
             return flagCallback(element[attributeName],attributeValue);
           }
         });
@@ -229,142 +342,60 @@ export default class FindTool extends Component {
     return results;
   }
   _findResults() {
-    const empty = {
-      nodes: [],
-      links: []
-    };
-    const results = {
-      nodes: [],
-      links: []
-    };
-
-    const handleSelector = (graph, selector, attribs={}) => {
-      const results = {
-        nodes: [],
-        links: []
-      };
-      const { selectorType, transition, transitionSelector, nextSelector } = selector;
-      let { selectorAttributes: attributes } = selector;
-      // console.log(selectors);
-      // nodes{"type:includes":"drug_exposure"}->links{}->nodes{"type:includes":"chemical_substance"}
-
-      attributes = parseAttributes(attributes);
-      if (attributes === -1) {
-        return -1;
-      }
-
-      attributes = {...attributes, ...attribs};
-
-      let elements = FindTool.findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector);
-
-      if (elements === -1) {
-        return -1;
-      }
-      else {
-        results.nodes = results.nodes.concat(elements.nodes);
-        results.links = results.links.concat(elements.links);
-      }
-
-      // If nextSelector is defined, that means that this is a node pair and therefore has a link transition.
-      if (nextSelector) {
-        // We want to add the results of the next selector first. Then we can take any links with a source id of any nodes from the first selector and a target id of any nodes from the last selector.
-        let {nextSelector: nextSelectorNextSelector, ...nextSel} = nextSelector;
-        let nextSelResults = handleSelector(graph, nextSel);
-
-        let transitionAttributes = {};
-        if (transition === "->") {
-          // Compile regex that matches any nodes with a source id of any nodes in the first selector and a target id of any nodes in the second selector
-          let source_re = new RegExp(results.nodes.map((n)=>n.id).join("|"));
-          let target_re = new RegExp(nextSelResults.nodes.map((n)=>n.id).join("|"));
-          transitionAttributes = {
-            "origin:func": (origin)=>origin.source_id.match(source_re) && origin.target_id.match(target_re)
-          };
-        }
-        let nextTransitionResults = handleSelector(graph, transitionSelector, transitionAttributes);
-        // Nodes should always be empty here but it is here anyways for consistency.
-        results.nodes = results.nodes.concat(nextTransitionResults.nodes);
-        results.links = results.links.concat(nextTransitionResults.links);
-
-        // Links should always be empty here but it is here anyways for consistency.
-        results.nodes = results.nodes.concat(nextSelResults.nodes);
-        results.links = results.links.concat(nextSelResults.links);
-
-
-        // Filter out any nodes which do not have any links connecting them
-        results.nodes = results.nodes.filter((node) => {
-          return results.links.reduce((acc,link) => {
-            // findElems returns elements' origins
-            return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
-          },0);
-        });
-        let nodeIds = [];
-        results.nodes = results.nodes.filter((node) => {
-          if (!nodeIds.includes(node.id)) {
-            nodeIds.push(node.id);
-            return true;
-          }
-          return false;
-        });
-
-      }
-
-      return results;
-    }
-
-    const parseAttributes = (attributes) => {
-      // Special case - providing no dict is a shorthand for saying `{selector}{}`, which selects everything from that selector (e.g. `nodes{}` or `nodes` will select all nodes)
-      if (attributes === undefined) {
-        attributes = {};
-      }
-      else {
-        try {
-          // Invalid
-          attributes = JSON.parse(attributes);
-        }
-        catch (e) {
-          return -1;
-        }
-      }
-      return attributes;
-    }
+    const empty = [];
+    // Results stores the results of each transition
+    const results = [];
 
     if (this._input.current === null) return results;
     const selectors = FindTool.parse(this._input.current.value);
-
-    console.log(selectors);
 
     const graph = this.props.graph;
 
     for (let i=0;i<selectors.length;i++) {
       let selector = selectors[i];
-      let elems = handleSelector(graph, selector);
+      let elems = FindTool.handleSelector(graph, selector);
       if (elems === -1) {
         return empty;
       }
-      results.nodes = results.nodes.concat(elems.nodes);
-      results.links = results.links.concat(elems.links);
+      results.push(elems);
     }
 
     return results;
   }
   _results() {
     const results = this._findResults();
-    const elements = Object.keys(results).map((elementType, i) => {
-      return (
-        <div key={i}>
-          <h4>{elementType}</h4>
-          {
-            results[elementType].map((element, n) => {
-              return (
-                <div key={n}>
-                  {JSON.stringify(element)}
-                </div>
-              )
-            })
-          }
+    let elements;
+    if (results.length === 0) {
+      elements = (
+        <div>
+          <h6>There are no results</h6>
         </div>
-      )
-    });
+      );
+    }
+    else {
+      elements = results.map((result, i) => (
+        <div key={i}>
+        {
+          Object.keys(result).map((elementType, n) => {
+            return (
+              <div key={n}>
+              <h5>{elementType}</h5>
+              {
+                result[elementType].map((element, k) => {
+                  return (
+                    <div key={k}>
+                    {JSON.stringify(element)}
+                    </div>
+                  )
+                })
+              }
+              </div>
+            );
+          })
+        }
+        </div>
+      ));
+    }
     return elements;
   }
   componentWillUnmount() {
