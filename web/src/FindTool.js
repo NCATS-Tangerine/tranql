@@ -406,7 +406,9 @@ export default class FindTool extends Component {
       // Error
       elements = (
         <div>
-          <h6>{results}</h6>
+          <div className="result result-header">
+            <span style={{fontWeight:"500"}}>{results}</span>
+          </div>
         </div>
       );
     }
