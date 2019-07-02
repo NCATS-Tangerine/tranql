@@ -57,49 +57,70 @@ export default class FindTool extends Component {
   static parse(text) {
     const transitionTokens = [
       '->',
-      '<-',
-      '<->'
+      ','
+    ];
+    const selectorTokens = [
+      "nodes",
+      "links",
+      "*"
     ];
     text = text.replace(/\s/g, "");
-    const transitionRegex = transitionTokens.join("|");
-    const selectors = text.split(new RegExp(transitionRegex));
-    let transitions = text.match(new RegExp(transitionRegex,"g"));
-
-    if (transitions === null) {
-      transitions = [];
+    const transitionRegex = transitionTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
+    // This prevents anything that could technically be a selector inside of selector attributes being matched as a new selector
+    // Explanation:
+    //    Group 1 - Join all selectors with or operators (and sanitize them for regex).
+    //    Group 2 - Optionally match open and closing curly braces and anything inside of them.
+    //    Group 3 - Lookahead and match either any transition or an end of line.
+    const selectorRegex = new RegExp(`(${selectorTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})({.*?})?(${transitionRegex}|$)`,"gi");
+    let selectors = [];
+    let selector;
+    while (selector = selectorRegex.exec(text)) {
+      selectors.push({
+        selectorType : selector[1],
+        selectorAttributes: selector[2],
+        transition: selector[3]
+      });
     }
 
-    return {selectors, transitions};
+    // const selectors = text.split(new RegExp(transitionRegex));
+    // let transitions = text.match(new RegExp(transitionRegex,"g"));
+    // if (transitions === null) {
+    //   transitions = [];
+    // }
+
+    // console.log(selectors,transitions,selectorRegex,text);
+    return selectors;
+    // return {selectors, transitions};
   }
   /**
    * Parses an attribute (e.g. `type:"bar"`)
    *
    * @param {String[]} attribute - Attribute in form [`attributeName`, `attributeValue`]
    *
-   * @returns {<String,Object>[]|Number} - Either an error code or an array of `attributeName`, `attributeValue`, where attribute value is in the form {`value`, `flagCallback`}.
-   *    If -1, the attribute contains an invalid flag name.
+   * @returns {Array<String,Function|String>|Number} - Either an error code or an array of `attributeName`, `flagCallback`, and `attributeValue`.
+   *    If `flagCallback` is of type string, the attribute does not contain a custom flag name, but does contain a flag.
    *
    */
   static parseAttribute(attribute) {
-    // Special attribute flags (e.g. `type:includes("bar")`)
+    // Custom attribute flags (e.g. `type:foo("bar")`)
     const flags = {
-      "includes": function(elementValue, value) {
-        return elementValue.includes(value);
+      regex: function(elementValue, value) {
+        try {
+          return elementValue.match(value);
+        }
+        catch (e) {
+          return false;
+        }
       }
     };
-    // Flag alisaes
-    flags.contains = flags.includes;
-
 
     let [attributeName, attributeValue] = attribute;
 
     let parsedAttribute = [
       attributeName,
-      {
-        value: attributeValue,
-        // Loose form of comparison that works with lists and objects as well
-        flagCallback: (ev,v)=>JSON.stringify(v)===JSON.stringify(ev)
-      }
+      // Loose form of comparison that works with lists and objects as well
+      (ev,v)=>JSON.stringify(v)===JSON.stringify(ev),
+      attributeValue
     ];
 
     let flag = attributeName.match(/(?<=:)(?<!\\:).*/);
@@ -111,11 +132,11 @@ export default class FindTool extends Component {
       parsedAttribute[0] = attributeName;
 
       if (flags.hasOwnProperty(flag)) {
-        parsedAttribute[1].flagCallback = flags[flag];
+        parsedAttribute[1] = flags[flag];
       }
       else {
-        console.warn(`Invalid attribute flag with name "${flag}"`);
-        return -1;
+        // console.warn(`Invalid attribute flag with name "${flag}"`);
+        parsedAttribute[1] = flag;
       }
     }
 
@@ -132,26 +153,35 @@ export default class FindTool extends Component {
     };
 
     if (this._input.current === null) return results;
-    const {selectors, transitions} = FindTool.parse(this._input.current.value);
+    const selectors = FindTool.parse(this._input.current.value);
 
     const graph = this.props.graph;
 
     for (let i=0;i<selectors.length;i++) {
-      const selector = selectors[i];
+      const {selectorType: selectorType, selectorAttributes: attributes, transition: transition} = selectors[i];
       const nextSelector = selectors[i+1];
-      const transition = transitions[i];
+
+      // Even
+      if (i % 2 === 0) {
+
+      }
+
+      // const transition = transitions[i];
 
       if (selectors.length > 1 && nextSelector === undefined) {
         continue;
       }
 
-      let selectorType = selector.match(/[^\{]*/);
-      let attributes = selector.match(/\{(.*?)\}/g);
+      // let selectorType = selector.match(/[^\{]*/);
+      // let attributes = selector.match(/\{(.*?)\}/g);
+
+      // Special case - if no dict is provided it will use all instead of none. E.g. `nodes` will select all nodes, but `nodes{}` will select none.
+      let useAll = false;
 
       // No attributes
-      if (attributes === null) {
+      if (attributes === undefined) {
         attributes = {};
-        selectorType = selector;
+        useAll = true;
       }
       else {
         try {
@@ -161,16 +191,15 @@ export default class FindTool extends Component {
         catch (e) {
           return empty;
         }
-        selectorType = selectorType[0];
       }
       let elements = {
         nodes: [],
         links: []
       }
-      if (selectorType === "link" || selectorType === "l" || selectorType === "links") {
+      if (selectorType === "links") {
         elements.links = graph.links;
       }
-      else if (selectorType === "node" || selectorType === "n" || selectorType === "nodes") {
+      else if (selectorType === "nodes") {
         elements.nodes = graph.nodes;
       }
       else if (selectorType === "*") {
@@ -182,23 +211,43 @@ export default class FindTool extends Component {
         return empty;
       }
 
-      console.log(selectorType,attributes);
+      const addElem = (elementType,element) => {
+        results[elementType].push(
+          element.hasOwnProperty('origin') ? element.origin : element
+        );
+      }
 
       Object.keys(elements).forEach((elementType) => {
         elements[elementType].forEach((element) => {
-          Object.entries(attributes).forEach((obj) => {
-            let [attributeName, attributeValue] = FindTool.parseAttribute(obj);
-            if (element.hasOwnProperty(attributeName)) {
-              if (attributeValue.flagCallback(element[attributeName],attributeValue.value)) {
-                results[elementType].push(
-                  element.hasOwnProperty('origin') ? element.origin : element
-                );
+          if (useAll) {
+            addElem(elementType,element);
+          }
+          else {
+            Object.entries(attributes).forEach((obj) => {
+              let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
+              if (element.hasOwnProperty(attributeName)) {
+                if (typeof flagCallback === "string") {
+                  let flag = flagCallback;
+                  flagCallback = function(elementValue, value) {
+                    if (typeof elementValue[flag] === "function") {
+                      try {
+                        return elementValue[flag](value);
+                      }
+                      catch (e) {
+                        return false;
+                      }
+                    }
+                  }
+                }
+                if (flagCallback(element[attributeName],attributeValue)) {
+                  addElem(elementType,element);
+                }
+                else {
+                  console.log(element[attributeName],attributeValue);
+                }
               }
-              else {
-                console.log(element[attributeName],attributeValue.value);
-              }
-            }
-          });
+            });
+          }
         });
       });
 
