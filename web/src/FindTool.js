@@ -1,14 +1,21 @@
 import React, { Component } from 'react';
 import { IoIosClose } from 'react-icons/io';
+import { FaLongArrowAltRight } from 'react-icons/fa';
 import './FindTool.css';
 
 export default class FindTool extends Component {
+  static defaultProps = {
+    resultMouseEnter: ()=>{},
+    resultMouseLeave: ()=>{},
+    resultMouseClick: ()=>{}
+  };
   constructor(props) {
     super(props);
 
     this.state = {
       active: false,
-      results: null
+      results: null,
+      entered: null
     };
 
     this.toggleShow = this.toggleShow.bind(this);
@@ -36,7 +43,8 @@ export default class FindTool extends Component {
     this.state.active ? this.hide() : this.show();
   }
   _onInput(e) {
-    this.setState({ results : this._results() });
+    this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
+    this.setState({ entered : null, results : this._results() });
   }
   _onKeyDown(e) {
     if (e.ctrlKey && e.keyCode === 70) {
@@ -104,14 +112,12 @@ export default class FindTool extends Component {
       acc.push(sel);
       return acc;
     }, []);
-
-    // const selectors = text.split(new RegExp(transitionRegex));
-    // let transitions = text.match(new RegExp(transitionRegex,"g"));
-    // if (transitions === null) {
-    //   transitions = [];
-    // }
-
-    // console.log(selectors,transitions,selectorRegex,text);
+    if (selectors.length === 0) {
+      return "No valid selectors found";
+    }
+    if (selectors.length % 2 === 0) {
+      return "Invalid selector or transition";
+    }
     return selectors;
     // return {selectors, transitions};
   }
@@ -191,7 +197,7 @@ export default class FindTool extends Component {
         attributes = JSON.parse(attributes);
       }
       catch (e) {
-        return -1;
+        return "Invalid attribute syntax";
       }
     }
     return attributes;
@@ -207,16 +213,16 @@ export default class FindTool extends Component {
     // nodes{"type:includes":"drug_exposure"}->links{}->nodes{"type:includes":"chemical_substance"}
 
     attributes = FindTool.parseAttributesString(attributes);
-    if (attributes === -1) {
-      return -1;
+    if (typeof attributes === "string") {
+      return attributes + ` for selector "${selectorType}"`;
     }
 
     attributes = {...attributes, ...attribs};
 
     let elements = FindTool.findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables);
 
-    if (elements === -1) {
-      return -1;
+    if (typeof elements === "string") {
+      return elements;
     }
     else {
       results.nodes = results.nodes.concat(elements.nodes);
@@ -229,8 +235,8 @@ export default class FindTool extends Component {
       let {nextSelector: nextSelectorNextSelector, ...nextSel} = nextSelector;
       let nextSelResults = FindTool.handleSelector(graph, nextSel);
 
-      if (nextSelResults === -1) {
-        return -1;
+      if (typeof nextSelResults === "string") {
+        return nextSelResults;
       }
 
       let transitionAttributes = {};
@@ -248,8 +254,8 @@ export default class FindTool extends Component {
         "__sourceNodes__" : source_re,
         "__targetNodes__" : target_re
       });
-      if (nextTransitionResults === -1) {
-        return -1;
+      if (typeof nextTransitionResults === "string") {
+        return nextTransitionResults;
       }
       // Nodes should always be empty here but it is here anyways for consistency.
       results.nodes = results.nodes.concat(nextTransitionResults.nodes);
@@ -263,8 +269,7 @@ export default class FindTool extends Component {
       // Filter out any nodes which do not have any links connecting them
       results.nodes = results.nodes.filter((node) => {
         return results.links.reduce((acc,link) => {
-          // findElems returns elements' origins
-          return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
+          return link.origin.source_id === node.id || link.origin.target_id === node.id ? acc + 1 : acc;
         },0);
       });
       let nodeIds = [];
@@ -301,13 +306,13 @@ export default class FindTool extends Component {
     }
     else {
       // Invalid selector type
-      return -1;
+      return `Invalid selector type "${selectorType}"`;
     }
 
 
     const addElem = (elementType,element) => {
       results[elementType].push(
-        element.hasOwnProperty('origin') ? element.origin : element
+        element
       );
     }
 
@@ -342,59 +347,96 @@ export default class FindTool extends Component {
     return results;
   }
   _findResults() {
-    const empty = [];
     // Results stores the results of each transition
-    const results = [];
+    const results = {
+      nodes:[],
+      links:[]
+    };
 
     if (this._input.current === null) return results;
     const selectors = FindTool.parse(this._input.current.value);
-
+    if (typeof selectors === "string") {
+      return selectors;
+    }
     const graph = this.props.graph;
 
     for (let i=0;i<selectors.length;i++) {
       let selector = selectors[i];
       let elems = FindTool.handleSelector(graph, selector);
-      if (elems === -1) {
-        return empty;
+      if (typeof elems === "string") {
+        return elems;
       }
-      results.push(elems);
+      results.nodes = results.nodes.concat(elems.nodes);
+      results.links = results.links.concat(elems.links);
     }
 
-    return results;
+    let grouped = [];
+
+    if (results.nodes.length === 0 || results.links.length === 0) {
+      return {
+        grouped : false,
+        groups: [...results.nodes,...results.links]
+      };
+    }
+    else {
+      let nodeMap = {};
+      results.nodes.forEach((node) => {
+        nodeMap[node.id] = node;
+      });
+      results.links.forEach((link) => {
+        grouped.push({
+          source: nodeMap[link.origin.source_id],
+          target: nodeMap[link.origin.target_id],
+          link: link
+        });
+      });
+
+      return {
+        grouped: true,
+        groups: grouped
+      };
+    }
+
   }
   _results() {
     const results = this._findResults();
     let elements;
-    if (results.length === 0) {
+    console.log(results);
+    if (typeof results === "string") {
+      // Error
       elements = (
         <div>
-          <h6>There are no results</h6>
+          <h6>{results}</h6>
         </div>
       );
     }
     else {
-      elements = results.map((result, i) => (
-        <div key={i}>
-        {
-          Object.keys(result).map((elementType, n) => {
-            return (
-              <div key={n}>
-              <h5>{elementType}</h5>
-              {
-                result[elementType].map((element, k) => {
-                  return (
-                    <div key={k}>
-                    {JSON.stringify(element)}
-                    </div>
-                  )
-                })
-              }
-              </div>
-            );
-          })
-        }
+      elements = (
+        <div>
+          <div className="result result-header">
+            <span style={{fontWeight:"500"}}>{results.groups.length} results</span>
+          </div>
+          {
+            results.groups.map((group, i) => {
+              return (
+                <div className="result" onMouseEnter={()=>{this.setState({ entered : group });this.props.resultMouseEnter(group)}} onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(group)}} onClick={()=>this.props.resultMouseClick(group)} key={i}>
+                  {
+                    results.grouped ?
+                      <>
+                        <span>{group.source.name + " (" + group.source.id + ")"}</span>
+                        <div><FaLongArrowAltRight/></div>
+                        <span>{(Array.isArray(group.link.origin.type) ? group.link.origin.type : [group.link.origin.type]).join(" / ") + " (" + group.link.id + ")"}</span>
+                        <div><FaLongArrowAltRight/></div>
+                        <span>{group.target.name + " (" + group.target.id + ")"}</span>
+                      </> :
+                      <><span>{group.name + " (" + group.id + ")"}</span></>
+                  }
+                </div>
+              );
+            })
+          }
         </div>
-      ));
+      );
     }
     return elements;
   }
@@ -402,6 +444,7 @@ export default class FindTool extends Component {
     window.removeEventListener('keydown',this._onKeyDown);
     this._input.current.removeEventListener('blur', this._onInputBlur);
     this._input.current.removeEventListener('input',this._onInput);
+    this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
   }
   componentDidMount() {
     window.addEventListener('keydown',this._onKeyDown);

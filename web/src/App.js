@@ -751,13 +751,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @param {Object} [fade] - Determines the properties of the fading.
    * @param {Number} [fade.duration=250] - If duration is greater than 0, it will take `duration` number of seconds for the old color to fade into the new color.
    * @param {Number} [fade.offset=0] - Amount of time it takes before the fade begins.
+   * @param {String} [property="type"] - Overrides `type` as the default property (e.g. `id` will highlight based on the `id` property).
    *
    * @private
    *
    * @returns {Promise} - (Only when using fade) Returns promise that resolves when the fade completes.
    */
-  _highlightType (type, highlight, outline, fade) {
+  _highlightType (type, highlight, outline, fade, property) {
     if (typeof fade === "undefined") fade = {duration:250,offset:0};
+    if (typeof property === "undefined") property = "type";
     if (!Array.isArray(type)) {
       type = [type];
     }
@@ -774,7 +776,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         let elements = graph[graphElementType];
         for (let i=0;i<elements.length;i++) {
           let element = elements[i];
-          let types = element.type;
+          let types = element[property];
           let id = element.id;
 
           if (!Array.isArray(types)) types = [types];
@@ -787,7 +789,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         };
       }
     });
-
     return this.__highlightTypes(highlightElements, type, highlight, outline, fade);
   }
   /**
@@ -1405,6 +1406,18 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _updateFg () {
+    let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
+    // React-force-graph reuses material objects for multiple elements, so we need to clone every material so that we can modify individual elements.
+    ["nodes","links"].forEach((elementType) => {
+      graph[elementType].forEach((element) => {
+        if (this.state.visMode !== "2D") {
+          let obj = (element.__lineObj || element.__threeObj);
+          if (obj !== undefined) {
+            obj.material = obj.material.clone();
+          }
+        }
+      });
+    });
   }
   /**
    * Callback for when a legend button is right clicked
@@ -2440,7 +2453,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       </div>
                       <LinkExaminer link={this.state.selectedNode}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
-                      <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph} ref={this._findTool}/>
+                      <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                resultMouseEnter={(group)=>Object.values(group).forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
+                                resultMouseLeave={(group)=>Object.values(group).forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
+                                resultMouseClick={(group)=>{}}
+                                ref={this._findTool}/>
                     </div>
                   </div>
                   <div onContextMenu={this._handleContextMenu}>
