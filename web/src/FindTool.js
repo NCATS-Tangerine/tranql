@@ -69,8 +69,8 @@ export default class FindTool extends Component {
     // This prevents anything that could technically be a selector inside of selector attributes being matched as a new selector
     // Explanation:
     //    Group 1 - Join all selectors with or operators (and sanitize them for regex).
-    //    Group 2 - Optionally match open and closing curly braces and anything inside of them.
-    //    Group 3 - Lookahead and match either any transition or an end of line.
+    //    Group 2 - Optionally match open and closing curly braces and anything inside of them (e.g. `{foo}`).
+    //    Group 3 - Match either any transition or an end of line.
     const selectorRegex = new RegExp(`(${selectorTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})({.*?})?(${transitionRegex}|$)`,"gi");
     let selectors = [];
     let selector;
@@ -81,6 +81,29 @@ export default class FindTool extends Component {
         transition: selector[3]
       });
     }
+    let skipNextIter = 0;
+    selectors = selectors.reduce((acc, sel, i) => {
+      if (skipNextIter > 0) {
+        skipNextIter--;
+        return acc;
+      }
+      if (sel.transition !== "") {
+        const transitionSelector = selectors[i+1];
+        const nextSelector = selectors[i+2];
+        // Make sure that we don't have a case where no selector is present but a transition is (e.g. `nodes{"foo":"bar"}->`). Treat it as if there is no transition if there is no selector.
+        if (nextSelector !== undefined) {
+          sel.transitionSelector = transitionSelector;
+          sel.nextSelector = nextSelector
+          if (nextSelector.transition === "")  {
+            // If the nextSelector does not have a transition do not include it as a general selector (e.g. just `nodes{"foo":"bar"}`) because it is only intended to be for this transition.
+            skipNextIter++;
+          }
+          skipNextIter++;
+        }
+      }
+      acc.push(sel);
+      return acc;
+    }, []);
 
     // const selectors = text.split(new RegExp(transitionRegex));
     // let transitions = text.match(new RegExp(transitionRegex,"g"));
@@ -104,13 +127,17 @@ export default class FindTool extends Component {
   static parseAttribute(attribute) {
     // Custom attribute flags (e.g. `type:foo("bar")`)
     const flags = {
+      // Tests a regex pattern against the value
       regex: function(elementValue, value) {
-        try {
-          return elementValue.match(value);
+        return elementValue.match(value);
+      },
+      // Run a given function on the attribute
+      func: function(elementValue, value) {
+        // This allows for unrestrained access of the object but is not recommended unless necessary.
+        if (typeof value === "string") {
+          value = eval(value);
         }
-        catch (e) {
-          return false;
-        }
+        return value(elementValue);
       }
     };
 
@@ -142,6 +169,65 @@ export default class FindTool extends Component {
 
     return parsedAttribute;
   }
+  static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector) {
+    let elements = {
+      nodes: [],
+      links: []
+    };
+    let results = {
+      nodes: [],
+      links: []
+    };
+    if (selectorType === "links") {
+      elements.links = graph.links;
+    }
+    else if (selectorType === "nodes") {
+      elements.nodes = graph.nodes;
+    }
+    else if (selectorType === "*") {
+      elements.nodes = graph.nodes;
+      elements.links = graph.links;
+    }
+    else {
+      // Invalid selector type
+      return -1;
+    }
+
+
+    const addElem = (elementType,element) => {
+      results[elementType].push(
+        element.hasOwnProperty('origin') ? element.origin : element
+      );
+    }
+
+    Object.keys(elements).forEach((elementType) => {
+      elements[elementType].forEach((element) => {
+        let every = Object.entries(attributes).every((obj) => {
+          let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
+          if (element.hasOwnProperty(attributeName)) {
+            if (typeof flagCallback === "string") {
+              let flag = flagCallback;
+              flagCallback = function(elementValue, value) {
+                if (typeof elementValue[flag] === "function") {
+                  try {
+                    return elementValue[flag](value);
+                  }
+                  catch (e) {
+                    return false;
+                  }
+                }
+              }
+            }
+            return flagCallback(element[attributeName],attributeValue);
+          }
+        });
+        if (every) {
+          addElem(elementType,element);
+        }
+      });
+    });
+    return results;
+  }
   _findResults() {
     const empty = {
       nodes: [],
@@ -152,36 +238,83 @@ export default class FindTool extends Component {
       links: []
     };
 
-    if (this._input.current === null) return results;
-    const selectors = FindTool.parse(this._input.current.value);
+    const handleSelector = (graph, selector, attribs={}) => {
+      const results = {
+        nodes: [],
+        links: []
+      };
+      const { selectorType, transition, transitionSelector, nextSelector } = selector;
+      let { selectorAttributes: attributes } = selector;
+      // console.log(selectors);
+      // nodes{"type:includes":"drug_exposure"}->links{}->nodes{"type:includes":"chemical_substance"}
 
-    const graph = this.props.graph;
+      attributes = parseAttributes(attributes);
+      if (attributes === -1) {
+        return -1;
+      }
 
-    for (let i=0;i<selectors.length;i++) {
-      const {selectorType: selectorType, selectorAttributes: attributes, transition: transition} = selectors[i];
-      const nextSelector = selectors[i+1];
+      attributes = {...attributes, ...attribs};
 
-      // Even
-      if (i % 2 === 0) {
+      let elements = FindTool.findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector);
+
+      if (elements === -1) {
+        return -1;
+      }
+      else {
+        results.nodes = results.nodes.concat(elements.nodes);
+        results.links = results.links.concat(elements.links);
+      }
+
+      // If nextSelector is defined, that means that this is a node pair and therefore has a link transition.
+      if (nextSelector) {
+        // We want to add the results of the next selector first. Then we can take any links with a source id of any nodes from the first selector and a target id of any nodes from the last selector.
+        let {nextSelector: nextSelectorNextSelector, ...nextSel} = nextSelector;
+        let nextSelResults = handleSelector(graph, nextSel);
+
+        let transitionAttributes = {};
+        if (transition === "->") {
+          // Compile regex that matches any nodes with a source id of any nodes in the first selector and a target id of any nodes in the second selector
+          let source_re = new RegExp(results.nodes.map((n)=>n.id).join("|"));
+          let target_re = new RegExp(nextSelResults.nodes.map((n)=>n.id).join("|"));
+          transitionAttributes = {
+            "origin:func": (origin)=>origin.source_id.match(source_re) && origin.target_id.match(target_re)
+          };
+        }
+        let nextTransitionResults = handleSelector(graph, transitionSelector, transitionAttributes);
+        // Nodes should always be empty here but it is here anyways for consistency.
+        results.nodes = results.nodes.concat(nextTransitionResults.nodes);
+        results.links = results.links.concat(nextTransitionResults.links);
+
+        // Links should always be empty here but it is here anyways for consistency.
+        results.nodes = results.nodes.concat(nextSelResults.nodes);
+        results.links = results.links.concat(nextSelResults.links);
+
+
+        // Filter out any nodes which do not have any links connecting them
+        results.nodes = results.nodes.filter((node) => {
+          return results.links.reduce((acc,link) => {
+            // findElems returns elements' origins
+            return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
+          },0);
+        });
+        let nodeIds = [];
+        results.nodes = results.nodes.filter((node) => {
+          if (!nodeIds.includes(node.id)) {
+            nodeIds.push(node.id);
+            return true;
+          }
+          return false;
+        });
 
       }
 
-      // const transition = transitions[i];
+      return results;
+    }
 
-      if (selectors.length > 1 && nextSelector === undefined) {
-        continue;
-      }
-
-      // let selectorType = selector.match(/[^\{]*/);
-      // let attributes = selector.match(/\{(.*?)\}/g);
-
-      // Special case - if no dict is provided it will use all instead of none. E.g. `nodes` will select all nodes, but `nodes{}` will select none.
-      let useAll = false;
-
-      // No attributes
+    const parseAttributes = (attributes) => {
+      // Special case - providing no dict is a shorthand for saying `{selector}{}`, which selects everything from that selector (e.g. `nodes{}` or `nodes` will select all nodes)
       if (attributes === undefined) {
         attributes = {};
-        useAll = true;
       }
       else {
         try {
@@ -189,81 +322,27 @@ export default class FindTool extends Component {
           attributes = JSON.parse(attributes);
         }
         catch (e) {
-          return empty;
+          return -1;
         }
       }
-      let elements = {
-        nodes: [],
-        links: []
-      }
-      if (selectorType === "links") {
-        elements.links = graph.links;
-      }
-      else if (selectorType === "nodes") {
-        elements.nodes = graph.nodes;
-      }
-      else if (selectorType === "*") {
-        elements.nodes = graph.nodes;
-        elements.links = graph.links;
-      }
-      else {
-        // Invalid selector type
+      return attributes;
+    }
+
+    if (this._input.current === null) return results;
+    const selectors = FindTool.parse(this._input.current.value);
+
+    console.log(selectors);
+
+    const graph = this.props.graph;
+
+    for (let i=0;i<selectors.length;i++) {
+      let selector = selectors[i];
+      let elems = handleSelector(graph, selector);
+      if (elems === -1) {
         return empty;
       }
-
-      const addElem = (elementType,element) => {
-        results[elementType].push(
-          element.hasOwnProperty('origin') ? element.origin : element
-        );
-      }
-
-      Object.keys(elements).forEach((elementType) => {
-        elements[elementType].forEach((element) => {
-          if (useAll) {
-            addElem(elementType,element);
-          }
-          else {
-            Object.entries(attributes).forEach((obj) => {
-              let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
-              if (element.hasOwnProperty(attributeName)) {
-                if (typeof flagCallback === "string") {
-                  let flag = flagCallback;
-                  flagCallback = function(elementValue, value) {
-                    if (typeof elementValue[flag] === "function") {
-                      try {
-                        return elementValue[flag](value);
-                      }
-                      catch (e) {
-                        return false;
-                      }
-                    }
-                  }
-                }
-                if (flagCallback(element[attributeName],attributeValue)) {
-                  addElem(elementType,element);
-                }
-                else {
-                  console.log(element[attributeName],attributeValue);
-                }
-              }
-            });
-          }
-        });
-      });
-
-      // if (transition === undefined) {
-      //   graph.nodes.forEach((node) => {
-      //
-      //   });
-      // }
-      // else {
-      //   graph.links.forEach((link) => {
-      //
-      //   });
-      //   graph.nodes.forEach((node) => {
-      //
-      //   });
-      // }
+      results.nodes = results.nodes.concat(elems.nodes);
+      results.links = results.links.concat(elems.links);
     }
 
     return results;

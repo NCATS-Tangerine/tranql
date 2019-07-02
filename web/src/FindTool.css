@@ -18,7 +18,8 @@
   border:none;
   outline:none;
   font-size:.75rem;
-  width:235px;
+  min-width:235px;
+  width:100%;
 }
 .find-tool-button-container {
   display:flex;
@@ -46,5 +47,5 @@
   background-color:rgb(220,220,220);
 }
 .result-container {
-  
+  overflow-y:auto;
 }
