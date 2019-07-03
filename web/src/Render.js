@@ -402,7 +402,6 @@ class CurvatureAdjuster extends Actor {
         // Group length of 1 would result in curvature of 1, which generates a semicircle.
         // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
         link.concatName = allTypesString;
-        link.allConnections = group;
         if (context.curvedLinks) {
           link.curvature = index/group.length;
           link.rotation = (Math.PI*2)/(index/group.length);

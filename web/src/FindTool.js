@@ -377,7 +377,10 @@ export default class FindTool extends Component {
     if (typeof selectors === "string") {
       return selectors;
     }
-    const graph = this.props.graph;
+    // Circular object replacer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cyclic_object_value)
+    let graph = JSON.parse(JSON.stringify(this.props.graph));
+
+    let anyTransitions = false;
 
     for (let i=0;i<selectors.length;i++) {
       let selector = selectors[i];
@@ -387,14 +390,18 @@ export default class FindTool extends Component {
       }
       results.nodes = results.nodes.concat(elems.nodes);
       results.links = results.links.concat(elems.links);
+
+      if (selector.transition !== "") {
+        anyTransitions = true;
+      }
     }
 
     let grouped = [];
 
-    if (results.nodes.length === 0 || results.links.length === 0) {
+    if (!anyTransitions) {
       return {
         grouped : false,
-        groups: []
+        groups: [...results.nodes, ...results.links]
       };
     }
     else {
