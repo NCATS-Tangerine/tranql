@@ -185,3 +185,29 @@ export function groupBy( array , f ) {
 export function lerp(a, b, u) {
     return (1 - u) * a + u * b;
 };
+
+
+/**
+ * Utility method to facilitate the debouncing of a function
+ *
+ * @param {function} func - Debounced function
+ * @param {number} time - Amount of time in ms since the function's last attempted invocation required to pass for the function to actually be invoked
+ * @param {...<T>} varargs - Any additional arguments to pass to the function
+ * @private
+ * @returns {function} - Debounced function that should be invoked rather than the actual one.
+ */
+export function debounce(func, time, ...args) {
+  let timer;
+  return function() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(()=>func(...args), time);
+  }
+}
+
+export function scrollIntoView(selector) {
+  const element = document.querySelector(selector);
+  element.scrollIntoView({
+    block: 'start',
+    behavior: 'smooth'
+  });
+}

@@ -33,7 +33,7 @@ import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import highlightTypes from './highlightTypes.js';
-import { shadeColor, adjustTitle } from './Util.js';
+import { shadeColor, adjustTitle, debounce, scrollIntoView } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import FindTool from './FindTool.js';
@@ -403,15 +403,21 @@ class App extends Component {
                       <h6>The valid flags are:</h6>
                       <Row>
                         <dl>
-                          <Col><dt>regex</dt></Col><Col><dd>Matches a <a target="_blank" href="http://cecas.clemson.edu/~warner/M865/RegexBasics.html">regular expression</a> against the element's attribute<br/><a href="#regexFlag">Example</a></dd></Col>
-                          <Col><dt>func</dt></Col><Col><dd>Evals a JavaScript function which is passed the element's attribute as the only argument. Should return true or false to indicate if the node should or should not be included.<br/><a href="#funcFlag">Example</a></dd></Col>
+                          <Col><dt>regex</dt></Col><Col><dd>Matches a <a target="_blank" href="http://cecas.clemson.edu/~warner/M865/RegexBasics.html">regular expression</a> against the element's attribute<br/><a href="javascript:void(0)" onClick={
+                            ()=>scrollIntoView("#regexFlag")
+                          }>Example</a></dd></Col>
+                          <Col><dt>func</dt></Col><Col><dd>Evals a JavaScript function which is passed the element's attribute as the only argument. Should return true or false to indicate if the node should or should not be included.<br/><a href="javascript:void(0)" onClick={
+                            ()=>scrollIntoView("#funcFlag")
+                          }>Example</a></dd></Col>
                           <Col>
                             <dt>Special</dt>
                             <dd>
                               Any other method in the element's attribute's JavaScript prototype chain (for common references see&nbsp;
                               <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/prototype">Text</a> and&nbsp;
                               <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype">Lists</a>).
-                              <br/><a href="#regexFlag">Example (list includes)</a>
+                              <br/><a href="javascript:void(0)" onClick={
+                                ()=>scrollIntoView("#regexFlag")
+                              }>Example (list includes)</a>
                             </dd>
                           </Col>
                         </dl>
@@ -1919,22 +1925,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         }
       );
   }
-  /**
-   * Utility method to facilitate the debouncing of a function
-   *
-   * @param {function} func - Debounced function
-   * @param {number} time - Amount of time in ms since the function's last attempted invocation required to pass for the function to actually be invoked
-   * @param {...<T>} varargs - Any additional arguments to pass to the function
-   * @private
-   * @returns {function} - Debounced function that should be invoked rather than the actual one.
-   */
-  _debounce(func, time, ...args) {
-    let timer;
-    return function() {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(func, time);
-    }
-  }
+
   /**
    * Invoked on window resize
    *
@@ -2102,7 +2093,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                           <Card.Header className="toolbar-help-content-title">
                           {this.state.toolHelpDescriptions[type][this.state.toolbarHelpModalActiveToolType[type]].title}
                           </Card.Header>
-                          <Card.Text>
+                          <Card.Text as="div">
                             <div>
                               {
                                 this.state.toolHelpDescriptions[type][this.state.toolbarHelpModalActiveToolType[type]].description
@@ -2369,7 +2360,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   componentDidMount() {
-    // this._updateDimensionsFunc = this._debounce(this._updateDimensions, 100);
+    // this._updateDimensionsFunc = debounce(this._updateDimensions, 100);
     this._updateDimensionsFunc = this._updateDimensions;
     window.addEventListener('resize', this._updateDimensionsFunc);
 
