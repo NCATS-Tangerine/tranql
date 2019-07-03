@@ -390,7 +390,7 @@ class App extends Component {
                     The `{"{}"}` following the selector may be omitted if no attributes are present.
                     Attributes must be valid <a target="_blank" href="https://tools.ietf.org/html/rfc7159">JSON</a>. This means that attributes are structured as key to value, where key is an attribute that a node or link may or may not possess.
                     If you are unsure as to what attributes nodes and links have, you can use the <FaMousePointer style={{fontSize:"14px"}}/> select tool to view a node or link's attributes.
-                    However, be mindful, only some attributes such as "id", "name", "type", and "equivalent_identifiers" are standard. Not all nodes or links are gaurenteeed to have others.
+                    However, keep in mind, only some attributes such as "id", "name", "type", and "equivalent_identifiers" are standard. Not all nodes or links are gaurenteeed to have others.
                   </p>
                   <div className="section">
                     <h6>Flags:</h6>
@@ -856,6 +856,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     let highlightElements = [];
 
+    // CLone all materials that have been reused by the react-force-graph so that we can modify individual elements
+    let materialCache = [];
+
     let graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
     type.forEach(highlightType => {
       for (let graphElementType of ["nodes","links"]) {
@@ -863,6 +866,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         for (let i=0;i<elements.length;i++) {
           let element = elements[i];
           let types = element[property];
+
+          if (highlight !== false) {
+            if (this.state.vMode !== "2D") {
+              let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
+              if (obj === undefined) continue;
+              let material = obj.material;
+              if (materialCache.includes(material.uuid)) {
+                obj.material = obj.material.clone();
+                materialCache.push(obj.material.uuid);
+              }
+              else {
+                materialCache.push(material.uuid);
+              }
+            }
+          }
 
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
@@ -1493,20 +1511,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _updateFg () {
     let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
     // React-force-graph reuses material objects for multiple elements, so we need to clone every material so that we can modify individual elements.
-    ["nodes","links"].forEach((elementType) => {
-      graph[elementType].forEach((element) => {
-        if (this.state.visMode !== "2D") {
-          let obj = (element.__lineObj || element.__threeObj);
-          if (obj !== undefined) {
-            obj._material = obj.material.clone();
-            delete obj.material;
-            // Sadly this is very hacky but it works. In order to prevent react-force-graph from reusing materials we have to clone the material everytime it tries to reassign it.
-            obj.__defineGetter__("material", () => obj._material);
-            obj.__defineSetter__("material", (material) => obj._material = material.clone());
-          }
-        }
-      });
-    });
+    // ["nodes","links"].forEach((elementType) => {
+    //   graph[elementType].forEach((element) => {
+    //     if (this.state.visMode !== "2D") {
+    //       let obj = (element.__lineObj || element.__threeObj);
+    //       if (obj !== undefined) {
+    //         obj._material = obj.material.clone();
+    //         delete obj.material;
+    //         // Sadly this is very hacky but it works. In order to prevent react-force-graph from reusing materials we have to clone the material everytime it tries to reassign it.
+    //         obj.__defineGetter__("material", () => obj._material);
+    //         obj.__defineSetter__("material", (material) => obj._material = material.clone());
+    //       }
+    //     }
+    //   });
+    // });
   }
   /**
    * Callback for when a legend button is right clicked
@@ -2528,16 +2546,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       <LinkExaminer link={this.state.selectedNode}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                resultMouseEnter={(group,grouped)=>{
-                                  console.log(group);
-                                  let values = grouped ? Object.values(group) : [group];
+                                resultMouseEnter={(values)=>{
+                                  console.log(values);
                                   values.forEach((element) => this._highlightType(element.source_el.id,0xff0000,false,undefined,'id'))}
                                 }
-                                resultMouseLeave={(group,grouped)=>{
-                                  let values = grouped ? Object.values(group) : [group];
+                                resultMouseLeave={(values)=>{
                                   values.forEach((element) => this._highlightType(element.source_el.id,false,false,undefined,'id'))}
                                 }
-                                resultMouseClick={(group,grouped)=>{}}
+                                resultMouseClick={(values)=>{}}
                                 ref={this._findTool}/>
                     </div>
                   </div>
@@ -2547,14 +2563,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         this._renderForceGraph (
                           this.state.schema,
                           {
-                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()},
-
-                          // Kind of hacky - in essense, every time the active graph changes, the d3 alpha decay forces are reapplied.
-                          // This detects if this is the first render and, if so, it allows the alpha decay forces to be applied to the graph.
-                          // Additionally, the react-force-graph does not seem to like it when you pass in a property as undefined.
-                          // Therefore, the spread operator is used here to conditionally add properties to the object without having to pass in a property as undefined
-                          // Commented out because it breaks charge. Needs to somehow reset graph when graph type changes, but also needs to retain auto color property.
-                          // ...(this.state.schema.nodes.some(n => n.index !== undefined) || this.state.schema.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
+                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
                         })
                       )
                     :
@@ -2562,9 +2571,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         this._renderForceGraph (
                           this.state.graph, {
                           ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
-
-                          // Refer to similar block in the above schema graph for a reference to what atrocious things are occuring here
-                          // ...(this.state.graph.nodes.some(n => n.index !== undefined) || this.state.graph.links.some(l => l.index !== undefined) ? {d3AlphaDecay: 1} : {})
                         })
                       )
                     }

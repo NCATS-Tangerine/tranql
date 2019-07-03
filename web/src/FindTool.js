@@ -154,6 +154,60 @@ export default class FindTool extends Component {
         catch {
           return false;
         }
+      },
+      "<": function(elementValue, value) {
+        // Performs < operator on the provided values
+        try {
+          return elementValue < value
+        }
+        catch {
+          return false;
+        }
+      },
+      ">": function(elementValue, value) {
+        // Performs > operator on the provided values
+        try {
+          return elementValue > value
+        }
+        catch {
+          return false;
+        }
+      },
+      "<=": function(elementValue, value) {
+        // Performs <= operator on the provided values
+        try {
+          return elementValue <= value
+        }
+        catch {
+          return false;
+        }
+      },
+      ">=": function(elementValue, value) {
+        // Performs >= operator on the provided values
+        try {
+          return elementValue >= value
+        }
+        catch {
+          return false;
+        }
+      },
+      "!==": function(elementValue, value) {
+        // Performs !== operator on the provided values (default operator is ===)
+        try {
+          return elementValue !== value
+        }
+        catch {
+          return false;
+        }
+      },
+      "!=": function(elementValue, value) {
+        // Performs != operator on the provided values (default operator is ===)
+        try {
+          return elementValue != value
+        }
+        catch {
+          return false;
+        }
       }
     };
 
@@ -342,6 +396,7 @@ export default class FindTool extends Component {
             if (typeof flagCallback === "string") {
               let flag = flagCallback;
               flagCallback = function(elementValue, value) {
+                // If the flag is a method of the value
                 if (typeof elementValue[flag] === "function") {
                   try {
                     return elementValue[flag](value);
@@ -354,7 +409,7 @@ export default class FindTool extends Component {
             }
             magicVariables["__element__"] = JSON.stringify(element);
             // Replace any magic variables
-            attributeValue = attributeValue.replace(/(?<!\\)__.*?__(?!\\)/g, (val) => magicVariables[val]);
+            if (typeof attributeValue === "string") attributeValue = attributeValue.replace(/(?<!\\)__.*?__(?!\\)/g, (val) => magicVariables[val]);
             return flagCallback(element[attributeName],attributeValue);
           }
         });
@@ -446,7 +501,9 @@ export default class FindTool extends Component {
           {
             results.groups.map((group, i) => {
               return (
-                <div className="result" onMouseEnter={()=>{this.setState({ entered : group });this.props.resultMouseEnter(group,results.grouped)}} onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(group,results.grouped)}} onClick={()=>this.props.resultMouseClick(group,results.grouped)} key={i}>
+                <div className="result" onMouseEnter={()=>{this.setState({ entered : results.grouped ? Object.values(group) : [group] });this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group])}}
+                                        onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group])}}
+                                        onClick={()=>this.props.resultMouseClick(results.grouped ? Object.values(group) : [group])} key={i}>
                   {
                     results.grouped ?
                       <>
