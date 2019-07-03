@@ -246,8 +246,18 @@ export default class FindTool extends Component {
         // Compile regex that matches any nodes with a source id of any nodes in the first selector and a target id of any nodes in the second selector
         source_re = new RegExp(results.nodes.map((n)=>n.id).join("|"));
         target_re = new RegExp(nextSelResults.nodes.map((n)=>n.id).join("|"));
+        if (results.nodes.length === 0 || nextSelResults.nodes.length === 0) {
+          return (
+            {
+              nodes:[],
+              links:[]
+            }
+          )
+        }
         transitionAttributes = {
-          "origin:func": `(origin)=>origin.source_id.match(${source_re}) && origin.target_id.match(${target_re})`
+          "source_id:regex":source_re.source,
+          "target_id:regex":target_re.source
+          // "origin:func": `(origin)=>origin.source_id.match(${source_re}) && origin.target_id.match(${target_re})`
         };
       }
       let nextTransitionResults = FindTool.handleSelector(graph, transitionSelector, transitionAttributes, {
@@ -265,13 +275,14 @@ export default class FindTool extends Component {
       results.nodes = results.nodes.concat(nextSelResults.nodes);
       results.links = results.links.concat(nextSelResults.links);
 
-
       // Filter out any nodes which do not have any links connecting them
       results.nodes = results.nodes.filter((node) => {
         return results.links.reduce((acc,link) => {
-          return link.origin.source_id === node.id || link.origin.target_id === node.id ? acc + 1 : acc;
+          return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
         },0);
       });
+
+      // Filter out any duplicate nodes
       let nodeIds = [];
       results.nodes = results.nodes.filter((node) => {
         if (!nodeIds.includes(node.id)) {
@@ -281,6 +292,10 @@ export default class FindTool extends Component {
         return false;
       });
 
+      // Filter out any links whose nodes are not present in the result (because it uses regex to select links it also tends to match substrings)
+      results.links = results.links.filter((link) => {
+        return nodeIds.includes(link.source_id) && nodeIds.includes(link.target_id);
+      });
     }
 
     return results;
@@ -318,6 +333,8 @@ export default class FindTool extends Component {
 
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
+        element.origin.source_el = { id : element.id, name : element.name };
+        element = element.origin;
         let every = Object.entries(attributes).every((obj) => {
           let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
           if (element.hasOwnProperty(attributeName)) {
@@ -353,8 +370,8 @@ export default class FindTool extends Component {
       links:[]
     };
 
-    if (this._input.current === null) return results;
-    const selectors = FindTool.parse(this._input.current.value);
+    const val = this._input.current === null ? "" : this._input.current.value;
+    const selectors = FindTool.parse(val);
     if (typeof selectors === "string") {
       return selectors;
     }
@@ -375,7 +392,7 @@ export default class FindTool extends Component {
     if (results.nodes.length === 0 || results.links.length === 0) {
       return {
         grouped : false,
-        groups: [...results.nodes,...results.links]
+        groups: []
       };
     }
     else {
@@ -385,8 +402,8 @@ export default class FindTool extends Component {
       });
       results.links.forEach((link) => {
         grouped.push({
-          source: nodeMap[link.origin.source_id],
-          target: nodeMap[link.origin.target_id],
+          source: nodeMap[link.source_id],
+          target: nodeMap[link.target_id],
           link: link
         });
       });
@@ -401,7 +418,6 @@ export default class FindTool extends Component {
   _results() {
     const results = this._findResults();
     let elements;
-    console.log(results);
     if (typeof results === "string") {
       // Error
       elements = (
@@ -421,17 +437,17 @@ export default class FindTool extends Component {
           {
             results.groups.map((group, i) => {
               return (
-                <div className="result" onMouseEnter={()=>{this.setState({ entered : group });this.props.resultMouseEnter(group)}} onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(group)}} onClick={()=>this.props.resultMouseClick(group)} key={i}>
+                <div className="result" onMouseEnter={()=>{this.setState({ entered : group });this.props.resultMouseEnter(group,results.grouped)}} onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(group,results.grouped)}} onClick={()=>this.props.resultMouseClick(group,results.grouped)} key={i}>
                   {
                     results.grouped ?
                       <>
-                        <span>{group.source.name + " (" + group.source.id + ")"}</span>
+                        <span>{group.source.source_el.name + " (" + group.source.source_el.id + ")"}</span>
                         <div><FaLongArrowAltRight/></div>
-                        <span>{(Array.isArray(group.link.origin.type) ? group.link.origin.type : [group.link.origin.type]).join(" / ") + " (" + group.link.id + ")"}</span>
+                        <span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ") + " (" + group.link.source_el.id + ")"}</span>
                         <div><FaLongArrowAltRight/></div>
-                        <span>{group.target.name + " (" + group.target.id + ")"}</span>
+                        <span>{group.target.source_el.name + " (" + group.target.source_el.id + ")"}</span>
                       </> :
-                      <><span>{group.name + " (" + group.id + ")"}</span></>
+                      <><span>{group.source_el.name + " (" + group.source_el.id + ")"}</span></>
                   }
                 </div>
               );
@@ -466,7 +482,7 @@ export default class FindTool extends Component {
         </div>
         <div className="result-container">
           {
-            this.state.results
+            this._results()
           }
         </div>
       </div>

@@ -239,7 +239,7 @@ body {
 .toolbar-help-modal-dialog {
   height:50%;
   margin:0;
-  width:500px;
+  width:700px;
   max-width:none;
 }
 .toolbar-help-modal-dialog .modal-body {
@@ -273,7 +273,7 @@ body {
   padding:.75rem 1.25rem;
 }
 .toolbar-help-tool-group {
-  flex:0 0 15%;
+  flex:0 0 12%;
   height:100%;
   overflow-y:auto;
 }
@@ -302,6 +302,14 @@ body {
 }
 .toolbar-help-tool-button > * {
   padding:0;
+}
+/* First child is the header of the section */
+.section > *:not(:first-child) {
+  padding-left:15PX;
+}
+.section dt {
+  /* Tone down the font weight applied to description lists a bit */
+  font-weight:500;
 }
 #helpGrid > * {
   padding-left:7.5px;

@@ -373,10 +373,87 @@ class App extends Component {
           },
           {
             title: "Find Tool",
-            description: `
-            This button brings up the find tool, which can also be opened with the keyboard shortcut control+F.
-            The find tool enables the user to use JSON-like attribute selectors to find certain objects in the graph.
-            `
+            description: (
+              <div>
+                <div className="section">
+                  <h6>Introduction:</h6>
+                  <p>
+                    This button brings up the find tool, which can also be opened with the keyboard shortcut control+F (the normal browser find tool can be opened with F3).
+                  The find tool enables the user to use JSON-like attribute selectors to find certain objects in the graph.
+                  </p>
+                </div>
+                <div className="section">
+                  <h6>Structure:</h6>
+                  <p>
+                    The general structure of queries is `selector`{"{`attributes`}"}. A selector can be either "nodes", "links", or "*". The asterisk selector selects both nodes and links.
+                    You can also connect these selectors with transitions, with the structure `selector`{"{`attributes`}"} -> `selector`{"{`attributes`}"} -> `selector`{"{`attributes`}"}. Note: only links are applicable in the second selector.
+                    The `{"{}"}` following the selector may be omitted if no attributes are present.
+                    Attributes must be valid <a target="_blank" href="https://tools.ietf.org/html/rfc7159">JSON</a>. This means that attributes are structured as key to value, where key is an attribute that a node or link may or may not possess.
+                    If you are unsure as to what attributes nodes and links have, you can use the <FaMousePointer style={{fontSize:"14px"}}/> select tool to view a node or link's attributes.
+                    However, be mindful, only some attributes such as "id", "name", "type", and "equivalent_identifiers" are standard. Not all nodes or links are gaurenteeed to have others.
+                  </p>
+                  <div className="section">
+                    <h6>Flags:</h6>
+                    <p>
+                      A colon in an attribute key indicates that the following text is an attribute flag. Attribute flags modify the behavior of how the attribute is compared to the provided value.
+                      For example, if an attribute is a list ("['a','b','c']"), you can use the `includes` flag to check if `a` is in the list. This would look like "nodes{`{"attribute:includes" : "a"}`}".
+                      All normal colons inside of attribute keys must be escaped, i.e. preceded by a backslash ("\:"), or it will be assumed that the following text is an attribute flag.
+                    </p>
+                    <div className="section">
+                      <h6>The valid flags are:</h6>
+                      <Row>
+                        <dl>
+                          <Col><dt>regex</dt></Col><Col><dd>Matches a <a target="_blank" href="http://cecas.clemson.edu/~warner/M865/RegexBasics.html">regular expression</a> against the element's attribute<br/><a href="#regexFlag">Example</a></dd></Col>
+                          <Col><dt>func</dt></Col><Col><dd>Evals a JavaScript function which is passed the element's attribute as the only argument. Should return true or false to indicate if the node should or should not be included.<br/><a href="#funcFlag">Example</a></dd></Col>
+                          <Col>
+                            <dt>Special</dt>
+                            <dd>
+                              Any other method in the element's attribute's JavaScript prototype chain (for common references see&nbsp;
+                              <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/prototype">Text</a> and&nbsp;
+                              <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype">Lists</a>).
+                              <br/><a href="#regexFlag">Example (list includes)</a>
+                            </dd>
+                          </Col>
+                        </dl>
+                      </Row>
+                    </div>
+                  </div>
+                  <div className="section">
+                    <h6>Magic variables (no current uses)</h6>
+                    <p>
+                      While flags are concerning attribute keys, magic variables are used in attribute values.
+                      These variables use the syntax "__`variable name`__". They are used as if they are plain text, for example, "nodes->links{`{"type:regex":"foo|__sourceNodes__"}`}->nodes".
+                      All instances of a normal two underscores in a row must be escaped with a backslash ("\__"), or it will result in any text following it and preceding another two unescaped underscores being detected as a magic variable.
+                    </p>
+                    <div className="section">
+                      <h6>The valid magic variables are:</h6>
+                      <Row>
+                        <dl>
+                          <Col><dt>__sourceNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of this is a regex string that matches for any ids of the nodes from the source selector.</dd></Col>
+                          <Col><dt>__targetNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of this is a regex string that matches for any ids of the nodes from the target selector.</dd></Col>
+                        </dl>
+                      </Row>
+                    </div>
+                  </div>
+                </div>
+                <div className="section">
+                  <h6>Example queries:</h6>
+                  <Row>
+                    <dl>
+                      <Col><dt>nodes{`{"id": "chemical_substance"}`}</dt></Col>
+                      <Col><dd>This will find all nodes in the graph whose `id` attribute equals "chemical_substance".</dd></Col>
+
+                      <Col id="regexFlag"><dt>nodes{`{"equivalent_identifiers:includes":"CHEMBL:CHEMBL3"}`} -><br/> links{`{"type:includes":"related_to"}`} -><br/> nodes{`{"name:regex":"(disease|genetic_condition)"}`}</dt></Col>
+                      <Col><dd>This will find all nodes in the graph who have the curie "CHEMBL:CHEMBL3" in their equivalent_identifiers attribute, all nodes whose name matches the regular expression "(disease|genetic_condition)",
+                      and all links whose source is any node from the first selector, target is from the third selector, and has the type "related_to".</dd></Col>
+
+                      <Col id="funcFlag"><dt>nodes{`{"description:func":"function(description) { return description.split("/").includes('test'); }"}`}</dt></Col>
+                      <Col><dd>This will find all nodes in the graph whose `description` attribute split by a forward slash contains the string "test".</dd></Col>
+                    </dl>
+                  </Row>
+                </div>
+              </div>
+          )
           },
           {
             title: "Help & Information",
@@ -777,7 +854,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         for (let i=0;i<elements.length;i++) {
           let element = elements[i];
           let types = element[property];
-          let id = element.id;
 
           if (!Array.isArray(types)) types = [types];
           if (types.includes(highlightType)) {
@@ -1413,7 +1489,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         if (this.state.visMode !== "2D") {
           let obj = (element.__lineObj || element.__threeObj);
           if (obj !== undefined) {
-            obj.material = obj.material.clone();
+            obj._material = obj.material.clone();
+            delete obj.material;
+            // Sadly this is very hacky but it works. In order to prevent react-force-graph from reusing materials we have to clone the material everytime it tries to reassign it.
+            obj.__defineGetter__("material", () => obj._material);
+            obj.__defineSetter__("material", (material) => obj._material = material.clone());
           }
         }
       });
@@ -2454,9 +2534,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       <LinkExaminer link={this.state.selectedNode}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                resultMouseEnter={(group)=>Object.values(group).forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
-                                resultMouseLeave={(group)=>Object.values(group).forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
-                                resultMouseClick={(group)=>{}}
+                                resultMouseEnter={(group,grouped)=>{
+                                  console.log(group);
+                                  let values = grouped ? Object.values(group) : [group];
+                                  values.forEach((element) => this._highlightType(element.source_el.id,0xff0000,false,undefined,'id'))}
+                                }
+                                resultMouseLeave={(group,grouped)=>{
+                                  let values = grouped ? Object.values(group) : [group];
+                                  values.forEach((element) => this._highlightType(element.source_el.id,false,false,undefined,'id'))}
+                                }
+                                resultMouseClick={(group,grouped)=>{}}
                                 ref={this._findTool}/>
                     </div>
                   </div>
