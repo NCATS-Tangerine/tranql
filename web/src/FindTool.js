@@ -333,6 +333,7 @@ export default class FindTool extends Component {
 
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
+        const actualElement = element;
         element.origin.source_el = { id : element.id, name : element.name };
         element = element.origin;
         let every = Object.entries(attributes).every((obj) => {
@@ -351,6 +352,7 @@ export default class FindTool extends Component {
                 }
               }
             }
+            magicVariables["__element__"] = JSON.stringify(element);
             // Replace any magic variables
             attributeValue = attributeValue.replace(/(?<!\\)__.*?__(?!\\)/g, (val) => magicVariables[val]);
             return flagCallback(element[attributeName],attributeValue);

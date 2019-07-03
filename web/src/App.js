@@ -435,8 +435,11 @@ class App extends Component {
                       <h6>The valid magic variables are:</h6>
                       <Row>
                         <dl>
-                          <Col><dt>__sourceNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of this is a regex string that matches for any ids of the nodes from the source selector.</dd></Col>
-                          <Col><dt>__targetNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of this is a regex string that matches for any ids of the nodes from the target selector.</dd></Col>
+                          <Col><dt>__sourceNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of __sourceNodes__ is a regex string that matches for any ids of the nodes from the source selector.</dd></Col>
+
+                          <Col><dt>__targetNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of __targetNodes__ is a regex string that matches for any ids of the nodes from the target selector.</dd></Col>
+
+                          <Col><dt>__element__</dt></Col><Col><dd>The value of __element__ is the current element being tested for the attribute.</dd></Col>
                         </dl>
                       </Row>
                     </div>
