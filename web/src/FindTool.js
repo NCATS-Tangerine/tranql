@@ -28,6 +28,7 @@ export default class FindTool extends Component {
 
     this._findResults = this._findResults.bind(this);
     this._results = this._results.bind(this);
+    this.updateResults = this.updateResults.bind(this);
 
     this._input = React.createRef();
   }
@@ -44,7 +45,8 @@ export default class FindTool extends Component {
   }
   _onInput(e) {
     this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
-    this.setState({ entered : null, results : this._results() });
+    this.setState({ entered : null });
+    this.updateResults();
   }
   _onKeyDown(e) {
     if (e.ctrlKey && e.keyCode === 70) {
@@ -532,6 +534,9 @@ export default class FindTool extends Component {
     }
     return elements;
   }
+  updateResults() {
+    this.setState({ results : this._results() });
+  }
   componentWillUnmount() {
     window.removeEventListener('keydown',this._onKeyDown);
     this._input.current.removeEventListener('blur', this._onInputBlur);
@@ -543,7 +548,7 @@ export default class FindTool extends Component {
     this._input.current.addEventListener('blur', this._onInputBlur);
     this._input.current.addEventListener('input',this._onInput);
 
-    this.setState({ results : this._results() });
+    this.updateResults();
   }
   render() {
     return (
@@ -556,7 +561,7 @@ export default class FindTool extends Component {
         </div>
         <div className="result-container">
           {
-            this._results()
+            this.state.results
           }
         </div>
       </div>

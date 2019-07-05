@@ -823,7 +823,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
       this._updateGraphSize(width);
     }
-
+    this.setState({},()=>this._findTool.current.updateResults());
   }
   /**
    * Highlight or unhighlight a given node or link type
@@ -1196,7 +1196,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this._renderChain.handle (message, this.state);
       this.setState({
         graph: message.graph
-      });
+      }, () => this._findTool.current.updateResults());
     }
   }
   /**
