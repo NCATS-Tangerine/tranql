@@ -1510,21 +1510,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _updateFg () {
     let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
-    // React-force-graph reuses material objects for multiple elements, so we need to clone every material so that we can modify individual elements.
-    // ["nodes","links"].forEach((elementType) => {
-    //   graph[elementType].forEach((element) => {
-    //     if (this.state.visMode !== "2D") {
-    //       let obj = (element.__lineObj || element.__threeObj);
-    //       if (obj !== undefined) {
-    //         obj._material = obj.material.clone();
-    //         delete obj.material;
-    //         // Sadly this is very hacky but it works. In order to prevent react-force-graph from reusing materials we have to clone the material everytime it tries to reassign it.
-    //         obj.__defineGetter__("material", () => obj._material);
-    //         obj.__defineSetter__("material", (material) => obj._material = material.clone());
-    //       }
-    //     }
-    //   });
-    // });
   }
   /**
    * Callback for when a legend button is right clicked

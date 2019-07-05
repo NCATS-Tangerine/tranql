@@ -222,10 +222,10 @@ export default class FindTool extends Component {
       attributeValue
     ];
 
-    let flag = attributeName.match(/(?<=:)(?<!\\:).*/g);
+    let flag = attributeName.match(/[^\\:][:](.*)/);
 
     if (flag !== null) {
-      flag = flag[0];
+      flag = flag[1];
 
       attributeName = attributeName.match(/.*(?=:)(?!\\:)/)
       // Update the attribute name to be the actual attribute name (without the flag)
@@ -411,7 +411,12 @@ export default class FindTool extends Component {
             }
             magicVariables["__element__"] = JSON.stringify(element);
             // Replace any magic variables
-            if (typeof attributeValue === "string") attributeValue = attributeValue.replace(/(?<!\\)__.*?__(?!\\)/g, (val) => magicVariables[val]);
+            let re = /[^\\](__.*?__)/g;
+            let sel;
+            while (sel = re.exec(attributeValue)) {
+              attributeValue = attributeValue.replace(sel[1],(val) => magicVariables[val]);
+            }
+            // if (typeof attributeValue === "string") attributeValue = attributeValue.replace(, (val) => magicVariables[val]);
             return flagCallback(element[attributeName],attributeValue);
           }
         });
