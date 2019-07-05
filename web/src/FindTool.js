@@ -251,7 +251,7 @@ export default class FindTool extends Component {
     else {
       try {
         // Invalid
-        attributes = JSON.parse(attributes);
+        attributes = JSON5.parse(attributes);
       }
       catch (e) {
         return "Invalid attribute syntax";
