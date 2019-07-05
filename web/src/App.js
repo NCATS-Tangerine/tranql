@@ -46,11 +46,14 @@ import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css';
 import { Controlled as CodeMirror } from 'react-codemirror2';
+import 'codemirror/mode/sql/sql';
+import 'codemirror/addon/hint/show-hint.css'; // without this css hints won't show
+import './App.css';
 require('create-react-class');
+require('codemirror/addon/hint/show-hint');
+require('codemirror/addon/hint/sql-hint');
 require('codemirror/lib/codemirror.css');
-require('codemirror/mode/sql/sql');
 
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
 Array.prototype.unique = function() {
@@ -172,7 +175,7 @@ class App extends Component {
     this._updateDimensions = this._updateDimensions.bind(this);
 
     // Create code mirror references.
-    this._codemirror = React.createRef ();
+    // this._codemirror = React.createRef ();
     this._contextMenu = React.createRef ();
 
     // Create modal references
@@ -780,9 +783,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @param {object} cm - The CodeMirror object.
    * @private
    */
-  _codeAutoComplete (cm) {
+  _codeAutoComplete () {
     // https://github.com/JedWatson/react-codemirror/issues/52
-    var codeMirror = this._codemirror.current.getCodeMirrorInstance ();
+    var codeMirror = this._codemirror;
 
     // hint options for specific plugin & general show-hint
     // 'tables' is sql-hint specific
@@ -801,12 +804,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       completeOnSingleClick: false
     };
 
-    // codeMirror.hint.sql is defined when importing codemirror/addon/hint/sql-hint
-    // (this is mentioned in codemirror addon documentation)
-    // Reference the hint function imported here when including other hint addons
-    // or supply your own
-    //codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
-    codeMirror.showHint(cm, codeMirror.hint.sql, hintOptions);
+    codeMirror.showHint(hintOptions);
   }
   /**
    * Sets the active force graph
@@ -2460,7 +2458,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               (
                 <>
                   <IoIosArrowDropupCircle onClick={(e) => this.setState({ showCodeMirror : false })} className="editor-vis-control legend-vis-control"/>
-                  <CodeMirror ref={this._codemirror}
+                  <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;window.editor=editor;}}
                   className="query-code"
                   value={this.state.code}
                   onBeforeChange={(editor, data, code) => this._updateCode(code)}
