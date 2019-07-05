@@ -57,6 +57,7 @@ class RenderSchemaInit extends Actor {
               source_id: edge[0],
               target_id: edge[1],
               type: edge[2],
+              ...edge[3],
               weight: 1
             });
           }

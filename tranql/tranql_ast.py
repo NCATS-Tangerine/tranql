@@ -449,6 +449,7 @@ class SelectStatement(Statement):
         if self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:
+            # We want to find what schema name corresponds to the url we are querying. Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces').
             schema = None
             for s in self.planner.schema.config["schema"]:
                 if self.planner.schema.config["schema"][s]["url"] == self.service:
@@ -514,6 +515,11 @@ class SelectStatement(Statement):
                 raise ServiceInvocationError (
                     f"No valid results from service {self.service} executing " +
                     f"query {self.query}. Unable to continue query. Exiting.")
+            for response in responses:
+                if 'knowledge_graph' in response:
+                    for element in [*response['knowledge_graph'].get('nodes',[]),*response['knowledge_graph'].get('edges',[])]:
+                        # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
+                        element["provided_by"] = schema
             result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
