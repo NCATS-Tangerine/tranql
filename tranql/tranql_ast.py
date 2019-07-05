@@ -312,17 +312,20 @@ class SelectStatement(Statement):
                 if index == len(steps) - 1:
                     """ If this is the last concept, add the object as well. """
                     statement.query.add (obj)
-                for constraint in self.where:
-                    """ Add constraints, if they apply to this schema. """
-                    name, op, val = constraint
-                    prefix = f"{schema}."
-                    if name.startswith (prefix):
-                        """ Remove the schema prefix as we add the constraint. """
-                        constraint_copy = copy.deepcopy (constraint)
-                        constraint_copy[0] = name.replace (prefix, "")
-                        statement.where.append (constraint_copy)
+                statement.where = self.where
         self.query.disable = True # = Query ()
         return statements
+
+    def format_constraints(self,schema):
+        for enum, constraint in enumerate(self.where):
+            """ Add constraints, if they apply to this schema. """
+            name, op, val = constraint
+            prefix = f"{schema}."
+            if name.startswith (prefix):
+                """ Remove the schema prefix as we add the constraint. """
+                constraint_copy = copy.deepcopy (constraint)
+                constraint_copy[0] = name.replace (prefix, "")
+                self.where[enum] = constraint_copy
 
     def generate_questions (self, interpreter):
         """
@@ -446,10 +449,19 @@ class SelectStatement(Statement):
         if self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:
+            schema = None
+            for s in self.planner.schema.config["schema"]:
+                if self.planner.schema.config["schema"][s]["url"] == self.service:
+                    schema = s
+                    break
+
+            self.format_constraints(schema)
+
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
             [self.ast.schema.validate_question(question) for question in questions]
             service = interpreter.context.resolve_arg (self.service)
+
 
             """ Invoke the service and store the response. """
 
@@ -602,7 +614,7 @@ class SelectStatement(Statement):
                             ids = [node['id']]
                         node['equivalent_identifiers'] = ids
                         total_requests += 1
-                        
+
                 for edge in response['knowledge_graph'].get('edges',[]):
                     """
                     Convert the `type` property of all edges into a list. Create it if they do not already have it.
