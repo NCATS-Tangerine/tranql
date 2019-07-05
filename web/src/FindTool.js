@@ -432,8 +432,16 @@ export default class FindTool extends Component {
     if (typeof selectors === "string") {
       return selectors;
     }
-    // Circular object replacer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cyclic_object_value)
-    let graph = JSON.parse(JSON.stringify(this.props.graph));
+
+    const replaceNodes = this.props.graph.nodes;
+    const replaceLinks = this.props.graph.links.map((link) => {
+      // Remove circular objects.
+      return Object.assign({}, link, { allConnections : undefined });
+    });
+    let graph = JSON.parse(JSON.stringify({
+      nodes:replaceNodes,
+      links:replaceLinks
+    }));
 
     let anyTransitions = false;
 
