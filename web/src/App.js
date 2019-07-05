@@ -7,6 +7,7 @@ import { Modal, Form, Card, Container, Row, Col, ListGroup, Tab as BsTab, Navbar
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
+import * as JSON5 from 'json5';
 import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayCircle } from 'react-icons/io';
@@ -1068,9 +1069,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             body: JSON.stringify ({
               'query' : this.state.code
             })
-          }).then(res => res.json())
+          }).then(res => res.text())
             .then(
               (result) => {
+                result = JSON5.parse(result);
                 if (result.message) {
                   this._handleMessageDialog (result.status, result.message, result.details);
                   console.log ("--error: " + result.message);
@@ -1107,7 +1109,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
-                this._handleMessageDialog (result.status, error.message, error.details);
+                this._handleMessageDialog ("Response Parsing Error", error.message, error.details);
                 this.setState ({
                   loading : false,
                   error : error

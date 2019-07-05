@@ -856,13 +856,20 @@ class QueryPlanStrategy:
         edge = None
         schema = None
         converted = False
+
+        source_type = source.type_name
+        target_type = target.type_name
+        if predicate.direction == Query.back_arrow:
+            source_type, target_type = target_type, source_type
+
         for schema_name, sub_schema_package in self.schema.schema.items ():
             """ Look for a path satisfying this edge in each schema. """
             sub_schema = sub_schema_package ['schema']
             sub_schema_url = sub_schema_package ['url']
-            if source.type_name in sub_schema:
-                logger.debug (f"  --{schema_name} - {source.type_name} => {target.type_name}")
-                if target.type_name in sub_schema[source.type_name]:
+
+            if source_type in sub_schema:
+                logger.debug (f"  --{schema_name} - {source_type} => {target_type}")
+                if target_type in sub_schema[source_type]:
                     """ Matching path. Write it to the plan. """
                     top_schema = None
                     if len(plan) > 0:
@@ -879,12 +886,12 @@ class QueryPlanStrategy:
             else:
                 """ No explicit matching plan for this edge. Do implicit conversions make it work? """
                 implicit_conversion = BiolinkModelWalker ()
-                for conv_type in implicit_conversion.get_transitions (source.type_name):
+                for conv_type in implicit_conversion.get_transitions (source_type):
                     implicit_conversion_schema = "implicit_conversion"
                     implicit_conversion_url = self.schema.schema[implicit_conversion_schema]['url']
                     if conv_type in sub_schema:
-                        logger.debug (f"  --impconv: {schema_name} - {conv_type} => {target.type_name}")
-                        if target.type_name in sub_schema[conv_type]:
+                        logger.debug (f"  --impconv: {schema_name} - {conv_type} => {target_type}")
+                        if target_type in sub_schema[conv_type]:
                             plan.append ([
                                 implicit_conversion_schema,
                                 implicit_conversion_url, [

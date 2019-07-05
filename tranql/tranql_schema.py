@@ -257,8 +257,7 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            pass
-            # raise InvalidTransitionException (source_type, target_type)
+            raise InvalidTransitionException (source_type, target_type)
 
     def validate_question (self, message):
         """
@@ -271,7 +270,7 @@ class Schema:
             source = nodes[edge['source_id']]['type']
             target = nodes[edge['target_id']]['type']
             self.validate_edge (source, target)
-            print (f"  -- valid transition: {source}->{target}")
+            # print (f"  -- valid transition: {source}->{target}")
 
 def get_test_kg (file_name):
     path = "https://raw.githubusercontent.com/NCATS-Tangerine/NCATS-ReasonerStdAPI-diff/master"

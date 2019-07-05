@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { IoIosClose } from 'react-icons/io';
 import { FaLongArrowAltRight } from 'react-icons/fa';
+import * as JSON5 from 'json5';
 import './FindTool.css';
 
 export default class FindTool extends Component {
@@ -218,7 +219,7 @@ export default class FindTool extends Component {
     let parsedAttribute = [
       attributeName,
       // Loose form of comparison that works with lists and objects as well
-      (ev,v)=>JSON.stringify(v)===JSON.stringify(ev),
+      (ev,v)=>JSON5.stringify(v)===JSON5.stringify(ev),
       attributeValue
     ];
 
@@ -250,7 +251,7 @@ export default class FindTool extends Component {
     else {
       try {
         // Invalid
-        attributes = JSON.parse(attributes);
+        attributes = JSON5.parse(attributes);
       }
       catch (e) {
         return "Invalid attribute syntax";
@@ -409,7 +410,7 @@ export default class FindTool extends Component {
                 }
               }
             }
-            magicVariables["__element__"] = JSON.stringify(element);
+            magicVariables["__element__"] = JSON5.stringify(element);
             // Replace any magic variables
             let re = /[^\\](__.*?__)/g;
             let sel;
@@ -445,7 +446,7 @@ export default class FindTool extends Component {
       // Remove circular objects.
       return Object.assign({}, link, { allConnections : undefined });
     });
-    let graph = JSON.parse(JSON.stringify({
+    let graph = JSON5.parse(JSON5.stringify({
       nodes:replaceNodes,
       links:replaceLinks
     }));
