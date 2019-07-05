@@ -584,6 +584,17 @@ class SelectStatement(Statement):
         for response in responses:
             if 'knowledge_graph' in response:
                 for node in response['knowledge_graph'].get('nodes',[]):
+                    """
+                    Convert the `type` property of all nodes into a list. Create it if they do not already have it.
+                    """
+                    if 'type' not in node:
+                        node['type'] = []
+                    if (not isinstance(node['type'],list)):
+                        node['type'] = [node['type']]
+
+                    """
+                    Create the `equivalent_identifiers` property on all nodes that do not already have it.
+                    """
                     if 'equivalent_identifiers' not in node:
                         if RESOLVE_EQUIVALENT_IDENTIFIERS:
                             ids = self.resolve_name (node.get('name',None), node.get('type',''))
@@ -591,6 +602,16 @@ class SelectStatement(Statement):
                             ids = [node['id']]
                         node['equivalent_identifiers'] = ids
                         total_requests += 1
+                        
+                for edge in response['knowledge_graph'].get('edges',[]):
+                    """
+                    Convert the `type` property of all edges into a list. Create it if they do not already have it.
+                    """
+                    if 'type' not in edge:
+                        edge['type'] = []
+                    if (not isinstance(edge['type'],list)):
+                        edge['type'] = [edge['type']]
+
         if RESOLVE_EQUIVALENT_IDENTIFIERS:
             logger.info (f'Finished fetching equivalent identifiers for {total_requests} nodes ({time.time()-prev_time}s).')
 
