@@ -174,7 +174,7 @@ optional arguments:
   * [X] Queries with bidirectional links.
   * [X] Validate query terms exist in the biolink-model.
   * [X] Predicates in queries.
-  * [ ] Enforce constraint identifiers are sub-types of biolink-model parent types where this info exists.
-  * [ ] Index previous answer via standard API "knowledge_maps" construct.
-  * [ ] Add export to and possible integration with Neo4J.
-  * [ ] Integrate graph [metadata API](http://robokop.renci.org/api/operations).
+  * [X] Enforce constraint identifiers are sub-types of biolink-model parent types where this info exists.
+  * [X] Index previous answer via standard API "knowledge_maps" construct.
+  * [X] Integrate graph [metadata API](http://robokop.renci.org/api/predicates).
+ 
