@@ -1525,7 +1525,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _legendButtonRightClick(e, active, type) {
     e.preventDefault();
-    this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0});
+    this._highlightType(type, 0xff0000, undefined, {duration:0, offset:0});
     setTimeout(()=>this._highlightType(type, false, undefined),2000);
   }
   /**
