@@ -168,6 +168,7 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
       }
       else {
         material.color = color;
+        material.opacity = opacity;
       }
     }
   }

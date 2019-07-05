@@ -834,9 +834,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    *    If false, it will be the original color.
    *    Otherwise, it must be a valid first argument for the Three.Color constructor.
    * @param {Boolean} [outline=true] - (NOT IMPLEMENTED) If true, the color will be an outline around the node. If false, it will directly modify the color of the node.
-   *    NOTE: Only affects nodes.
+   *    NOTE: Does nothing currently. Only affects nodes.
    * @param {Object} [fade] - Determines the properties of the fading.
-   * @param {Number} [fade.duration=250] - If duration is greater than 0, it will take `duration` number of seconds for the old color to fade into the new color.
+   *    NOTE: Opacity does not work with fade. The elements will retain their inital opacities.
+   * @param {Number} [fade.duration=0] - If duration is greater than 0, it will take `duration` number of seconds for the old color to fade into the new color.
    * @param {Number} [fade.offset=0] - Amount of time it takes before the fade begins.
    * @param {String} [property="type"] - Overrides `type` as the default property (e.g. `id` will highlight based on the `id` property).
    *
@@ -845,7 +846,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @returns {Promise} - (Only when using fade) Returns promise that resolves when the fade completes.
    */
   _highlightType (type, highlight, outline, fade, property) {
-    if (typeof fade === "undefined") fade = {duration:250,offset:0};
+    if (typeof fade === "undefined") fade = {duration:0,offset:0};
     if (typeof property === "undefined") property = "type";
     if (!Array.isArray(type)) {
       type = [type];
@@ -1524,9 +1525,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _legendButtonRightClick(e, active, type) {
     e.preventDefault();
-    this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0}).then(() => {
-      this._highlightType(type, false, undefined, {duration:500, offset:2000});
-    });
+    this._highlightType(type, 0xff0000, undefined, {duration:500, offset:0});
+    setTimeout(()=>this._highlightType(type, false, undefined),2000);
   }
   /**
    * Handle Legend callback on toggling of element type
