@@ -219,7 +219,7 @@ export default class FindTool extends Component {
     let parsedAttribute = [
       attributeName,
       // Loose form of comparison that works with lists and objects as well
-      (ev,v)=>JSON5.stringify(v)===JSON5.stringify(ev),
+      (ev,v)=>JSON.stringify(v)===JSON.stringify(ev),
       attributeValue
     ];
 
@@ -251,7 +251,7 @@ export default class FindTool extends Component {
     else {
       try {
         // Invalid
-        attributes = JSON5.parse(attributes);
+        attributes = JSON.parse(attributes);
       }
       catch (e) {
         return "Invalid attribute syntax";
@@ -410,7 +410,7 @@ export default class FindTool extends Component {
                 }
               }
             }
-            magicVariables["__element__"] = JSON5.stringify(element);
+            magicVariables["__element__"] = JSON.stringify(element);
             // Replace any magic variables
             let re = /[^\\](__.*?__)/g;
             let sel;
@@ -446,7 +446,7 @@ export default class FindTool extends Component {
       // Remove circular objects.
       return Object.assign({}, link, { allConnections : undefined });
     });
-    let graph = JSON5.parse(JSON5.stringify({
+    let graph = JSON.parse(JSON.stringify({
       nodes:replaceNodes,
       links:replaceLinks
     }));
