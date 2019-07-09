@@ -49,7 +49,7 @@ class Relationship:
 class ConceptModel:
     """ A grouping of concepts.
     Should ultimately be generalizable to different concept models. We begin with the biolink-model. """
-    
+
     def __init__(self, name):
         self.name = name
         self.by_name = {} #defaultdict(lambda:None)
@@ -77,7 +77,7 @@ class ConceptModel:
 
         """ Design discussions are ongoing about how best to model concepts with respect to ids. Manual annotation
         provides the most reliable and granular approach but is time intensive. It's unclear when this standard might
-        be met. Another approach is to reason about concepts based on identifiers. This overloads the semantics of 
+        be met. Another approach is to reason about concepts based on identifiers. This overloads the semantics of
         identifiers which is concerning. For now, we plan to look first in the model. If a curator has made an assertion
         about an association between the model and an identifier, we prioritize that. If not, we guess based on a map
         of associations between identifiers and concepts. """
@@ -113,11 +113,11 @@ class ConceptModel:
         return concept.id_prefixes
 
     def get (self, concept_name):
-        return self.by_name[concept_name]
+        return self.by_name.get(concept_name)
 
     def __contains__ (self, name):
         return name in self.by_name
-    
+
     def add_item (self, concept):
         self.by_name [concept.name] = concept
         for prefix in concept.id_prefixes:
@@ -204,7 +204,7 @@ class ConceptModelLoader:
 class BiolinkConceptModelLoader (ConceptModelLoader):
     def __init__(self, name, concept_model):
         super(BiolinkConceptModelLoader, self).__init__(name, concept_model)
-                
+
     def parse_item (self, originalname, obj):
         name = originalname.replace (" ", "_")
         is_a = obj["is_a"].replace (" ", "_") if "is_a" in obj else None

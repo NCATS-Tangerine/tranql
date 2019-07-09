@@ -78,11 +78,60 @@ class StandardAPIResource(Resource):
     def rename_key_list (self, node_list, old, new):
         for n in node_list:
             self.rename_key (n, old, new)
+    def format_as_query(self, message):
+        question_graph = message['question_graph']
+
+        for node in question_graph.get('nodes',[]):
+            node['node_id'] = node['id']
+            del node['id']
+        for edge in question_graph.get('edges',[]):
+            edge['edge_id'] = edge['id']
+            del edge['id']
+
+        return {
+            "query_message": {
+                "query_graph": question_graph
+            }
+        }
+    def merge_results (self, message):
+        results = message['results']
+        del message['results']
+        if 'knowledge_graph' not in message:
+            message['knowledge_graph'] = {
+                "edges": [],
+                "nodes": []
+            }
+        if 'knowledge_map' not in message:
+            message['knowledge_map'] = []
+        nodeIds = []
+        for result in results:
+            # Convert 0.9.0 equivalent of knowledge_map to the knowledge_map format we want
+            node_bindings = result.get('node_bindings',None)
+            edge_bindings = result.get('edge_bindings',None)
+            if node_bindings != None and edge_bindings != None:
+                message['knowledge_map'].append({
+                    "node_bindings": node_bindings,
+                    "edge_bindings": edge_bindings
+                })
+
+
+            result = result.get('result_graph', {})
+
+            nodes = result.get('nodes',[])
+            edges = result.get('edges',[])
+
+            message['knowledge_graph']['edges'].extend(edges)
+            for node in nodes:
+                if not node['id'] in nodeIds:
+                    message['knowledge_graph']['nodes'].append(node)
+                    nodeIds.append(node['id'])
+        return message
     def normalize_message (self, message):
+        if 'results' in message:
+            return self.normalize_message(self.merge_results(message))
         if 'answers' in message:
             #message['knowledge_map'] = message['answers']
             message['knowledge_map'] = message.pop ('answers')
-
         #print (f"---- message ------------> {json.dumps(message, indent=2)}")
 
         ''' downcast 0.9.1 to 0.9 '''
@@ -94,7 +143,7 @@ class StandardAPIResource(Resource):
         ''' SPEC: for icees, it's machine_question going in and question_graph coming out (but in a return value)? '''
         ''' return value is only an issue for ICEES '''
         if not 'knowledge_map' in message:
-            message['knowledge_map'] = message.get('return value',{}).get('answers', {})
+            message['knowledge_map'] = message.get('return value',{}).get('answers', [])
         if not 'question_graph' in message:
             message['question_graph'] = message.get('return value',{}).get('question_graph', {})
         self.rename_key_list (message.get('question_graph',{}).get('nodes',[]),
@@ -306,6 +355,156 @@ class PublishToNDEx(StandardAPIResource):
                     "edges" : request.json['knowledge_graph']['edges']
                 })
 
+class RtxQuery(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.base_url = 'https://rtx.ncats.io'
+        self.query_url = f'{self.base_url}/beta/api/rtx/v1/query'
+    """
+    Rtx seems to divulge from the normal identifer syntax in some places so our syntax to be compliant with theirs.
+    """
+    @staticmethod
+    def convert_curies_to_rtx(message):
+        for i in message["question_graph"]:
+            for element in message["question_graph"][i]:
+                if 'curie' in element:
+                    curie = element['curie']
+                    identifierSource = curie.split(":")
+                    if identifierSource[0] == "CHEMBL":
+                        curie = "CHEMBL.COMPOUND:"+identifierSource[1]
+                    # print(element['curie'],curie)
+                    element['curie'] = curie
+        return message
+    """
+    We must convert these curies back to the standard form when returning the response.
+    """
+    @staticmethod
+    def convert_curies_to_standard(message):
+        for i in message["knowledge_map"]:
+            for n in i:
+                for k in i[n]:
+                    for enum, binding in enumerate(i[n][k]):
+                        identifierSource = binding.split(":")
+                        if identifierSource[0] == "CHEMBL.COMPOUND":
+                            binding = "CHEMBL:"+identifierSource[1]
+                        # print(element['curie'],curie)
+                        i[n][k][enum] = binding
+        for element in message["knowledge_graph"]["nodes"]:
+            identifierSource = element["id"].split(":")
+            if identifierSource[0] == "CHEMBL.COMPOUND":
+                element["id"] = "CHEMBL:"+identifierSource[1]
+        for element in message["knowledge_graph"]["edges"]:
+            for prop in ["source_id","target_id"]:
+                identifierSource = element[prop].split(":")
+                if identifierSource[0] == "CHEMBL.COMPOUND":
+                    element[prop] = "CHEMBL:"+identifierSource[1]
+        return message
+    def post(self):
+        """
+        Visualize
+        ---
+        tag: validation
+        description: Query Rtx, given a question graph.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        self.validate(request)
+
+        data = self.format_as_query(self.convert_curies_to_rtx(request.json))
+        # print(json.dumps(data,indent=2))
+        response = requests.post(self.query_url, json=data)
+        if not response.ok:
+            if response.status_code == 500:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Rtx Internal Server Error. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+            else:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Bad Rtx query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+        else:
+            result = self.convert_curies_to_standard(self.normalize_message(response.json()))
+        return result
+
+class IndigoQuery(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.base_url = 'https://indigo.ncats.io'
+        self.query_url = f'{self.base_url}/reasoner/api/v1/query'
+    def post(self):
+        """
+        Visualize
+        ---
+        tag: validation
+        description: Query Indigo, given a question graph.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Sucessfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        self.validate(request)
+
+        data = self.format_as_query(request.json)
+
+        # print("input",json.dumps(data,indent=2))
+        response = requests.post(self.query_url, json=data)
+        if not response.ok:
+            if response.status_code == 500:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Indigo Internal Server Error. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+            else:
+                result = {
+                    "status" : "error",
+                    "code"   : "service_invocation_failure",
+                    "message" : f"Bad Indigo query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
+                }
+        else:
+            result = self.normalize_message(response.json())
+        return result
+
 #######################################################
 ##
 ## Gamma - publish a graph to Gamma.
@@ -358,7 +557,7 @@ class GammaQuery(GammaResource):
         del request.json['knowledge_maps']
         del request.json['options']
         response = requests.post (self.quick_url, json=request.json)
-        print (f"{json.dumps(response.json (), indent=2)}")
+        # print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
             result = {
                 "status" : "error",
@@ -588,6 +787,8 @@ class BiolinkModelWalkerService(StandardAPIResource):
 api.add_resource(GammaQuery, '/graph/gamma/quick')
 api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
+api.add_resource(IndigoQuery, '/graph/indigo')
+api.add_resource(RtxQuery, '/graph/rtx')
 
 # Workflow specific
 #api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')

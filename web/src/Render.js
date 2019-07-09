@@ -1,5 +1,6 @@
 import Actor from './Actor.js';
 import { groupBy, changeHue } from './Util.js';
+import uuid from 'uuid/v4';
 
 class RenderInit extends Actor {
   handle (message, context) {
@@ -15,7 +16,7 @@ class RenderInit extends Actor {
             origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
-          var weight = Math.round (edge.weight * 100) / 100;
+          var weight = edge.weight === undefined ? null : Math.round (edge.weight * 100) / 100;
           var opacity = (100 - (100 * weight) ) / 100;
           return {
             source: edge.source_id,
@@ -32,6 +33,69 @@ class RenderInit extends Actor {
     }
   }
 }
+
+class RenderSchemaInit extends Actor {
+  handle(message, context) {
+    message.knowledge_graph = {
+      nodes: message.knowledge_graph.nodes.map((node) => {
+        if (typeof node === "string") {
+          return {
+            id: node,
+            type: node,
+            name: node
+          };
+        }
+        else {
+          return node;
+        }
+      }),
+      edges: message.knowledge_graph.edges.reduce((acc, edge) => {
+        // TODO fix? Can't draw edges from a node to itself
+        if (Array.isArray(edge)) {
+          if (edge[0] !== edge[1]) {
+            acc.push({
+              source_id: edge[0],
+              target_id: edge[1],
+              type: edge[2],
+              ...edge[3],
+              weight: 1
+            });
+          }
+        }
+        else {
+          acc.push(edge);
+        }
+        return acc;
+      }, [])
+   };
+  }
+}
+
+class IdFilter extends Actor {
+  /**
+   * Links do not possess unique identifiers and although the force graph seems to generate uuids for them I'm unsure if this they are persistent/safe to use.
+   * Some things may require that both nodes and links can be distinguished from one another, so this filter goes through and generates uuids for each link.
+   *
+   */
+  handle (message, context) {
+    const id = {
+      _ids: [],
+      get() {
+        const id = uuid();
+        if (this._ids.includes(id)) {
+          return this.get();
+        }
+        else {
+          this._ids.push(id);
+          return id;
+        }
+      }
+    };
+    message.graph.links.forEach((link) => {
+      link.id = id.get();
+    });
+  }
+}
 class LinkFilter extends Actor {
   handle (message, context) {
     // Filter links:
@@ -41,7 +105,7 @@ class LinkFilter extends Actor {
     var max = context.linkWeightRange[1] / 100;
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
-        if (link.weight >= min && link.weight <= max) {
+        if (link.weight === null || link.weight >= min && link.weight <= max) {
           result.push (link);
           if (! node_ref.includes (link.source)) {
             node_ref.push (link.source);
@@ -58,7 +122,7 @@ class LinkFilter extends Actor {
         }
         return result;
       }, [])
-    }
+    };
   }
 }
 class NodeFilter extends Actor {
@@ -107,16 +171,21 @@ class SourceDatabaseFilter extends Actor {
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
         var source_db = link.origin.source_database;
-        if (typeof source_db === "string") {
-          source_db = [ source_db ];
-          link.origin.source_database = source_db;
+        if (typeof source_db === "undefined") {
+          keep_it = true
         }
-        var keep_it = true;
-        for (var c = 0; c < dataSources.length; c++) {
-          if (source_db.includes (dataSources[c].label)) {
-            if (! dataSources[c].checked) {
-              keep_it = false;
-              break;
+        else {
+          if (typeof source_db === "string") {
+            source_db = [ source_db ];
+            link.origin.source_database = source_db;
+          }
+          var keep_it = true;
+          for (var c = 0; c < dataSources.length; c++) {
+            if (source_db.includes (dataSources[c].label)) {
+              if (! dataSources[c].checked) {
+                keep_it = false;
+                break;
+              }
             }
           }
         }
@@ -333,8 +402,8 @@ class CurvatureAdjuster extends Actor {
       group.forEach((link, index) => {
         // Group length of 1 would result in curvature of 1, which generates a semicircle.
         // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
-        link.concatName = allTypesString;
         link.allConnections = group;
+        link.concatName = allTypesString;
         if (context.curvedLinks) {
           link.curvature = index/group.length;
           link.rotation = (Math.PI*2)/(index/group.length);
@@ -346,6 +415,8 @@ class CurvatureAdjuster extends Actor {
 
 export {
   RenderInit,
+  RenderSchemaInit,
+  IdFilter,
   LegendFilter,
   LinkFilter,
   NodeFilter,

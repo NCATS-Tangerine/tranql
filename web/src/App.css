@@ -17,10 +17,16 @@ body {
     width:100%;
     display:flex;
     align-items:center;
-    padding: 0 5px 0 5px;
+    padding: 6.5px;
 }
 #headerContainer > * {
-  margin:5px;
+  margin:0 auto;
+}
+/* Add additional 5 pixels of margin to the loading icon when it is visible */
+#headerContainer > p ~ div {
+  margin-right: 5px;
+}
+#headerContainer > p {
 }
 #splitpane {
     position: relative;
@@ -46,14 +52,35 @@ body {
 #viewContainer > .SplitPane {
     flex:1 !important;
 }
+#bottomContainer {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  height:100%;
+  background-color: transparent;
+  display:flex;
+  align-items:flex-start;
+  pointer-events:none; /* So that the transparent container does not consume all the pointer events meant for the force graph */
+}
+#bottomContainer > * {
+  pointer-events:initial; /* So that the container's children can still receive pointer events */
+}
 #toolbar {
-    background-color:rgba(30,30,30, 1);
-    width:auto;
+  background-color:rgba(30,30,30, 1);
+  border-bottom-width:5px;
+}
+#graphOverlayContainer {
+  display:flex;
+  flex-grow: 1;
+  flex-direction:column;
+  align-items:flex-start;
+  pointer-events:none;
 }
 #schemaBanner {
-    background-color: rgb(30, 30, 30);
-    border-bottom: 4px solid rgb(50, 50, 50);
-    position: relative;
+    /* background-color: rgb(30, 30, 30); */
+    /* border-bottom: 4px solid rgb(50, 50, 50); */
+    width: 100%;
+    background-color: transparent;
     padding: 10px;
     /* text-align: center; */
     /* text-decoration: underline; */
@@ -63,6 +90,17 @@ body {
     color: rgb(235, 235, 235);
     display:flex;
     align-items: center;
+    pointer-events:none;
+}
+.LinkExaminer {
+  pointer-events:initial;
+  margin-left: 10px;
+  max-height:400px;
+}
+.FindTool {
+  position:absolute;
+  right:5px;
+  top:5px;
 }
 .fa-spin {
   /* Pseudo fa-spin class because react-icons doesn't seem to natively support it */
@@ -77,6 +115,9 @@ body {
 }
 #schemaViewToggleButton {
   float: right;
+  background-color: black;
+  color: #007bff;
+  pointer-events:initial;
 }
 #info {
     /* position: absolute; */
@@ -91,7 +132,7 @@ body {
     margin:5px !important;
     margin-bottom: 12.5px !important;
 }
-.typeChart {
+.type-chart {
   width: 95%;
   height: 100%;
   max-height: none;
@@ -135,12 +176,12 @@ body {
 
 .App-header {
     background-color: #282c34;
-     min-height: 8vh;
+     /* min-height: 8vh; */
      display: flex;
      align-items: center; /* center; */
      justify-content: left; /*center;*/
      color: white;
-     font-size: calc(9px + 2vmin);
+     font-size: 28px;
      font-style: italic;
      font-weight : bold;
  }
@@ -181,6 +222,111 @@ body {
     max-height: 90%;
     height: 90%;
 }
+.messageDialog .react-tabs__tab-panel {
+  /* Retain the formatting from the message */
+  white-space:pre-wrap;
+}
+.help-modal {
+  /* height:60%; */
+}
+.toolbar-help-modal {
+  display:flex !important;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  height:100%;
+}
+.toolbar-help-modal-dialog {
+  height:50%;
+  margin:0;
+  width:700px;
+  max-width:none;
+}
+.toolbar-help-modal-dialog .modal-body {
+  display:flex;
+}
+.toolbar-help-tabs {
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+}
+.toolbar-help-tab-panel {
+  display:flex;
+  flex-grow:1;
+}
+.toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
+  display:none;
+}
+.toolbar-help-content {
+  flex-grow:1;
+  margin-left:10px;
+}
+.toolbar-help-content-body {
+  height:100%;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+.toolbar-help-content-body > .card-text {
+  overflow-y:auto;
+  padding:.75rem 1.25rem;
+}
+.toolbar-help-tool-group {
+  flex:0 0 12%;
+  height:100%;
+  overflow-y:auto;
+}
+.toolbar-help-tool-group > * {
+  /* flex:0; */
+}
+.toolbar-help-tool-group > *:last-child {
+  /* No padding allows it to essentially go invisible, meaning that it will not show up if there is any overflow */
+  padding:0;
+  flex-grow:1 !important;
+}
+.toolbar-help-tool-button {
+  padding-left:0;
+  padding-right:0;
+  flex-grow:0;
+  /* width:33.33%; */
+  /* flex: 1 1 0; */
+  /* padding-top:0; */
+  /* padding-bottom:0; */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  word-break:break-word;
+  /* white-space:nowrap; */
+  text-align:center;
+}
+.toolbar-help-tool-button > * {
+  padding:0;
+}
+/* First child is the header of the section */
+.section > *:not(:first-child) {
+  padding-left:15PX;
+}
+.section dt {
+  /* Tone down the font weight applied to description lists a bit */
+  font-weight:500;
+}
+#helpGrid > * {
+  padding-left:7.5px;
+  padding-right:7.5px;
+}
+#helpGrid > *:first-child {
+  padding-top:7.5px;
+}
+#helpGrid > *:last-child {
+  padding-bottom:7.5px;
+}
+#helpGrid > * > * {
+  padding:7.5px;
+}
+#helpGrid > * > * > * {
+  height:100%;
+}
 #spinner {
     position : absolute;
     right : 250px;
@@ -220,8 +366,10 @@ body {
   /* top: 40px; */
 }
 .Legend {
-  border-top:1px solid rgb(200,200,200);
   border-bottom:1px solid rgb(200,200,200);
+}
+.Legend[data-closed="true"] {
+  border-top:1px solid rgb(200,200,200);
 }
 .App-link {
   color: #61dafb;
@@ -238,10 +386,10 @@ body {
 .splitPane {
     position: relative;
  }
-.CodeMirror-scroll {
+.query-code .CodeMirror-scroll {
     height: 40%;
  }
-.CodeMirror {
+.query-code .CodeMirror {
     text-align: left!important;
     padding: 2px;
     font-size : 14px;
@@ -250,63 +398,93 @@ body {
     height: 50%!important;
     border-color: lightgray 1px solid;
  }
-.rv-force {
-    border: 1px solid gray;
+.editor {
+  background-color:white;
  }
+.editor-vis-control.legend-vis-control {
+  z-index:3 !important;
+}
+.rv-force {
+  border: 1px solid gray;
+}
+.title-edit {
+  text-overflow:ellipsis;
+  overflow:hidden;
+  white-space:nowrap;
+  color:#0088cc;
+  border-bottom:1px dashed #0088cc;
+}
+#cachedQueriesModal .query-title {
+  min-width:0; /* Need it because flex box changes min-width to auto */
+}
+#cachedQueriesModal .query-title > input {
+  flex-grow:1;
+}
+/* Elevate it by 1 pixel since the first has a border */
+#cachedQueriesModal .query-title > span + span {
+  margin-bottom: 1px;
+}
+/* When the inline editing is active hide the adjacent span because we want 100% width (displays if the query has been edited or not) */
+#cachedQueriesModal .query-title > input + span {
+  display:none;
+}
+/* ??? */
+.Resizer {
+    background: #000;
+    opacity: .2;
+    z-index: 1;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -moz-background-clip: padding;
+    -webkit-background-clip: padding;
+    background-clip: padding-box;
+}
 
+ .Resizer:hover {
+    -webkit-transition: all 2s ease;
+    transition: all 2s ease;
+}
 
+ .Resizer.horizontal {
+    height: 11px;
+    margin: -5px 0;
+    border-top: 5px solid rgba(255, 255, 255, 0);
+    border-bottom: 5px solid rgba(255, 255, 255, 0);
+    cursor: row-resize;
+    width: 100%;
+}
 
+.Resizer.horizontal:hover {
+    border-top: 5px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 5px solid rgba(0, 0, 0, 0.5);
+}
 
+.Resizer.vertical {
+    width: 11px;
+    margin: 0 -5px;
+    border-left: 5px solid rgba(255, 255, 255, 0);
+    border-right: 5px solid rgba(255, 255, 255, 0);
+    cursor: col-resize;
+}
 
-    .Resizer {
-        background: #000;
-        opacity: .2;
-        z-index: 1;
-        -moz-box-sizing: border-box;
-        -webkit-box-sizing: border-box;
-        box-sizing: border-box;
-        -moz-background-clip: padding;
-        -webkit-background-clip: padding;
-        background-clip: padding-box;
-    }
-
-     .Resizer:hover {
-        -webkit-transition: all 2s ease;
-        transition: all 2s ease;
-    }
-
-     .Resizer.horizontal {
-        height: 11px;
-        margin: -5px 0;
-        border-top: 5px solid rgba(255, 255, 255, 0);
-        border-bottom: 5px solid rgba(255, 255, 255, 0);
-        cursor: row-resize;
-        width: 100%;
-    }
-
-    .Resizer.horizontal:hover {
-        border-top: 5px solid rgba(0, 0, 0, 0.5);
-        border-bottom: 5px solid rgba(0, 0, 0, 0.5);
-    }
-
-    .Resizer.vertical {
-        width: 11px;
-        margin: 0 -5px;
-        border-left: 5px solid rgba(255, 255, 255, 0);
-        border-right: 5px solid rgba(255, 255, 255, 0);
-        cursor: col-resize;
-    }
-
-    .Resizer.vertical:hover {
-        border-left: 5px solid rgba(0, 0, 0, 0.5);
-        border-right: 5px solid rgba(0, 0, 0, 0.5);
-    }
-    .Resizer.disabled {
-      cursor: not-allowed;
-    }
-    .Resizer.disabled:hover {
-      border-color: transparent;
-    }
+.Resizer.vertical:hover {
+    border-left: 5px solid rgba(0, 0, 0, 0.5);
+    border-right: 5px solid rgba(0, 0, 0, 0.5);
+}
+.Resizer.disabled {
+  cursor: not-allowed;
+}
+.Resizer.disabled:hover {
+  border-color: transparent;
+}
+.no-select {
+  user-select:none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -o-user-select:none;
+  -ms-user-select:none;
+}
 
 @-ms-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-o-keyframes spin { 100% { -moz-transform: rotate(360deg); } }

@@ -1,0 +1,120 @@
+{
+  "anatomical_entity": {
+    "biological_process": [
+      "capable_of"
+    ],
+    "cellular_component": [
+      "has_part"
+    ]
+  },
+  "biological_process": {
+    "biological_process": [
+      "subclass_of"
+    ]
+  },
+  "cellular_component": {
+    "cellular_component": [
+      "subclass_of"
+    ]
+  },
+  "chemical_substance": {
+    "disease": [
+      "indicated_for",
+      "contraindicated_for"
+    ],
+    "phenotypic_feature": [
+      "indicated_for",
+      "contraindicated_for"
+    ],
+    "protein": [
+      "physically_interacts_with"
+    ]
+  },
+  "disease": {
+    "biological_process": [
+      "affects"
+    ],
+    "cellular_component": [
+      "affects"
+    ],
+    "disease": [
+      "subclass_of"
+    ],
+    "phenotypic_feature": [
+      "has_phenotype"
+    ]
+  },
+  "metabolite": {
+    "protein": [
+      "physically_interacts_with"
+    ]
+  },
+  "microRNA": {
+    "anatomical_entity": [
+      "expressed_in"
+    ],
+    "biological_process": [
+      "involved_in"
+    ],
+    "disease": [
+      "gene_mutations_contribute_to",
+      "gene_associated_with_condition"
+    ],
+    "microRNA": [
+      "regulates"
+    ],
+    "phenotypic_feature": [
+      "has_phenotype"
+    ],
+    "protein": [
+      "regulates"
+    ]
+  },
+  "molecular_function": {
+    "molecular_function": [
+      "subclass_of"
+    ]
+  },
+  "phenotypic_feature": {
+    "anatomical_entity": [
+      "affects"
+    ],
+    "phenotypic_feature": [
+      "subclass_of"
+    ]
+  },
+  "protein": {
+    "anatomical_entity": [
+      "expressed_in"
+    ],
+    "biological_process": [
+      "involved_in"
+    ],
+    "cellular_component": [
+      "expressed_in"
+    ],
+    "chemical_substance": [
+      "physically_interacts_with"
+    ],
+    "disease": [
+      "gene_mutations_contribute_to",
+      "gene_associated_with_condition"
+    ],
+    "metabolite": [
+      "physically_interacts_with"
+    ],
+    "molecular_function": [
+      "capable_of"
+    ],
+    "pathway": [
+      "participates_in"
+    ],
+    "phenotypic_feature": [
+      "has_phenotype"
+    ],
+    "protein": [
+      "regulates",
+      "physically_interacts_with"
+    ]
+  }
+}

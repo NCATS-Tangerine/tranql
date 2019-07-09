@@ -22,7 +22,7 @@
 
 .TypeButton {
   border-radius:20px !important;
-  font-size:14px;
+  font-size:13.5px;
   border-color:rgb(100,100,100);
   margin:7.5px;
   color:black !important;
@@ -76,7 +76,7 @@
   padding:5px 5px 5px 7.5px;
 }
 
-.graph-element-type-container:not(:first-child) {
+.graph-element-type-container {
   border-top:2px solid rgb(200,200,200);
 }
 .graph-element-type-container:not(:last-child) {
@@ -89,9 +89,4 @@
 
 .graph-element-content {
 
-}
-
-/* Rules to adjust for if containers are empty */
-.graph-element-type-container:not(:empty) {
-  /* border-bottom:1px solid rgb(200,200,200); */
 }

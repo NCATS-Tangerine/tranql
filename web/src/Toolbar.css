@@ -1,15 +1,19 @@
 .Toolbar {
-  height:100%;
+  height:auto;
   width:auto;
-  border-right:5px solid rgb(50,50,50);
+  border:0px solid rgb(50,50,50);
+  border-right-width:5px;
   display:flex;
   flex-direction:column;
+  resize:vertical;
+  overflow:auto;
+  height:100%;
+  max-height:100%;
 }
-
 
 .Tool {
   position:relative;
-  white-space:nowrap;
+  /* white-space:nowrap; */
   padding:5px;
   border-radius:3px;
   display:flex; /* Inline-block doesn't seem to work to fit to contents when icon is contained, but flex does */
@@ -54,11 +58,11 @@
 }
 
 .select-menu {
-  position:absolute;
+  position:fixed;
   z-index:1;
   background-color:rgb(30,30,30);
-  top:0;
-  left:100%;
+  /* top:0; */
+  /* left:100%; */
   margin-left:3.5px;
   border:1px solid rgba(150,150,150,1);
   display:flex;

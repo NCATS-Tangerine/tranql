@@ -17,7 +17,7 @@ While these features are essential for some applications, they are neither targe
   * **Iterative, interactive exploration** of large data sets.
   * **Accessibility** to communities like clinical data specialists and medical experts.
   * **A programmatic interface between applications** and a data source.
-  
+
 ## Interactive Exploration
 
 The ability to explore large data sets with queries is extremely familiar to clinical data experts and many medical informatics specialists. To make semantic databases more accessible to these communities, we designed TranQL to share structural and syntactic similarities with the most familiar and widely used languages for interactive distributed data analytics, while providing an interface to heterogeneous semantic graph services existing environments don't address.
@@ -39,8 +39,8 @@ TranQL is a classic interpreter with a lexical analyzer & parser which produces 
       ```
   * **SELECT**: Select a graph described by a pattern from a service, given various constraints. Graph patterns are expressed using concepts from the [biolink-model](https://biolink.github.io/biolink-model/).
     - ```
-       SELECT <graph> 
-       FROM <service> 
+       SELECT <graph>
+       FROM <service>
        [WHERE <constraint> [AND <constraint]*]
        [[SET <jsonpath> AS <var> | [SET <var>]]*```
   * **CREATE GRAPH**: Create a graph at a service.
@@ -53,7 +53,7 @@ TranQL is a classic interpreter with a lexical analyzer & parser which produces 
 The [Translator standard graph API](https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI) is a protocol for exchanging graphs with federated data sources. TranQL works with endpoints supporting this standard.
 
 ## Backplane
- 
+
 The TranQL Backplane is a collection of endpoints supporting the standard API which implement reusable question answering services, or modules.
 
 Backplane modules support a simplified syntax in the language for greater readability.
@@ -82,7 +82,7 @@ The final part of the select statement is a `set` statement which **uses a JSONP
 
 #### The Second Select Statement
 
-The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step. 
+The second `select` statement sends a different graph query to the Gamma reasoner and parameterizes the chemical_substance concept with identifiers from the first clinical step.
 
 ![image](https://user-images.githubusercontent.com/306971/52903985-7ddd9b80-31f3-11e9-9caf-ebcf96f84fc0.png)
 
@@ -110,7 +110,7 @@ Here's a [link to the Gamma visualization for the answer](http://robokop.renci.o
 
 ## Status
 
-TranQL is brand new and strictly alpha. 
+TranQL is brand new and strictly alpha.
 
 ## Installation and Usage
 
@@ -138,6 +138,16 @@ Then run the query:
 ```
 bin/tranql --source tranql/queries/workflow-5.tranql
 ```
+### Web app
+
+To run the web app, first start the TranQL API:
+
+```
+cd tranql
+PYTHONPATH=$PWD/../ python api.py
+```
+
+Then follow the instructions in web/ to start the website.
 ### Shell
 
 Run the interactive interpreter.
@@ -177,4 +187,3 @@ optional arguments:
   * [X] Enforce constraint identifiers are sub-types of biolink-model parent types where this info exists.
   * [X] Index previous answer via standard API "knowledge_maps" construct.
   * [X] Integrate graph [metadata API](http://robokop.renci.org/api/predicates).
- 

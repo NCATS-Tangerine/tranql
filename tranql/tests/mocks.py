@@ -37,10 +37,17 @@ class MockMap(MockHelper):
                     "path" : "predicates.json",
                     "method" : "get"
                 },
+                "http://localhost:8099/graph/rtx" : {
+                    "path" : "rtx.json"
+                },
+                "https://rtx.ncats.io/beta/api/rtx/v1/predicates" : {
+                    "path": "rtx_predicates.json",
+                    "method" : "get"
+                },
                 "http://localhost:8099/clincial/icees/schema" : {
                     "path" : "icees_predicates.json",
                     "method" : "get"
-                }
+                },
             }
         }
         for k, v in self.mock_map[test_name].items ():
@@ -51,4 +58,4 @@ class MockMap(MockHelper):
             elif method == 'get':
                 requests_mock.get (k, text=text)
             else:
-                raise ValueError (f"unknown method {method}")            
+                raise ValueError (f"unknown method {method}")

@@ -2,6 +2,40 @@ import React, { Component } from 'react';
 import ReactTooltip from 'react-tooltip';
 import './Toolbar.css'
 
+class SelectMenu extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      selectMenuHover: false,
+      active: false
+    }
+  }
+  setActive() {
+    this.setState({ active : true });
+    Toolbar._resize();
+  }
+  render() {
+    if (!this.state.active) return null;
+    return (
+      <div onMouseLeave={this.props.leaveCallback}
+           onMouseEnter={() => this.setState({selectMenuHover:true})}
+           className="select-menu"
+      >
+       {
+         this.props.children.map((tool,index) => {
+           return (
+             <div key={index} className="select-menu-tool" data-active-tool={this.props.activeTool === index} onClick={() => this.props.onClick(index)}>
+               {/* Clone the icon of the tool (children is a component when only one child exists) */}
+               {React.cloneElement(tool.props.children)} {tool.props.description}
+             </div>
+           );
+         })
+       }
+      </div>
+    );
+  }
+}
+
 /**
  * Component allowing for the easy multifunctionality of a single tool slot (name is fairly misleading)
  *    Acts as a singular tool, which then can open a dropdown when held down which allows the user to replace the active tool with others contained within the ToolGroup
@@ -34,6 +68,7 @@ export class ToolGroup extends Component {
          throw new Error("ToolGroup must only contain components of type Tool, not type '"+(typeof comp.type === 'string' ? comp.type : comp.type.name)+"'");
        }
        return React.cloneElement(comp, {
+         ...comp.props,
          onMouseDown: (e) => {
            e.preventDefault();
            this._selectActive(index);
@@ -44,17 +79,19 @@ export class ToolGroup extends Component {
          toolbarCallback:this.props.toolbarCallback,
          key:index,
          ref:React.createRef(),
-         tipProp: comp.props.name+" - "+comp.props.description,
-         name: undefined, // Gets in the way when menu is open so we'll conditionally render it on the container, rather than the tool
+         onlyUseShortcutsWhen: this.props.onlyUseShortcutsWhen,
+         tipProp:Tool.makeTip(comp.name,comp.description,comp.shortcut),
+         // Hide the tooltip
+         name:undefined
        });
      });
 
      this.state = {
-       selectMenuHover: false,
-       selectMenu: null,
        children: children,
        activeTool: this.props.hasOwnProperty('default') ? this.props.default : 0
      };
+
+     this._selectMenu = React.createRef();
    }
 
    /* ToolGroup class needs to be able to function as if it were an instance of a Tool */
@@ -85,41 +122,15 @@ export class ToolGroup extends Component {
    }
 
    _showSelectMenu() {
-     const leaveCallback = () => {
-       this.setState(prevState => {
-         return {
-           selectMenuHover: false,
-           selectMenu: null
-         };
-       });
-     }
-     let selectMenu = (
-       <div onMouseLeave={leaveCallback}
-            onMouseEnter={this.setState({selectMenuHover:true})}
-            className="select-menu"
-       >
-        {
-          this.state.children.map((tool,index) => {
-            return (
-              <div key={index} className="select-menu-tool" data-active-tool={this.state.activeTool === index} onClick={() => this._selectActive(index,true)}>
-                {/* Clone the icon of the tool (children is a component when only one child exists) */}
-                {React.cloneElement(tool.props.children)} {tool.props.description}
-              </div>
-            );
-          })
-        }
-       </div>
-     );
-     this.setState({ selectMenu : selectMenu });
+     this._selectMenu.current.setActive();
+     // let selectMenu = ;
+     // this.setState({ selectMenu : selectMenu });
    }
 
    _leave(index) {
-     if (this.state.selectMenu) {
-       if (!this.state.selectMenuHover) {
-         this.setState({
-           selectMenuHover: false,
-           selectMenu: null
-         });
+     if (this._selectMenu.current.active) {
+       if (!this._selectMenu.current.state.selectMenuHover) {
+         this._selectMenu.current.setState({ active : false });
        }
      }
      else {
@@ -133,7 +144,7 @@ export class ToolGroup extends Component {
      let active = this._activeTool === tool;
      if (selectMenu) {
        this._activeTool = index;
-       this.setState({ selectMenu: null, selectMenuHover: false});
+       this._selectMenu.current.setState({ active : false });
      }
      else if (active) {
        tool.ref.current.holdTimeout = setTimeout(() => {
@@ -144,10 +155,13 @@ export class ToolGroup extends Component {
 
    render() {
      return (
-        <div className="tool-group" style={{position:"relative"}} data-html={true} data-tip={this.state.selectMenu === null ? this._activeTool.props.tipProp : undefined}>
-          {/* ^data-tip does not render if select menu is open */}
+        <div className="tool-group" style={{position:"relative"}}>
           {this._activeTool}
-          {this.state.selectMenu}
+          <SelectMenu leaveCallback={() => this._selectMenu.current.setState({ active : false })}
+                                       children={this.state.children}
+                                       activeTool={this.state.activeTool}
+                                       ref={this._selectMenu}
+                                       onClick={(index) => this._selectActive(index,true)}/>
           {/* This is really bad but they lose their refs when they're not rendered */}
           <div style={{display:"none"}}>{this.state.children.map(tool => tool !== this._activeTool && tool)}</div>
         </div>
@@ -171,18 +185,24 @@ export class Tool extends Component {
    * @param {Object} props - Properties of the Tool
    * @param {string} props.name - Name of the tool
    * @param {string} props.description - Description of the tool (keep it short). Only functional when contained in a ToolGroup.
-   * @param {onClick} props.callback - Callback invoked on click
-   * @param {Component} props.children - Icon of the child (e.g. <IoIosSettings />)
+   * @param {onClick} props.callback - Callback invoked on click.
+   * @param {Component} props.children - Icon of the child (e.g. <IoIosSettings />).
+   * @param {Number|String|Array<Number|String>} props.shortcut - Keycode or key for the shortcut. When a string, it is case sensitive.
+   *    If an array, the shortcut will trigger if any of the keys/key codes contained are pressed.
+   *    Array may be of mixed types.
    */
   constructor(props) {
     super(props);
 
     if (this.props.children === undefined) throw new Error("Tool must contain icon component");
-    if (Array.isArray(this.props.children)) throw new Error("Tool must contain icon component as the only child");
+    if (Array.isArray(this.props.children) && this.props.children.length > 1) throw new Error("Tool must contain icon component as the only child");
 
     this.state = {
-      active: false
+      active: false,
+      shortcut: Array.isArray(this.props.shortcut) ? this.props.shortcut : [this.props.shortcut]
     };
+
+    this._keyDownCallback = this._keyDownCallback.bind(this);
 
     // this.setActive = this.setActive.bind(this);
   }
@@ -199,12 +219,54 @@ export class Tool extends Component {
     });
   }
 
+  _keyDownCallback(e) {
+    if (this.props.onlyUseShortcutsWhen.some(type => document.activeElement instanceof type)) {
+      let char = String.fromCharCode(e.keyCode);
+      if (e.ctrlKey) {
+        return;
+      }
+      if (!e.shiftKey) {
+        char = char.toLowerCase();
+      }
+      if (typeof this.props.shortcut !== "undefined" && this.state.shortcut.includes(e.keyCode) || this.state.shortcut.includes(char)) {
+        this.props.onMouseUp ? this.props.onMouseUp() : this.setActive(true);
+      }
+    }
+  }
+
+  static makeTip(name,description,shortcut) {
+    return (name !== undefined && description !== undefined ? (
+      name +
+      " - "+description +
+      (typeof shortcut !== "undefined" ?
+        (" ("+(Array.isArray(shortcut) ?
+          shortcut :
+          [shortcut]).map(key=>(typeof key==="string" ?
+            (key === key.toUpperCase() ?
+              "shift+" + key :
+              key.toUpperCase()) :
+            String.fromCharCode(key)
+          ))
+          .join("/")+")") :
+        ""
+        )
+    ) : undefined);
+  }
+
+  componentDidMount() {
+    document.addEventListener('keydown', this._keyDownCallback);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._keyDownCallback);
+  }
+
   render() {
     return (
       <div className="Tool"
            onMouseUp={this.props.onMouseUp || (() => {this.setActive(true);})}
            onMouseDown={this.props.onMouseDown}
-           data-tip={this.props.name !== undefined && this.props.description !== undefined ? this.props.name+" - "+this.props.description : undefined}
+           data-tip={Tool.makeTip(this.props.name,this.props.description,this.props.shortcut)}
            data-html={true}
            data-active-tool={this.state.active}>
         {
@@ -240,11 +302,12 @@ export class Toolbar extends Component {
    * Constructs a new Toolbar component
    *
    * @param {Object} props - Properties of toolbar
-   * @param {Tool[]} props.tools - Array of tool groups and tools contained within the toolbar.
+   * @param {Array<ToolGroup|Tool>} props.tools - Array of tool groups and tools contained within the toolbar.
    *    NOTE: Tools are not required to be contained inside of ToolGroups, the name may be misleading. Make sure to check out what a ToolGroup actually does.
    * @param {Component[]} props.buttons - Array of components (icons) contained at the bottom of the toolbar.
    *    The Toolbar does not modify these components in any way. It simply provides a container for them to be better placed within the larger document.
    * @param {int} [props.default=0] - Index in props.tools of the default active tool (its callback will be invoked to select it)
+   * @param {Array<HTMLElement|String>} [props.onlyUseShortcutsWhen=[]] - Shortcuts will only fire when the document's active element is of a type that inherits HTMLElement contained within this array or has the same id as a string in this array.
    */
   constructor(props) {
     super(props);
@@ -259,7 +322,6 @@ export class Toolbar extends Component {
         });
       }),
     };
-
   }
 
   _setActiveTool(tool) {
@@ -268,10 +330,27 @@ export class Toolbar extends Component {
     });
   }
 
+  static _resize(e) {
+    // Quite the hack but there doesn't seem to be any other alternative
+    let menus = document.querySelectorAll('.select-menu');
+    for (let i=0;i<menus.length;i++) {
+      const menu = menus[i];
+      menu.style.left = menu.parentElement.getBoundingClientRect().left + menu.parentElement.offsetWidth + "px";
+      menu.style.top = menu.parentElement.getBoundingClientRect().top + "px";
+    }
+  }
+
   componentDidMount() {
     let defaultTool = this.props.hasOwnProperty('default') ? this.state.tools[this.props.default].ref.current : this.state.tools[0].ref.current;
     defaultTool.setActive(true);
     this._setActiveTool(defaultTool);
+    window.addEventListener('resize',Toolbar._resize);
+    document.addEventListener('scroll',Toolbar._resize);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('resize',Toolbar._resize);
+    document.removeEventListener('scroll',Toolbar._resize);
   }
 
   render() {
@@ -295,7 +374,7 @@ export class Toolbar extends Component {
             this.state.tools.map((tool,i) => {
               return (
                 <div key={i} className='tool-container'>
-                  {tool}
+                  {React.cloneElement(tool,{onlyUseShortcutsWhen: this.props.onlyUseShortcutsWhen, ...tool.props})}
                 </div>
               )
             })

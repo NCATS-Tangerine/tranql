@@ -1,0 +1,7 @@
+-- What proteins are targetted by the metabolite KEGG:C00017?
+
+set metabolite = "KEGG:C00017"
+
+select metabolite->protein
+  from "/graph/rtx"
+ where metabolite=$metabolite

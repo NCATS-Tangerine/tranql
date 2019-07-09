@@ -21,6 +21,7 @@ from tranql.exception import UnableToGenerateQuestionError
 from tranql.exception import MalformedResponseError
 from tranql.exception import IllegalConceptIdentifierError
 from tranql.exception import UnknownServiceError
+from tranql.exception import InvalidTransitionException
 
 logger = logging.getLogger (__name__)
 
@@ -29,12 +30,11 @@ def truncate (s, max_length=75):
 
 class Bionames:
     """ Resolve natural language names to ontology identifiers. """
-    def __init__(self):
-        """ Initialize the operator. """
-        self.url = "https://bionames.renci.org/lookup/{input}/{type}/"
+    url = "https://bionames.renci.org/lookup/{input}/{type}/"
 
-    def get_ids (self, name, type_name):
-        url = self.url.format (**{
+    @staticmethod
+    def get_ids (name, type_name):
+        url = Bionames.url.format (**{
             "input" : name,
             "type"  : type_name
         })
@@ -234,19 +234,30 @@ class SelectStatement(Statement):
     def val(self, value, field="id"):
         """ Get the value of an object. """
         result = value
-        if isinstance(value, dict) and field in value:
-            result = value[field]
+        if isinstance(value, dict):
+            if field in value:
+                result = value[field]
+            else:
+                result = None
         return result
 
-    def resolve_name (self, name, type_name):
-        bionames = Bionames ()
-        result = [ r['id'] for r in bionames.get_ids (name, type_name) ]
+    def resolve_name (self, name, type_names):
+        if not isinstance(type_names, list):
+            type_names = [type_names]
         #result += self.synonymize (value, type_name)
-        if type_name == 'chemical_substance':
-            response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
-            for obj in response['hits']:
-                if 'chebi' in obj:
-                    result.append (obj['chebi']['id'])
+        result = []
+        for type_name in type_names:
+            equivalent_identifiers = Bionames.get_ids (name, type_name)
+            for i in equivalent_identifiers:
+                result.append(i["id"])
+        for type_name in type_names:
+            if type_name == 'chemical_substance':
+                response = requests.get (f"http://mychem.info/v1/query?q={name}").json ()
+                for obj in response['hits']:
+                    if 'chebi' in obj:
+                        result.append (obj['chebi']['id'])
+                    if 'chembl' in obj:
+                        result.append ("CHEMBL:"+obj['chembl']['molecule_chembl_id'])
         logger.debug (f"name resolution result: {name} => {result}")
         return result
 
@@ -301,17 +312,20 @@ class SelectStatement(Statement):
                 if index == len(steps) - 1:
                     """ If this is the last concept, add the object as well. """
                     statement.query.add (obj)
-                for constraint in self.where:
-                    """ Add constraints, if they apply to this schema. """
-                    name, op, val = constraint
-                    prefix = f"{schema}."
-                    if name.startswith (prefix):
-                        """ Remove the schema prefix as we add the constraint. """
-                        constraint_copy = copy.deepcopy (constraint)
-                        constraint_copy[0] = name.replace (prefix, "")
-                        statement.where.append (constraint_copy)
+                statement.where = self.where
         self.query.disable = True # = Query ()
         return statements
+
+    def format_constraints(self,schema):
+        for enum, constraint in enumerate(self.where):
+            """ Add constraints, if they apply to this schema. """
+            name, op, val = constraint
+            prefix = f"{schema}."
+            if name.startswith (prefix):
+                """ Remove the schema prefix as we add the constraint. """
+                constraint_copy = copy.deepcopy (constraint)
+                constraint_copy[0] = name.replace (prefix, "")
+                self.where[enum] = constraint_copy
 
     def generate_questions (self, interpreter):
         """
@@ -435,33 +449,22 @@ class SelectStatement(Statement):
         if self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:
+            # We want to find what schema name corresponds to the url we are querying. Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces').
+            schema = None
+            for s in self.planner.schema.config["schema"]:
+                if self.planner.schema.config["schema"][s]["url"] == self.service:
+                    schema = s
+                    break
+
+            self.format_constraints(schema)
+
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
+            [self.ast.schema.validate_question(question) for question in questions]
             service = interpreter.context.resolve_arg (self.service)
 
+
             """ Invoke the service and store the response. """
-
-            """
-            Basic data from default query about asthma (in seconds):
-                Async (4 parallel requests at once):
-                    [
-                        8.950051546096802,
-                        8.789488792419434,
-                        8.992945432662964
-                    ]
-                    Average time: 8.910828590393066
-
-                Serial:
-                    [
-                        120.87169480323792,
-                        121.13019347190857,
-                        120.94755744934082
-                    ]
-                    Average time: 120.9831485748291
-
-                Average speed increase of async requests: 1357% (almost 13.6 times faster)
-            """
-
 
             # For each question, make a request to the service with the question
             # Only have a maximum of maximumParallelRequests requests executing at any given time
@@ -469,6 +472,9 @@ class SelectStatement(Statement):
             logger.debug (f"Starting queries on service: {service} (asynchronous={interpreter.asynchronous})")
             logger.setLevel (logging.INFO)
             prev = time.time ()
+            # We don't want to flood the service so we cap the maximum number of requests we can make to it.
+            maximumQueryRequests = 50
+            interpreter.context.set('requestErrors',[])
             if interpreter.asynchronous:
                 maximumParallelRequests = 4
                 responses = async_make_requests ([
@@ -480,8 +486,11 @@ class SelectStatement(Statement):
                             "accept": "application/json"
                         }
                     }
-                    for q in questions[:50]
+                    for q in questions[:maximumQueryRequests]
                 ],maximumParallelRequests)
+                errors = responses["errors"]
+                responses = responses["responses"]
+                interpreter.context.mem.get('requestErrors', []).extend(errors)
 
             else:
                 responses = []
@@ -490,22 +499,28 @@ class SelectStatement(Statement):
                     response = self.request (service, q)
                     # TODO - add a parameter to limit service invocations.
                     # Until we parallelize requests, cap the max number we attempt for performance reasons.
-                    if index > 50:
+                    if index >= maximumQueryRequests:
                         break
                     #logger.debug (f"response: {json.dumps(response, indent=2)}")
                     responses.append (response)
 
-            if len(responses) == 0:
-                raise ServiceInvocationError (
-                    f"No valid results from service {self.service} executing " +
-                    f"query {self.query}. Unable to continue query. Exiting.")
-                #raise ServiceInvocationError (f"No responses received from {service}")
 
             logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
             logger.setLevel (logging.INFO)
-
-            result = self.merge_results (responses, service)
+            if len(responses) == 0:
+                # interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
+                #     f"No valid results from {self.service} with query {self.query}"
+                # ))
+                raise ServiceInvocationError (
+                    f"No valid results from service {self.service} executing " +
+                    f"query {self.query}. Unable to continue query. Exiting.")
+            for response in responses:
+                if 'knowledge_graph' in response:
+                    for element in [*response['knowledge_graph'].get('nodes',[]),*response['knowledge_graph'].get('edges',[])]:
+                        # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
+                        element["provided_by"] = schema
+            result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
@@ -519,6 +534,7 @@ class SelectStatement(Statement):
         plan = self.planner.plan (self.query)
         statements = self.plan (plan)
         responses = []
+        first_concept = None
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
             response = statement.execute (interpreter)
@@ -532,25 +548,42 @@ class SelectStatement(Statement):
                 name = next_statement.query.order [0]
                 #name = statement.query.order[-1]
                 #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
-                logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
+                # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
                 values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
-                first_concept.set_nodes (values)
-                if len(values) == 0:
-                    message = f"No valid results from service {statement.service} executing " + \
-                              f"query {statement.query}. Unable to continue query. Exiting."
-                    raise ServiceInvocationError (
-                        message = message,
-                        details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
-                print (f"{values}")
-        merged = self.merge_results (responses, self.service)
+                if statements[index].query.order == next_statement.query.order:
+                    first_concept.set_nodes (statements[index].query.concepts[name].nodes)
+                else:
+                    first_concept.set_nodes (values)
+                    if len(values) == 0:
+                        message = f"No valid results from service {statement.service} executing " + \
+                                  f"query {statement.query}. Unable to continue query. Exiting."
+                        raise ServiceInvocationError (
+                            message = message,
+                            details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+        merged = self.merge_results (responses, self.service, interpreter)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
         return merged
 
-    def merge_results (self, responses, service):
+    def merge_results (self, responses, service, interpreter):
         """ Merge results. """
+
+        """
+        If True, SelectStatement::resolve_name (and therefore the Bionames API) will be called on every node that does not already possess the `equivalent_identifiers` property.
+        As of now, this feature should be left disabled as it results in large queries failing due to the flooding of the Bionames API. Additionally, the Bionames class does not use async requests as of now, so it is also quite slow.
+        """
+        RESOLVE_EQUIVALENT_IDENTIFIERS = interpreter.resolve_names
+
         result = responses[0] if len(responses) > 0 else None
+        if result == None:
+            return {
+                "knowledge_graph": {
+                    "nodes": [],
+                    "edges": []
+                },
+                "knowledge_map": []
+            }
         if not 'knowledge_graph' in result:
             message = "Malformed response does not contain knowledge_graph element."
             logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
@@ -560,6 +593,47 @@ class SelectStatement(Statement):
         answers = result['knowledge_map']
 
         node_map = { n['id'] : n for n in kg.get('nodes',[]) }
+
+        replace_edge_ids = []
+        if RESOLVE_EQUIVALENT_IDENTIFIERS:
+            logger.info ('Starting to fetch equivalent identifiers')
+        total_requests = 0
+        prev_time = time.time()
+        for response in responses:
+            if 'knowledge_graph' in response:
+                for node in response['knowledge_graph'].get('nodes',[]):
+                    """
+                    Convert the `type` property of all nodes into a list. Create it if they do not already have it.
+                    """
+                    if 'type' not in node:
+                        node['type'] = []
+                    if (not isinstance(node['type'],list)):
+                        node['type'] = [node['type']]
+
+                    """
+                    Create the `equivalent_identifiers` property on all nodes that do not already have it.
+                    """
+                    if 'equivalent_identifiers' not in node:
+                        if RESOLVE_EQUIVALENT_IDENTIFIERS:
+                            ids = self.resolve_name (node.get('name',None), node.get('type',''))
+                        else:
+                            ids = [node['id']]
+                        node['equivalent_identifiers'] = ids
+                        total_requests += 1
+
+                for edge in response['knowledge_graph'].get('edges',[]):
+                    """
+                    Convert the `type` property of all edges into a list. Create it if they do not already have it.
+                    """
+                    if 'type' not in edge:
+                        edge['type'] = []
+                    if (not isinstance(edge['type'],list)):
+                        edge['type'] = [edge['type']]
+
+        if RESOLVE_EQUIVALENT_IDENTIFIERS:
+            logger.info (f'Finished fetching equivalent identifiers for {total_requests} nodes ({time.time()-prev_time}s).')
+
+        # TODO: This probably needs a rewrite. It should just construct an empty Message object and then iterate over the entire list of repsonses normally, rather than having to start with the first and using that as the starting Message object.
         for response in responses[1:]:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
@@ -567,14 +641,46 @@ class SelectStatement(Statement):
             # Edges, we may keep distinct and whole or merge to some tbd extent.
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
-                kg['edges'] += rkg['edges'] if 'edges' in rkg else []
+                other_edges = rkg['edges'] if 'edges' in rkg else []
+                for e in other_edges:
+                    exists = False
+                    for edge in kg['edges']:
+                        edge_type = edge.get('type',None)
+                        e_type = e.get('type',None)
+                        if edge_type == e_type and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
+                            exists = True
+                            break
+                    if not exists:
+                        kg['edges'].append (e)
                 #result['answers'] += response['answers']
                 result['knowledge_map'] += response['knowledge_map']
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
-                    if not n['id'] in node_map:
+                    """
+                    If possible, try to convert all nodes to a single identifier so that we don't end up with multiple separate nodes that are actually the same in the graph.
+                    Example: https://i.imgur.com/Z76R1wZ.png. The node on left is called "citric acid," and the node on right is called "anhydrous citric acid." The left node's id is "CHEBI:30769" and the right node's id is "CHEMBL:CHEMBL1261." These identifiers are actually equivalent to each other.
+                    """
+                    ids = n['equivalent_identifiers']
+                    exists = False
+                    for id in ids:
+                        for node_id in node_map:
+                            node = node_map[node_id]
+                            if id == node_id or id in node['equivalent_identifiers']:
+                                exists = True
+                                break
+                        if exists:
+                            replace_edge_ids.append([n["id"], node["id"]])
+                            break
+                    if not exists:
                         node_map[n['id']] = n
                         kg['nodes'].append (n)
+        # We need to update the edges' ids if we changed any node ids.
+        for old_id, new_id in replace_edge_ids:
+            for edge in result['knowledge_graph'].get('edges',[]):
+                if old_id == edge['source_id']:
+                    edge['source_id'] = new_id
+                if old_id == edge['target_id']:
+                    edge['target_id'] = new_id
         return result
 
 class TranQL_AST:
@@ -695,6 +801,7 @@ class Query:
         self.arrows = []
         self.concepts = {}
         self.disable = False
+        self.errors = [];
 
     def add(self, key):
         """ Add a token in the question graph to this query object. """
@@ -723,8 +830,9 @@ class Query:
                 name, type_name = key.split (':')
             self.order.append (name)
             """ Verify the type name is in the model we have. """
-            assert self.concept_model.get (type_name) != None
-            assert type_name in self.concept_model, f"Error: Concept {type_name} is not in the concept model."
+            if self.concept_model.get (type_name) == None or type_name not in self.concept_model:
+                raise Exception(f'Concept "{type_name}" is not in the concept model.')
+
             self.concepts[name] = Concept (name=name, type_name=type_name)
     def __getitem__(self, key):
         return self.concepts [key]
@@ -786,13 +894,21 @@ class QueryPlanStrategy:
         """
         edge = None
         schema = None
+        converted = False
+
+        source_type = source.type_name
+        target_type = target.type_name
+        if predicate.direction == Query.back_arrow:
+            source_type, target_type = target_type, source_type
+
         for schema_name, sub_schema_package in self.schema.schema.items ():
             """ Look for a path satisfying this edge in each schema. """
             sub_schema = sub_schema_package ['schema']
             sub_schema_url = sub_schema_package ['url']
-            if source.type_name in sub_schema:
-                logger.debug (f"  --{schema_name} - {source.type_name} => {target.type_name}")
-                if target.type_name in sub_schema[source.type_name]:
+
+            if source_type in sub_schema:
+                logger.debug (f"  --{schema_name} - {source_type} => {target_type}")
+                if target_type in sub_schema[source_type]:
                     """ Matching path. Write it to the plan. """
                     top_schema = None
                     if len(plan) > 0:
@@ -805,15 +921,16 @@ class QueryPlanStrategy:
                         plan.append ([ schema_name, sub_schema_url, [
                             [ source, predicate, target ]
                         ]])
+                    converted = True
             else:
                 """ No explicit matching plan for this edge. Do implicit conversions make it work? """
                 implicit_conversion = BiolinkModelWalker ()
-                for conv_type in implicit_conversion.get_transitions (source.type_name):
+                for conv_type in implicit_conversion.get_transitions (source_type):
                     implicit_conversion_schema = "implicit_conversion"
                     implicit_conversion_url = self.schema.schema[implicit_conversion_schema]['url']
                     if conv_type in sub_schema:
-                        logger.debug (f"  --impconv: {schema_name} - {conv_type} => {target.type_name}")
-                        if target.type_name in sub_schema[conv_type]:
+                        logger.debug (f"  --impconv: {schema_name} - {conv_type} => {target_type}")
+                        if target_type in sub_schema[conv_type]:
                             plan.append ([
                                 implicit_conversion_schema,
                                 implicit_conversion_url, [
@@ -828,3 +945,6 @@ class QueryPlanStrategy:
                                           include_patterns=source.include_patterns,
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
+                            converted = True
+        if not converted:
+            raise InvalidTransitionException (source, target, predicate)

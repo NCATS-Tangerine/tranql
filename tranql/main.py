@@ -175,10 +175,11 @@ class TranQL:
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
 
-        if 'ASYNCHRONOUS_REQUESTS' in self.config:
-            asynchronous = self.config['ASYNCHRONOUS_REQUESTS']
+        # If config has arg use, else use constructor arg
+        asynchronous = self.config.get('ASYNCHRONOUS_REQUESTS',asynchronous)
 
         self.asynchronous = asynchronous
+        self.resolve_names = False
 
     def parse (self, program):
         """ If we just want the AST. """

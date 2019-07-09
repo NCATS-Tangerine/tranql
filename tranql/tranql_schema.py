@@ -7,14 +7,14 @@ import requests_cache
 import os
 from tranql.concept import BiolinkModelWalker
 from collections import defaultdict
-from tranql.exception import TranQLException
+from tranql.exception import TranQLException, InvalidTransitionException
 from tranql.redis_graph import RedisGraph
 
 class NetworkxGraph:
     def __init__(self):
         self.net = nx.MultiDiGraph ()
     def add_edge (self, start, predicate, end, properties={}):
-        return self.net.add_edge (start, end, key=predicate)
+        return self.net.add_edge (start, end, key=predicate, **properties)
     def add_node (self, identifier, label=None, properties={}):
         return self.net.add_node (identifier, attr_dict=properties)
     def has_node (self, identifier):
@@ -29,10 +29,10 @@ class NetworkxGraph:
                 result = e
                 break
         return result
-    def get_nodes (self):
-        return self.net.nodes
-    def get_edges (self):
-        return self.net.edges
+    def get_nodes (self,**kwargs):
+        return self.net.nodes(**kwargs)
+    def get_edges (self,**kwargs):
+        return self.net.edges(keys=True,**kwargs)
     def delete (self):
         self.net.clear ()
     def commit (self):
@@ -69,7 +69,7 @@ class GraphTranslator:
         :return: Return a KGS message
         """
         nodes = list (self.graph.get_nodes ())
-        edges = list (self.graph.get_edges ())
+        edges = list (self.graph.get_edges (data=True))
         return {
             "knowledge_graph" : {
                 "nodes" : nodes,
@@ -115,7 +115,7 @@ class Schema:
                     elif isinstance(e,requests.exceptions.ConnectionError):
                         error = 'Request could not connect while fetching schema at "'+schema_data+'"'
                     else:
-                        error = 'Request failed whlie fetching schema at "'+schema_data+'"'
+                        error = 'Request failed while fetching schema at "'+schema_data+'"'
                     self.loadErrors.append(error)
                     # Delete the key here because it has no data.
                     del self.config['schema'][schema_name]
@@ -135,11 +135,11 @@ class Schema:
 
         for k, v in self.config['schema'].items ():
             #print (f"layer: {k}")
-            self.add_layer (layer=v['schema'])
+            self.add_layer (layer=v['schema'], name=k)
 
         self.schema_graph.commit ()
 
-    def add_layer (self, layer):
+    def add_layer (self, layer, name=None):
         """
         :param layer: Knowledge schema metadata layers.
         """
@@ -148,13 +148,11 @@ class Schema:
             for target_type, links in targets_list.items ():
                 target_node = self.get_node (node_id=target_type)
                 #self.schema_graph.commit ()
-                if isinstance(links, list):
-                    for link in links:
-                        #print (f"   {source_name}->{target_type} [{link}]")
-                        self.schema_graph.add_edge (source_name, link, target_type)
-                elif isinstance(links, str):
+                if isinstance(links, str):
+                    links = [links]
+                for link in links:
                     #print (f" {source_name}->{target_type} [{link}]")
-                    self.schema_graph.add_edge (source_name, link, target_type)
+                    self.schema_graph.add_edge (source_name, link, target_type, {"provided_by":name})
 
     def get_edge (self, plan, source_name, source_type, target_name, target_type,
                   predicate, edge_direction):
@@ -257,7 +255,7 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            raise TranQLException (f"Invalid transition: {source_type}->{target_type}")
+            raise InvalidTransitionException (source_type, target_type)
 
     def validate_question (self, message):
         """
@@ -270,7 +268,7 @@ class Schema:
             source = nodes[edge['source_id']]['type']
             target = nodes[edge['target_id']]['type']
             self.validate_edge (source, target)
-            print (f"  -- valid transition: {source}->{target}")
+            # print (f"  -- valid transition: {source}->{target}")
 
 def get_test_kg (file_name):
     path = "https://raw.githubusercontent.com/NCATS-Tangerine/NCATS-ReasonerStdAPI-diff/master"

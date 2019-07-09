@@ -52,21 +52,33 @@ class StandardAPIResource(Resource):
         except jsonschema.exceptions.ValidationError as error:
             logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
-    def handle_exception (self, e):
+    def handle_exception (self, e, warning=False):
         result = {}
-        if isinstance (e, TranQLException):
+        if isinstance (e, list):
             result = {
-                "status" : "error",
+                "message" : "\n\n".join([str(exception) for exception in e]),
+                "details" : "\n\n".join([(str(exception.details) if hasattr(exception,'details') else '') for exception in e])
+            }
+        elif isinstance (e, TranQLException):
+            result = {
                 "message" : str(e),
                 "details" : e.details if e.details else ''
             }
         elif isinstance (e, Exception):
-            traceback.print_exc (e)
+            traceback.print_exc ()
             result = {
-                "status" : "error",
                 "message" : str(e),
                 "details" : ''
             }
+        elif isinstance (e, str):
+            result = self.handle_exception(Exception(e))
+
+        if warning:
+            result["status"] = "Warning"
+        else:
+            result["status"] = "Error"
+
+
         return result
 
 class WebAppRoot(Resource):
@@ -197,16 +209,22 @@ class TranQLQuery(StandardAPIResource):
         """
         #self.validate (request)
         result = {}
+        tranql = TranQL ()
         try:
-            tranql = TranQL ()
             logging.debug (request.json)
             query = request.json['query'] if 'query' in request.json else ''
             logging.debug (f"--> query: {query}")
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
+            if len(context.mem.get ('requestErrors', [])) > 0:
+                errors = self.handle_exception(context.mem['requestErrors'], warning=True)
+                for key in errors:
+                    result[key] = errors[key]
         except Exception as e:
-            result = self.handle_exception (e)
+            traceback.print_exc()
+            errors = [e, *tranql.context.mem.get ('requestErrors', [])]
+            result = self.handle_exception (errors)
         with open ('query.out', 'w') as stream:
             json.dump (result, stream, indent=2)
         return result
@@ -296,10 +314,14 @@ class SchemaGraph(StandardAPIResource):
         # logger.info(schemaGraph.graph_to_message())
 
         # return {"nodes":[],"links":[]}
-        return {
+        obj = {
             "schema": schemaGraph.graph_to_message(),
-            "errors": schema.loadErrors
         }
+        if len(schema.loadErrors) > 0:
+            errors = self.handle_exception(schema.loadErrors, warning=True)
+            for key in errors:
+                obj[key] = errors[key]
+        return obj
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """
