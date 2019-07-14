@@ -434,13 +434,16 @@ api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')
-    parser.add_argument('-port', action="store", dest="port", default=8001, type=int)
+    parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
+    parser.add_argument('--port', action="store", dest="port", default=8001, type=int)
+    parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
     args = parser.parse_args()
-    server_host = '0.0.0.0'
-    server_port = args.port
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
     app.run(
-        host=server_host,
-        port=server_port,
-        debug=False,
-        use_reloader=True
+        host=args.host,
+        port=args.port,
+        debug=args.debug,
+        use_reloader=args.debug
     )

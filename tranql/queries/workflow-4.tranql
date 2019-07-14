@@ -11,25 +11,17 @@
 --      associated with exposure to these chemicals?
 --
 
-SELECT cohort_diagnosis:disease->diagnoses:disease
-  FROM '/clinical/cohort/disease_to_chemical_exposure'
- WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
-   AND Sex = '0'
-   AND cohort = 'all_patients'
-   AND max_p_value = '0.5'
-   SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
+-- this one's broken because icees.cohort_features.Sex is not a thing.
+SELECT cohort_diagnosis:disease->diagnoses:disease->genes1:gene->biological_process_or_activity->drug2:chemical_substance->genes2:gene->candidate_drug:chemical_substance
+  FROM '/schema'
+ WHERE icees.table = 'patient'
+   AND icees.year = 2010
+   AND icees.cohort_features.Sex = '0'
+   AND icees.maximum_p_value = 1
 
-SELECT disease->genes1:gene->pathway->candidate_genes:gene->chemical_substance
-  FROM '/graph/gamma/quick'
- WHERE disease = $diagnoses
-   SET chemical_pathways
-
-CREATE GRAPH $chemical_pathways
-    AT '/visualize/ndex'
-    AS 'wf4_paths'
-
-CREATE GRAPH $chemical_pathways
-    AT '/visualize/gamma'
-    AS 'wf4_paths'
-
-
+SELECT population_of_individual_organisms->disease->gene->biological_process_or_activity->chemical_substance
+  FROM '/schema'
+ WHERE icees.table = 'patient'
+   AND icees.year = 2010
+   AND icees.feature.Sex2 = 'Male'
+   AND icees.maximum_p_value = 1

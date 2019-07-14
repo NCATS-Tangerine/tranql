@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import aiohttp
 import concurrent.futures
@@ -24,6 +25,7 @@ async def make_request_async (semaphore, **kwargs):
                         raise ServiceInvocationError(
                             f"An error occurred invoking service: {kwargs['url']}.",
                             response['message'])
+                    print (f"** asyncio-response: {json.dumps(response,indent=2)}")
                 elif http_response.status == 404:
                     raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?")
                 else:

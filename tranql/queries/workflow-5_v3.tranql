@@ -11,11 +11,11 @@
 --      associated with exposure to these chemicals?
 --
 
-SELECT population_of_individual_organisms->chemical_substance->gene->biological_process->phenotypic_feature
+SELECT population_of_individual_organisms->chemical_substance->gene->biological_process_or_activity<-phenotypic_feature
   FROM "/schema"
  WHERE icees.table = 'patient'
    AND icees.year = 2010
    AND icees.cohort_features.AgeStudyStart = '0-2'
    AND icees.feature.EstResidentialDensity < 1
    AND icees.maximum_p_value = 1
-   AND drug_exposure !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'
+   AND chemical_substance !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'

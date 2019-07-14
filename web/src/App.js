@@ -1072,6 +1072,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             .then(
               (result) => {
                 result = JSON5.parse(result);
+                console.log (result);
+                var worthShowing = 
+                    !(
+                      result.knowledge_graph === undefined || (
+                        (
+                          result.knowledge_graph.nodes === undefined ||
+                            result.knowledge_graph.edges === undefined
+                        ) || (
+                          result.knowledge_graph.nodes.length +
+                            result.knowledge_graph.edges.length === 0
+                        )
+                      )
+                    );
+              
                 if (result.message) {
                   this._handleMessageDialog (result.status, result.message, result.details);
                   console.log ("--error: " + result.message);
@@ -1082,7 +1096,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 }
                 // If there was no error or if it's just a warning continue on as if nothing happened.
                 // Maybe remove caching on results with warnings?
-                if (!result.message || result.status === "Warning") {
+                //                if (!result.message || result.status === "Warning") {
+                if (worthShowing) {
                   /* Convert the knowledge graph to a renderable form. */
                   if (result.answers) {
                     // answers is not kgs 0.9 compliant. ... longer story.

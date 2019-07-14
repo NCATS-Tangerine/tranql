@@ -270,6 +270,7 @@ class Schema:
             self.validate_edge (source, target)
             # print (f"  -- valid transition: {source}->{target}")
 
+
 def get_test_kg (file_name):
     path = "https://raw.githubusercontent.com/NCATS-Tangerine/NCATS-ReasonerStdAPI-diff/master"
     url = f"{path}/{file_name}"

@@ -71,10 +71,11 @@ tableName      = quotedString.setName ("service name")
 tableNameList  = Group(delimitedList(tableName))
 
 SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
-arrow = Literal ("->") | \
-        Literal ("<-") | \
+arrow = \
         Group(Literal("-[") + concept_name + Literal("]->")) | \
-        Group(Literal("<-[") + concept_name + Literal("]-"))
+        Group(Literal("<-[") + concept_name + Literal("]-")) | \
+        Literal ("->") | \
+        Literal ("<-") 
 question_graph_element = (
     concept_name + ZeroOrMore ( LineEnd () )
 ) | \

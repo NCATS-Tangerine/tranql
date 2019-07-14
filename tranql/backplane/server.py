@@ -1,5 +1,5 @@
 """
-Provide a standard protocol for asking graph oriented questions of Translator data sources.
+Provide a normalized protocol for asking graph oriented questions of Translator data sources.
 """
 import copy
 import argparse
@@ -13,7 +13,6 @@ from flask import Flask, request, abort, Response
 from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
-#from tranql.lib.ndex import NDEx
 from tranql.main import TranQL
 import networkx as nx
 from tranql.util import JSONKit
@@ -224,44 +223,43 @@ class ICEESClusterQuery(StandardAPIResource):
         Until these stabilize and converge, we adapt between them in various ways.
         '''
 
-        '''
-        request.json['query_options'] = request.json.pop('options')
-        for n in request.json['machine_question']['nodes']:
-            n['node_id'] = n.pop ('id')
-        for e in request.json['machine_question']['edges']:
-            e['edge_id'] = e.pop ('id')
-            e['type'] = 'association'
-        del request.json['knowledge_graph']
-        del request.json['knowledge_maps']
-        '''
         for e in request.json['question_graph']['edges']:
             e['type'] = 'association'
         request.json['query_options'] = request.json.pop('options')
         request.json['machine_question'] = request.json.pop('question_graph')
-
-        #print (f"{json.dumps(request.json, indent=2)}")
+        for bad in [ 'knowledge_graph', 'knowledge_maps' ]:
+            if bad in request.json:
+                 del request.json[bad]
+            
         result = {}
 
         ''' Invoke ICEES '''
         icees_kg_url = "https://icees.renci.org/2.0.0/knowledge_graph"
-        #print (f"--- request.json ----------> {json.dumps(request.json, indent=2)}")
+        app.logger.debug (f"--request.json({icees_kg_url})--> {json.dumps(request.json, indent=2)}")
         response = requests.post (icees_kg_url,
                                   json=request.json,
                                   verify=False)
 
         with open ('icees.out', 'w') as stream:
             json.dump (response.json (), stream, indent=2)
-        #print (f"-- response --> {json.dumps(response.json(), indent=2)}")
-        #print (f"{json.dumps(response.json(), indent=2)}")
+        app.logger.debug (f"-- response --> {json.dumps(response.json(), indent=2)}")
 
-        if response.status_code >= 300:
+        response_json = response.json ()
+        its_an_error = response_json.\
+                       get('return value',{}).\
+                       get ('message_code',None) == 'Error'
+        if response.status_code >= 300 or its_an_error:
             result = {
                 "status" : "error",
                 "code"   : "service_invocation_failure",
-                "message" : f"Bad Gamma quick response. url: {self.robokop_url} request: {request.json} response: {response.text}."
+                "message" : f"Bad ICEES response. url: {icees_kg_url} request: {request.json} response: {response.text}.",
+                "query"  : request.json,
+                "response" : response_json
             }
+            print (f"ICEES-ERROR: {json.dumps(result,indent=2)}")
         else:
-            result = self.normalize_message (response.json ())
+            print (f"ICEES-NOMINAL: {json.dumps(result,indent=2)}")
+            result = self.normalize_message (response_json)
 
         with open ('icees.out.norm', 'w') as stream:
             json.dump (result, stream, indent=2)
@@ -274,7 +272,7 @@ class ICEESClusterQuery(StandardAPIResource):
         for k in options.keys ():
             val = options[k]
             if '.' in k:
-                ''' Make a nested structure. '''
+                ''' Make a nested structure. Turn `icees.feature.X = y` into a nested dict. '''
                 levels = k.split ('.')
                 obj = result
                 for index, level in enumerate(levels):
@@ -290,22 +288,12 @@ class ICEESClusterQuery(StandardAPIResource):
             else:
                 ''' assign directly. '''
                 result[k] = val[1]
+                
+        """ Filter ids returned by ICEES to ones we can currently make use of. """
+        result["regex"] = "(MONDO|HP):.*"
+            
         return result
 
-'''
-class ICEESEdVisitsClusterQuery(ICEESClusterQuery):
-    """ ICEES Resource. """
-    def __init__(self):
-        super(ICEESClusterQuery, self).__init__()
-        self.cluster_args = ICEESClusterArgs (
-            cohort_id="COHORT:22",
-            feature_id="TotalEDInpatientVisits",
-            value="2",
-            operator="<",
-            max_p_val="0.1")
-    def get_feature (self):
-        return "TotalEDInpatientVisits"
-'''
 #######################################################
 ##
 ## NDEx - publish a graph to NDEx
@@ -401,7 +389,7 @@ class RtxQuery(StandardAPIResource):
         return message
     def post(self):
         """
-        Visualize
+        Query RTX
         ---
         tag: validation
         description: Query Rtx, given a question graph.
@@ -456,7 +444,7 @@ class IndigoQuery(StandardAPIResource):
         self.query_url = f'{self.base_url}/reasoner/api/v1/query'
     def post(self):
         """
-        Visualize
+        Indigo Query
         ---
         tag: validation
         description: Query Indigo, given a question graph.
@@ -791,7 +779,6 @@ api.add_resource(IndigoQuery, '/graph/indigo')
 api.add_resource(RtxQuery, '/graph/rtx')
 
 # Workflow specific
-#api.add_resource(ICEESClusterQuery, '/flow/5/mod_1_4/icees/by_residential_density')
 api.add_resource(ICEESClusterQuery, '/clinical/cohort/disease_to_chemical_exposure')
 api.add_resource(ICEESSchema, '/clincial/icees/schema')
 
@@ -801,15 +788,13 @@ api.add_resource(PublishToNDEx, '/visualize/ndex')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='TranQL Backplane')
-    parser.add_argument('-port', action="store", dest="port", default=8099, type=int)
+    parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
+    parser.add_argument('-p', '--port', action="store", dest="port", default=8099, type=int)
+    parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
     args = parser.parse_args()
-
-    server_host = '0.0.0.0'
-    server_port = args.port
-
     app.run(
-        host=server_host,
-        port=server_port,
-        debug=False,
-        use_reloader=True
+        host=args.host,
+        port=args.port,
+        debug=args.debug,
+        use_reloader=args.debug
     )

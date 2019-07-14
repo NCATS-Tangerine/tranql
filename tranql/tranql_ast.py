@@ -107,7 +107,7 @@ class Statement:
                 logger.error (f"error {http_response.status_code} processing request: {message}")
                 logger.error (http_response.text)
         except ServiceInvocationError as e:
-            raise e
+            pass #raise e
         except Exception as e:
             logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
             #traceback.print_exc ()
@@ -449,7 +449,8 @@ class SelectStatement(Statement):
         if self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:
-            # We want to find what schema name corresponds to the url we are querying. Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces').
+            """ We want to find what schema name corresponds to the url we are querying.
+            Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces'). """
             schema = None
             for s in self.planner.schema.config["schema"]:
                 if self.planner.schema.config["schema"][s]["url"] == self.service:
@@ -499,11 +500,11 @@ class SelectStatement(Statement):
                     response = self.request (service, q)
                     # TODO - add a parameter to limit service invocations.
                     # Until we parallelize requests, cap the max number we attempt for performance reasons.
-                    if index >= maximumQueryRequests:
-                        break
                     #logger.debug (f"response: {json.dumps(response, indent=2)}")
                     responses.append (response)
-
+                    
+                    if index >= maximumQueryRequests:
+                        break
 
             logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
@@ -556,6 +557,7 @@ class SelectStatement(Statement):
                 else:
                     first_concept.set_nodes (values)
                     if len(values) == 0:
+                        print (f"---> {json.dumps(response, indent=2)}")
                         message = f"No valid results from service {statement.service} executing " + \
                                   f"query {statement.query}. Unable to continue query. Exiting."
                         raise ServiceInvocationError (
@@ -947,4 +949,21 @@ class QueryPlanStrategy:
                             ]])
                             converted = True
         if not converted:
-            raise InvalidTransitionException (source, target, predicate)
+            source_target_predicates = self.explain_predicates (source_type, target_type)
+            target_source_predicates = self.explain_predicates (target_type, source_type)
+            raise InvalidTransitionException (
+                source,
+                target,
+                predicate,
+                explanation=''.join ([
+                    "Valid transitions in the federated schema between the given types are: \n",
+                    f"{source_type}->{target_type}: {json.dumps(source_target_predicates, indent=2)}\n",
+                    f"{target_type}->{source_type}: {json.dumps(target_source_predicates, indent=2)} "
+                ]))
+        
+    def explain_predicates (self, source_type, target_type):
+        list_of_lists = [
+            sub_schema_package['schema'].get (source_type,{}).get (target_type, [])
+            for schema_name, sub_schema_package in self.schema.schema.items ()
+        ]
+        return [ i for li in list_of_lists for i in li ]
