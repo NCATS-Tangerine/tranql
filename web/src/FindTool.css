@@ -22,7 +22,6 @@
   border:none;
   outline:none;
   font-size:.8rem;
-  min-width:235px;
   width:100%;
   border-radius:0;
 }
@@ -56,6 +55,7 @@
   background-color:rgb(220,220,220);
 }
 .result-container {
+  resize:vertical;
   overflow-y:auto;
   border-top:2px solid rgb(220, 220, 220);
 }

@@ -461,7 +461,9 @@ class SelectStatement(Statement):
 
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
+            
             [self.ast.schema.validate_question(question) for question in questions]
+
             service = interpreter.context.resolve_arg (self.service)
 
 
@@ -502,7 +504,7 @@ class SelectStatement(Statement):
                     # Until we parallelize requests, cap the max number we attempt for performance reasons.
                     #logger.debug (f"response: {json.dumps(response, indent=2)}")
                     responses.append (response)
-                    
+
                     if index >= maximumQueryRequests:
                         break
 
@@ -960,7 +962,7 @@ class QueryPlanStrategy:
                     f"{source_type}->{target_type}: {json.dumps(source_target_predicates, indent=2)}\n",
                     f"{target_type}->{source_type}: {json.dumps(target_source_predicates, indent=2)} "
                 ]))
-        
+
     def explain_predicates (self, source_type, target_type):
         list_of_lists = [
             sub_schema_package['schema'].get (source_type,{}).get (target_type, [])

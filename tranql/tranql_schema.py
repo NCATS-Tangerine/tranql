@@ -255,7 +255,7 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            raise InvalidTransitionException (source_type, target_type)
+            raise InvalidTransitionException (source_type, target_type, explanation=f'No valid transitions exist between {source_type} and {target_type} in this schema.')
 
     def validate_question (self, message):
         """
