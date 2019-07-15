@@ -291,7 +291,7 @@ class ICEESClusterQuery(StandardAPIResource):
 
         """ Filter ids returned by ICEES to ones we can currently make use of. """
         #result["regex"] = "(MONDO|HP):.*"
-            
+
         return result
 
 #######################################################
@@ -794,10 +794,11 @@ if __name__ == "__main__":
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
     parser.add_argument('-p', '--port', action="store", dest="port", default=8099, type=int)
     parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
+    parser.add_argument('-r', '--reloader', help="Use reloader independent of debug.", default=False, action='store_true')
     args = parser.parse_args()
     app.run(
         host=args.host,
         port=args.port,
         debug=args.debug,
-        use_reloader=args.debug
+        use_reloader=args.debug or args.reloader
     )

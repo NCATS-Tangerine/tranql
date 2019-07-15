@@ -461,7 +461,7 @@ class SelectStatement(Statement):
 
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
-            
+
             [self.ast.schema.validate_question(question) for question in questions]
 
             service = interpreter.context.resolve_arg (self.service)
@@ -579,33 +579,39 @@ class SelectStatement(Statement):
         """
         RESOLVE_EQUIVALENT_IDENTIFIERS = interpreter.resolve_names
 
-        result = responses[0] if len(responses) > 0 else None
-        if result == None:
-            return {
+        # result = responses[0] if len(responses) > 0 else None
+        result = {
                 "knowledge_graph": {
                     "nodes": [],
                     "edges": []
                 },
                 "knowledge_map": []
-            }
-        if not 'knowledge_graph' in result:
-            message = "Malformed response does not contain knowledge_graph element."
-            logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
-            raise MalformedResponseError (message)
+        }
+        # if not 'knowledge_graph' in result:
+        #     message = "Malformed response does not contain knowledge_graph element."
+        #     logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
+        #     raise MalformedResponseError (message)
         kg = result['knowledge_graph']
         #answers = result['answers']
         answers = result['knowledge_map']
 
-        node_map = { n['id'] : n for n in kg.get('nodes',[]) }
+        node_map = {}
 
         replace_edge_ids = []
         if RESOLVE_EQUIVALENT_IDENTIFIERS:
             logger.info ('Starting to fetch equivalent identifiers')
         total_requests = 0
         prev_time = time.time()
+        """
+        Fetch/create equivalent identifiers for all nodes in the responses.
+
+        Convert the type property on all nodes and edges to a list if it is not already one.
+        """
         for response in responses:
             if 'knowledge_graph' in response:
-                for node in response['knowledge_graph'].get('nodes',[]):
+                nodes = response['knowledge_graph'].get('nodes',[])
+                edges = response['knowledge_graph'].get('edges',[])
+                for node in nodes:
                     """
                     Convert the `type` property of all nodes into a list. Create it if they do not already have it.
                     """
@@ -625,7 +631,7 @@ class SelectStatement(Statement):
                         node['equivalent_identifiers'] = ids
                         total_requests += 1
 
-                for edge in response['knowledge_graph'].get('edges',[]):
+                for edge in edges:
                     """
                     Convert the `type` property of all edges into a list. Create it if they do not already have it.
                     """
@@ -637,8 +643,39 @@ class SelectStatement(Statement):
         if RESOLVE_EQUIVALENT_IDENTIFIERS:
             logger.info (f'Finished fetching equivalent identifiers for {total_requests} nodes ({time.time()-prev_time}s).')
 
+        """
+        For instances where multiple nodes have the same name, infer that they are equivalent and give each equivalent identifiers to one another.
+        Note: this infers that if a node has the same `name` property as another, then it be the other. If this ever becomes untrue, it needs to be updated.
+        """
+        node_name_map = {}
+        for response in responses:
+            if 'knowledge_graph' in response:
+                nodes = response['knowledge_graph'].get('nodes',[])
+                for node in nodes:
+                    """
+                    Add to the node_name_map of duplicate names to nodes
+                    """
+                    name = node.get('name',None)
+                    if name not in node_name_map:
+                        node_name_map[name] = [node]
+                    else:
+                        node_name_map[name].append(node)
+
+        for i in node_name_map:
+            """
+            Assign every node the equivalent_identifiers property of all other nodes with the same name
+            """
+            nodes = node_name_map[i]
+            all_equivalent_identifiers = []
+            [all_equivalent_identifiers.extend(node['equivalent_identifiers']) for node in nodes]
+            # Filter out all duplicates
+            all_equivalent_identifiers = list(set(all_equivalent_identifiers))
+            for node in nodes:
+                node['equivalent_identifiers'] = all_equivalent_identifiers
+
+
         # TODO: This probably needs a rewrite. It should just construct an empty Message object and then iterate over the entire list of repsonses normally, rather than having to start with the first and using that as the starting Message object.
-        for response in responses[1:]:
+        for response in responses:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
             # their ids are equal. Consider merging provenance/properties.
@@ -662,7 +699,8 @@ class SelectStatement(Statement):
                 for n in other_nodes:
                     """
                     If possible, try to convert all nodes to a single identifier so that we don't end up with multiple separate nodes that are actually the same in the graph.
-                    Example: https://i.imgur.com/Z76R1wZ.png. The node on left is called "citric acid," and the node on right is called "anhydrous citric acid." The left node's id is "CHEBI:30769" and the right node's id is "CHEMBL:CHEMBL1261." These identifiers are actually equivalent to each other.
+                    Example: https://i.imgur.com/Z76R1wZ.png. The node on left is called "citric acid," and the node on right is called "anhydrous citric acid."
+                    The left node's id is "CHEBI:30769" and the right node's id is "CHEMBL:CHEMBL1261." These identifiers are actually equivalent to each other.
                     """
                     ids = n['equivalent_identifiers']
                     exists = False

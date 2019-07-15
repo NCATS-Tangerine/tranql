@@ -437,6 +437,7 @@ if __name__ == "__main__":
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
     parser.add_argument('--port', action="store", dest="port", default=8001, type=int)
     parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
+    parser.add_argument('-r', '--reloader', help="Use reloader independent of debug.", default=False, action='store_true')
     args = parser.parse_args()
 
     if args.debug:
@@ -445,5 +446,5 @@ if __name__ == "__main__":
         host=args.host,
         port=args.port,
         debug=args.debug,
-        use_reloader=args.debug
+        use_reloader=args.debug or args.reloader
     )
