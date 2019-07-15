@@ -1073,7 +1073,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               (result) => {
                 result = JSON5.parse(result);
                 console.log (result);
-                var worthShowing = 
+                var worthShowing =
                     !(
                       result.knowledge_graph === undefined || (
                         (
@@ -1085,7 +1085,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         )
                       )
                     );
-              
+
                 if (result.message) {
                   this._handleMessageDialog (result.status, result.message, result.details);
                   console.log ("--error: " + result.message);
@@ -2544,6 +2544,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         </div>
                       </div>
                       <LinkExaminer link={this.state.selectedNode}
+                                    onClose={() => this.setState({ selectedNode : null })}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{

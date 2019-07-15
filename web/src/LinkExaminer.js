@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { FaCircle, FaLongArrowAltLeft, FaLongArrowAltRight } from 'react-icons/fa';
+import { FaCircle, FaLongArrowAltLeft, FaLongArrowAltRight, FaTimes } from 'react-icons/fa';
 import './LinkExaminer.css';
 
 export default class LinkExaminer extends Component {
@@ -11,14 +11,15 @@ export default class LinkExaminer extends Component {
     return (
       <div className="LinkExaminer">
         <div className="link-examiner-header">
-          <h6 className="link-examiner-header-text">Examine Connections</h6>
+          <span className="link-examiner-header-text">Examine Connections</span>
+          <FaTimes className="link-examiner-close-button" onClick={(e) => this.props.onClose(e)}/>
         </div>
         <div className="link-examiner-header-info">
           {
             [this.props.link.link.source, this.props.link.link.target]
               .sort((a,b)=>a.name.localeCompare(b.name))
-              .map((node) => (
-                <div className="header-node">
+              .map((node,i) => (
+                <div className="header-node" key={i}>
                   <FaCircle color={node.color}/>
                   <span>{node.name}</span>
                 </div>
