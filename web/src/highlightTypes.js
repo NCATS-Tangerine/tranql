@@ -145,7 +145,8 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
       if (highlight !== false) {
         color = new THREE.Color(highlight);
         if (vMode !== "2D") {
-          element.prevOpacity = material.opacity;
+            // Default
+            element.prevOpacity = material.opacity !== undefined ? material.opacity : 0.2;
         }
         else {
           element.prevColor = element.color;
@@ -156,7 +157,7 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
         if (vMode !== "2D") {
           color = new THREE.Color(parseInt(element.color.slice(1),16));
           opacity = element.prevOpacity;
-          delete element.prevOpacity;
+          // delete element.prevOpacity;
         }
         else {
           color = new THREE.Color(parseInt(element.prevColor.slice(1),16));
@@ -167,6 +168,7 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
         element.color = "#" + color.getHexString();
       }
       else {
+        if (opacity === undefined) return;
         material.color = color;
         material.opacity = opacity;
       }

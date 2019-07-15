@@ -24,6 +24,8 @@ import InlineEdit from 'react-edit-inline2';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
+import { NotificationContainer , NotificationManager } from 'react-notifications';
+import 'react-notifications/lib/notifications.css';
 import Slider, { Range } from 'rc-slider';
 import { GridLoader } from 'react-spinners';
 import SplitPane from 'react-split-pane';
@@ -130,6 +132,9 @@ class App extends Component {
     this._updateGraphSize = this._updateGraphSize.bind(this);
     this._updateGraphSplitPaneResize = this._updateGraphSplitPaneResize.bind(this);
     this._setSchemaViewerActive = this._setSchemaViewerActive.bind(this);
+
+    // Notifications
+    this._displayAllHiddenNotification = this._displayAllHiddenNotification.bind(this);
 
     // Fetch data for schema visualization
     this._getSchema = this._getSchema.bind(this);
@@ -1432,6 +1437,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
+      this._displayAllHiddenNotification();
     }
     else if (link !== null &&
         this.state.selectedLink !== null &&
@@ -1471,6 +1477,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       if (mappings !== undefined) {
         let hideTypes = Object.keys(mappings).filter(t => !linkType.includes(t));
         this._updateGraphElementVisibility("links", hideTypes, true);
+        this._displayAllHiddenNotification();
       }
     }
   }
@@ -1487,10 +1494,23 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       if (mappings !== undefined) {
         let hideTypes = Object.keys(mappings).filter(t => !nodeType.includes(t));
         this._updateGraphElementVisibility("nodes", hideTypes, true);
+        this._displayAllHiddenNotification();
       }
     }
     this.setState ({
       contextNode : node
+    });
+  }
+  /**
+   * Displays a notification indicating if all nodes or links have been hidden.
+   */
+  _displayAllHiddenNotification() {
+    this.setState({}, () => {
+      let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
+      // Mutually inclusive
+      if (graph.nodes.length === 0 || graph.links.length === 0) {
+        NotificationManager.warning('All nodes or links have been filtered', 'Warning', 3250);
+      }
     });
   }
   _handleContextMenu (e) {
@@ -1565,16 +1585,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         graph.hiddenTypes[graphElementType].splice(graph.hiddenTypes[graphElementType].indexOf(t),1);
       });
     }
-
+    let newMessage;
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
-      let newMessage = this.state.schemaMessage;
+      newMessage = this.state.schemaMessage;
       newMessage.hiddenTypes = graph.hiddenTypes;
       this._schemaRenderChain.handle(newMessage, this.state);
       // console.log(message);
       this.setState({ schema : newMessage.graph });
     }
     else {
-      let newMessage = this.state.message;
+      newMessage = this.state.message;
       newMessage.hiddenTypes = graph.hiddenTypes;
 
       this.setState({ message : newMessage }, () => {
@@ -1593,6 +1613,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     console.log (node);
     if (this.state.highlightTypes) {
       node !== null && this._updateGraphElementVisibility("nodes", node.type, true);
+      this._displayAllHiddenNotification();
     }
     else if (this.state.navigateMode && this.state.visMode === '3D') {
       // Navigate camera to selected node.
@@ -2418,6 +2439,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
         {this._renderToolbarHelpModal ()}
+        <NotificationContainer/>
         <QueriesModal ref={this._exampleQueriesModal}
                       runButtonCallback={(code, e) => {
                         this._exampleQueriesModal.current.hide();
