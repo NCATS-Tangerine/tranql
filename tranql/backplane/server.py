@@ -290,8 +290,8 @@ class ICEESClusterQuery(StandardAPIResource):
                 result[k] = val[1]
 
         """ Filter ids returned by ICEES to ones we can currently make use of. """
-        result["regex"] = "(MONDO|HP):.*"
-
+        #result["regex"] = "(MONDO|HP):.*"
+            
         return result
 
 #######################################################
