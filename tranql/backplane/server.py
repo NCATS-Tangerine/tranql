@@ -230,7 +230,7 @@ class ICEESClusterQuery(StandardAPIResource):
         for bad in [ 'knowledge_graph', 'knowledge_maps' ]:
             if bad in request.json:
                  del request.json[bad]
-            
+
         result = {}
 
         ''' Invoke ICEES '''
@@ -288,10 +288,10 @@ class ICEESClusterQuery(StandardAPIResource):
             else:
                 ''' assign directly. '''
                 result[k] = val[1]
-                
+
         """ Filter ids returned by ICEES to ones we can currently make use of. """
         result["regex"] = "(MONDO|HP):.*"
-            
+
         return result
 
 #######################################################
@@ -662,9 +662,10 @@ class GNBRDecorator(StandardAPIResource):
                 'node_list': []
             }
         }
-
         for edge in knowledge_graph['edges']:
-            edge['publications'] = ','.join(edge['publications'])
+            edge['publications'] = edge.get('publications', '')
+            if isinstance(edge['publications'],list):
+                edge['publications'] = ','.join(edge['publications'])
             mapped_message['result_graph']['edge_list'].append(edge)
 
         for node in knowledge_graph['nodes']:
@@ -681,7 +682,9 @@ class GNBRDecorator(StandardAPIResource):
 
         rtx_result = rtx['result_list'][index]
         for edge in rtx_result['result_graph']['edge_list']:
-            edge['publications'] = list(edge['publications'].split(','))
+            edge['publications'] = edge.get('publications', [])
+            if isinstance(edge['publications'],str):
+                edge['publications'] = list(edge['publications'].split(','))
         for node in rtx_result['result_graph']['node_list']:
             if not isinstance(node['type'], list):
                 node['type'] = [node['type']]
