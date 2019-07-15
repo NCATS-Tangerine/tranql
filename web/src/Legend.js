@@ -93,7 +93,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.props.active ? <b>{adjustTitle(this.props.data.type)}</b> : adjustTitle(this.props.data.type)}
+        {this.props.active ? <b>{(this.props.data.type)}</b> : (this.props.data.type)}
         {this.props.active ? <b>({this.props.data.actualQuantity}/{this.props.data.quantity})</b> : "("+this.props.data.actualQuantity+"/"+this.props.data.quantity+")"}
       </ToggleButton>
     );

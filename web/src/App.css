@@ -219,8 +219,8 @@ body {
     border: 1px solid rgba(0,0,0,.2);
     border-radius: .3rem;
     outline: 0;
-    max-height: 90%;
-    height: 90%;
+    /* max-height: 90%; */
+    height: 100%;
 }
 .messageDialog .react-tabs__tab-panel {
   /* Retain the formatting from the message */
@@ -237,7 +237,7 @@ body {
   height:100%;
 }
 .toolbar-help-modal-dialog {
-  height:50%;
+  height:75%;
   margin:0;
   width:700px;
   max-width:none;

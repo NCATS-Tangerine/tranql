@@ -370,6 +370,7 @@ class App extends Component {
             This will bring up the connection viewer interface.
             It will display each node's name as an abbreviation. It also colors codes their names according to the node's color in the force graph.
             If you forget a node's name, you can hover over the abbreviation, and it will display its name in full.
+            Clicking on a link will bring it up in the object viewer.
             `
           }
         ],

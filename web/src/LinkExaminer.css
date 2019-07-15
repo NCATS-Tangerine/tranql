@@ -52,5 +52,6 @@
   margin:2px;
 }
 .link-label-text {
+  cursor:pointer;
   /* color:#2b9cff; */
 }
