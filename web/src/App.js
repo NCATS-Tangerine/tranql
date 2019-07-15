@@ -189,6 +189,9 @@ class App extends Component {
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
 
+    // Create tool-related references (for selecting them to be active)
+    this._selectToolRef = React.createRef ();
+
 
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
@@ -304,7 +307,7 @@ class App extends Component {
         <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
         </Tool>,
-        <Tool name="Select" shortcut="g" description="Open a node or link in the object viewer" callback={(bool) => this._setSelectMode(bool)}>
+        <Tool name="Select" shortcut="g" description="Open a node or link in the object viewer" ref={this._selectToolRef} callback={(bool) => this._setSelectMode(bool)}>
           <FaMousePointer/>
         </Tool>,
         <Tool name="Highlight Types"
@@ -2545,6 +2548,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       </div>
                       <LinkExaminer link={this.state.selectedNode}
                                     onClose={() => this.setState({ selectedNode : null })}
+                                    onLinkClick={(link) => (
+                                      this._setSelectMode(true),
+                                      this._selectToolRef.current.setActive(true),
+                                      this.setState({ connectionExaminer : false }, () => this._handleLinkClick(link))
+                                    )}
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{

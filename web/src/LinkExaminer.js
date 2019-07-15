@@ -33,10 +33,10 @@ export default class LinkExaminer extends Component {
            */
           this.props.link.link.allConnections.map((link, i) => {
             return (
-              <div className="link-label" key={i}>
+              <div className="link-label" key={i} onClick={(e) => this.props.onLinkClick(link,e)}>
                 <span title={link.source.name} style={{color:link.source.color}}>{link.source.name.slice(0,3).toUpperCase()}</span>
                 <FaLongArrowAltRight/>
-                {link.type.join()}
+                <span className="link-label-text" style={{color:link.color}}>{link.type.join()}</span>
                 <FaLongArrowAltRight/>
                 <span title={link.target.name} style={{color:link.target.color}}>{link.target.name.slice(0,3).toUpperCase()}</span>
               </div>
