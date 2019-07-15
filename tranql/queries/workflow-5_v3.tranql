@@ -19,3 +19,4 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    AND icees.feature.EstResidentialDensity < 1
    AND icees.maximum_p_value = 1
    AND chemical_substance !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'
+   AND icees.regex = "(MONDO|HP):.*"
