@@ -422,6 +422,8 @@ class App extends Component {
                           <Col><dt>func</dt></Col><Col><dd>Evals a JavaScript function which is passed the element's attribute as the only argument. Should return true or false to indicate if the node should or should not be included.<br/><a href="javascript:void(0)" onClick={
                             ()=>scrollIntoView("#funcFlag")
                           }>Example</a></dd></Col>
+                          <Col><dt>Comparison Operators</dt></Col><Col><dd>The comparison operators <b>({"<"}, {"<="}, {">"}, {">="}, {"=="}, {"==="}, {"!="}, {"!=="})</b> are all valid flags. {"<="} and {">="} compare if a number is less than or equal to and greater than or equal to the given input respectively.
+                          "!=" and "!==" both compare if it is not equal to the given input. The "===" and "!==" operators do not allow for implicit conversion when comparing, and therefore should almost always be used over their alternative.</dd></Col>
                           <Col>
                             <dt>Special</dt>
                             <dd>
@@ -453,6 +455,10 @@ class App extends Component {
                           <Col><dt>__targetNodes__</dt></Col><Col><dd>(Only applicable in the second selector of a nodes->links->nodes query) The value of __targetNodes__ is a regex string that matches for any ids of the nodes from the target selector.</dd></Col>
 
                           <Col><dt>__element__</dt></Col><Col><dd>The value of __element__ is the current element being tested for the attribute.</dd></Col>
+
+                          <Col><dt>__nodes__</dt></Col><Col><dd>The value of __nodes__ is a list of the all the nodes in the current force graph</dd></Col>
+
+                          <Col><dt>__links__</dt></Col><Col><dd>The value of __links__ is a list of the all the links in the current force graph</dd></Col>
                         </dl>
                       </Row>
                     </div>

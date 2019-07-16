@@ -388,6 +388,9 @@ export default class FindTool extends Component {
       );
     }
 
+    magicVariables["__nodes__"] = JSON.stringify(graph.nodes);
+    magicVariables["__links__"] = JSON.stringify(graph.links);
+
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
         const actualElement = element;
