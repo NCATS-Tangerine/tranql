@@ -225,15 +225,15 @@ export function hydrateState () {
       let value = localStorage.getItem(key);
       console.log (" setting " + key + " => " + value);
       // parse the localStorage string and setState
+      const cb = () => console.log (" set " + key + " => " + this.state[key]);
       try {
         value = JSON.parse(value);
-        this.setState({ [key]: value });
+        this.setState({ [key]: value }, cb);
       } catch (e) {
         // handle empty string.
         console.log (" setting " + key + " => " + value);
-        this.setState({ [key]: value });
+        this.setState({ [key]: value }, cb);
       }
-      console.log (" set " + this.state[key]);
     }
   }
 }

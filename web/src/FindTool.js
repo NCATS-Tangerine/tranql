@@ -38,6 +38,8 @@ export default class FindTool extends Component {
     this.updateResults = this.updateResults.bind(this);
     this.showSettings = this.showSettings.bind(this);
 
+    this._setDefaultJSONPathQuery = this._setDefaultJSONPathQuery.bind(this);
+
     this._input = React.createRef();
 
     this._inputHandler = debounce(this._onInput,300);
@@ -78,6 +80,9 @@ export default class FindTool extends Component {
       // e.preventDefault();
       // this._input.current.focus();
     }
+  }
+  _setDefaultJSONPathQuery() {
+    if (this._input.current.value === "") this._input.current.value = "$.*";
   }
   static parse(text) {
     const transitionTokens = [
@@ -455,25 +460,6 @@ export default class FindTool extends Component {
       links:[]
     };
 
-    const val = this._input.current === null ? "" : this._input.current.value;
-
-    if (this.state.useJSONPath) {
-      let results = [];
-      try {
-        results = jp.query({nodes:this.props.graph.nodes,links:this.props.graph.links},val).filter((el) => el.origin).map((el) => (FindTool._sourceElement(el), el.origin));
-      }
-      catch {}
-      return {
-        grouped: false,
-        groups: results
-      }
-    }
-
-    const selectors = FindTool.parse(val);
-    if (typeof selectors === "string") {
-      return selectors;
-    }
-
     const replaceNodes = this.props.graph.nodes;
     const replaceLinks = this.props.graph.links.map((link) => {
       // Remove circular objects.
@@ -483,6 +469,37 @@ export default class FindTool extends Component {
       nodes:replaceNodes,
       links:replaceLinks
     }));
+
+    const val = this._input.current === null ? "" : this._input.current.value;
+
+    if (this.state.useJSONPath) {
+      let results = [];
+      let graphElement = false;
+      try {
+        results = jp.nodes({nodes:graph.nodes,links:graph.links},val).map((el) => {
+          // Must be a node or link object
+          if (el.path.length === 3) {
+            FindTool._sourceElement(el.value);
+            graphElement = true;
+            return el.value.origin;
+          }
+          return el;
+        });
+      }
+      catch {}
+      console.log(results);
+      return {
+        grouped: false,
+        groups: results,
+        graphElement: graphElement
+      }
+    }
+
+    const selectors = FindTool.parse(val);
+    if (typeof selectors === "string") {
+      return selectors;
+    }
+
 
     let anyTransitions = false;
 
@@ -550,9 +567,26 @@ export default class FindTool extends Component {
           {
             results.groups.map((group, i) => {
               return (
-                <div className="find-tool-result" onMouseEnter={()=>{this.setState({ entered : results.grouped ? Object.values(group) : [group] });this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group])}}
-                                        onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group])}}
-                                        onClick={()=>this.props.resultMouseClick(results.grouped ? Object.values(group) : [group])} key={i}>
+                <div className="find-tool-result"
+                     onMouseEnter={()=>{
+                       if (!results.graphElement) return;
+                       this.setState({ entered : results.grouped ? Object.values(group) : [group] });
+                       this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group]);
+                     }}
+                     onMouseLeave={()=>{
+                       if (!results.graphElement) return;
+                       this.setState({ entered : null });
+                       this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group]);
+                     }}
+                     onClick={()=>{
+                       if (!results.graphElement) {
+                         this._input.current.value = jp.stringify(group.path) + ".*";
+                         this._inputHandler();
+                         return;
+                       }
+                       this.props.resultMouseClick(results.grouped ? Object.values(group) : [group]);
+                     }}
+                     key={i}>
                   {
                     results.grouped ?
                       <>
@@ -562,7 +596,14 @@ export default class FindTool extends Component {
                         <div><FaLongArrowAltRight/></div>
                         <span>{group.target.source_el.name + " (" + group.target.source_el.id + ")"}</span>
                       </> :
-                      <><span>{group.source_el.name + " (" + group.source_el.id + ")"}</span></>
+                        <span>
+                          {
+                            (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                              group.source_el.name + " (" + group.source_el.id + ")"
+                            ) :
+                              group.path[group.path.length-1] + " (" + (typeof group === "object" ? Object.keys(group.value).length : group.value) + ")"
+                          }
+                        </span>
                   }
                 </div>
               );
@@ -619,11 +660,17 @@ export default class FindTool extends Component {
                      name="useJSONPath"
                      checked={this.state.useJSONPath}
                      onChange={(e) => {
+                       const name = e.currentTarget.name;
+                       const checked = e.currentTarget.checked;
                        this.setState({
-                         useJSONPath : e.currentTarget.checked
+                         useJSONPath : checked
+                       }, () => {
+                         if (checked) {
+                           this._setDefaultJSONPathQuery();
+                         }
+                         this.updateResults();
                        });
-                       localStorage.setItem(e.currentTarget.name,JSON.stringify(e.currentTarget.checked));
-                       this.updateResults();
+                       localStorage.setItem(name,JSON.stringify(checked));
                      }}/>
                <span>Use <a target="_blank" href="https://goessner.net/articles/JsonPath/">JSONPath</a> syntax</span>
             </div>
