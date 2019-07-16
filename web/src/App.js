@@ -2560,10 +2560,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                     render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{
-                                  values.forEach((element) => this._highlightType(element.source_el.id,0xff0000,false,undefined,'id'))}
+                                  values.forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
                                 }
                                 resultMouseLeave={(values)=>{
-                                  values.forEach((element) => this._highlightType(element.source_el.id,false,false,undefined,'id'))}
+                                  values.forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
                                 }
                                 resultMouseClick={(values)=>{}}
                                 ref={this._findTool}/>

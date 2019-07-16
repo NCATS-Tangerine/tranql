@@ -331,8 +331,8 @@ export default class FindTool extends Component {
           )
         }
         transitionAttributes = {
-          "source_id:regex":source_re.source,
-          "target_id:regex":target_re.source
+          "source:func":(val) => val.id.match(source_re) !== null,
+          "target:func":(val) => val.id.match(target_re) !== null
           // "origin:func": `(origin)=>origin.source_id.match(${source_re}) && origin.target_id.match(${target_re})`
         };
       }
@@ -354,7 +354,7 @@ export default class FindTool extends Component {
       // Filter out any nodes which do not have any links connecting them
       results.nodes = results.nodes.filter((node) => {
         return results.links.reduce((acc,link) => {
-          return link.source_id === node.id || link.target_id === node.id ? acc + 1 : acc;
+          return link.source.id === node.id || link.target.id === node.id ? acc + 1 : acc;
         },0);
       });
 
@@ -370,14 +370,29 @@ export default class FindTool extends Component {
 
       // Filter out any links whose nodes are not present in the result (because it uses regex to select links it also tends to match substrings)
       results.links = results.links.filter((link) => {
-        return nodeIds.includes(link.source_id) && nodeIds.includes(link.target_id);
+        return nodeIds.includes(link.source.id) && nodeIds.includes(link.target.id);
       });
     }
 
     return results;
   }
-  static _sourceElement(element) {
-    element.origin.source_el = { id : element.id, name : element.name };
+  static repr(obj) {
+    if (Array.isArray(obj)) {
+      // Array
+      return "[" + obj.length + "]";
+    }
+    else if (obj.constructor.name === "Object") {
+      // Object literal
+      return "{" + Object.keys(obj).length + "}";
+    }
+    else if (obj === Object(obj)) {
+      // Not primitive or object literal or array
+      return obj.constructor.name;
+    }
+    else {
+      // Primitive
+      return obj;
+    }
   }
   static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables) {
     let elements = {
@@ -411,13 +426,13 @@ export default class FindTool extends Component {
     }
 
     magicVariables["__nodes__"] = JSON.stringify(graph.nodes);
-    magicVariables["__links__"] = JSON.stringify(graph.links);
+    magicVariables["__links__"] = JSON.stringify(graph.links,(key,val)=>key!=="allConnections"?val:undefined);
 
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
         const actualElement = element;
-        FindTool._sourceElement(element);
-        element = element.origin;
+        // FindTool._sourceElement(element);
+        // element = element.origin;
         let every = Object.entries(attributes).every((obj) => {
           let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
           if (element.hasOwnProperty(attributeName)) {
@@ -435,7 +450,7 @@ export default class FindTool extends Component {
                 }
               }
             }
-            magicVariables["__element__"] = JSON.stringify(element);
+            magicVariables["__element__"] = JSON.stringify(element,(key,val)=>key!=="allConnections"?val:undefined);
             // Replace any magic variables
             let re = /[^\\](__.*?__)/g;
             let sel;
@@ -460,15 +475,16 @@ export default class FindTool extends Component {
       links:[]
     };
 
-    const replaceNodes = this.props.graph.nodes;
-    const replaceLinks = this.props.graph.links.map((link) => {
-      // Remove circular objects.
-      return Object.assign({}, link, { allConnections : undefined });
-    });
-    let graph = JSON.parse(JSON.stringify({
-      nodes:replaceNodes,
-      links:replaceLinks
-    }));
+    // const replaceNodes = this.props.graph.nodes;
+    // const replaceLinks = this.props.graph.links.map((link) => {
+    //   // Remove circular objects.
+    //   return Object.assign({}, link, { allConnections : undefined });
+    // });
+    // let graph = JSON.parse(JSON.stringify({
+    //   nodes:replaceNodes,
+    //   links:replaceLinks
+    // }));
+    let graph = this.props.graph;
 
     const val = this._input.current === null ? "" : this._input.current.value;
 
@@ -479,9 +495,8 @@ export default class FindTool extends Component {
         results = jp.nodes({nodes:graph.nodes,links:graph.links},val).map((el) => {
           // Must be a node or link object
           if (el.path.length === 3) {
-            FindTool._sourceElement(el.value);
             graphElement = true;
-            return el.value.origin;
+            return el;
           }
           return el;
         });
@@ -522,7 +537,7 @@ export default class FindTool extends Component {
     if (!anyTransitions) {
       return {
         grouped : false,
-        groups: [...results.nodes, ...results.links]
+        groups: [...results.nodes, ...results.links].map((el)=>({value:el}))
       };
     }
     else {
@@ -532,8 +547,8 @@ export default class FindTool extends Component {
       });
       results.links.forEach((link) => {
         grouped.push({
-          source: nodeMap[link.source_id],
-          target: nodeMap[link.target_id],
+          source: nodeMap[link.source.id],
+          target: nodeMap[link.target.id],
           link: link
         });
       });
@@ -569,41 +584,48 @@ export default class FindTool extends Component {
               return (
                 <div className="find-tool-result"
                      onMouseEnter={()=>{
-                       if (!results.graphElement) return;
-                       this.setState({ entered : results.grouped ? Object.values(group) : [group] });
-                       this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group]);
+                       if (results.hasOwnProperty('graphElement') && !results.graphElement) return;
+                       this.setState({ entered : results.grouped ? Object.values(group) : [group.value.origin] });
+                       this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group.value.origin]);
                      }}
                      onMouseLeave={()=>{
-                       if (!results.graphElement) return;
+                       if (results.hasOwnProperty('graphElement') && !results.graphElement) return;
                        this.setState({ entered : null });
-                       this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group]);
+                       this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group.value.origin]);
                      }}
                      onClick={()=>{
-                       if (!results.graphElement) {
-                         this._input.current.value = jp.stringify(group.path) + ".*";
-                         this._inputHandler();
-                         return;
-                       }
-                       this.props.resultMouseClick(results.grouped ? Object.values(group) : [group]);
+                       this.props.resultMouseClick(results.grouped ? Object.values(group) : [group.value.origin]);
                      }}
                      key={i}>
                   {
                     results.grouped ?
                       <>
-                        <span>{group.source.source_el.name + " (" + group.source.source_el.id + ")"}</span>
+                        <span>{group.source.name + " (" + group.source.id + ")"}</span>
                         <div><FaLongArrowAltRight/></div>
-                        <span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ") + " (" + group.link.source_el.id + ")"}</span>
+                        <span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ") + " (" + group.link.id + ")"}</span>
                         <div><FaLongArrowAltRight/></div>
-                        <span>{group.target.source_el.name + " (" + group.target.source_el.id + ")"}</span>
+                        <span>{group.target.name + " (" + group.target.id + ")"}</span>
                       </> :
-                        <span>
+                        <div>
+                          <span>
+                            {
+                              (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                group.value.name + " (" + group.value.id + ")"
+                              ) :
+                                group.path[group.path.length-1] + ": " + FindTool.repr(group.value)
+                            }
+                          </span>
                           {
-                            (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                              group.source_el.name + " (" + group.source_el.id + ")"
-                            ) :
-                              group.path[group.path.length-1] + " (" + (typeof group === "object" ? Object.keys(group.value).length : group.value) + ")"
+                            this.state.useJSONPath && (
+                              <div className="find-tool-select-button-wrapper">
+                                <FaLongArrowAltRight className="find-tool-select-button" onClick={() => {
+                                  this._input.current.value = jp.stringify(group.path) + ".*";
+                                  this._inputHandler();
+                                }}/>
+                              </div>
+                            )
                           }
-                        </span>
+                        </div>
                   }
                 </div>
               );
