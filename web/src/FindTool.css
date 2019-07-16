@@ -30,36 +30,52 @@
 }
 .find-tool-button-container {
   display:flex;
-  justify-content:center;
+  justify-content:space-around;
   align-items:center;
 }
-.find-tool-button-container::before {
-  content:'';
-  position:relative;
-  width:1.25px;
-  height:100%;
-  left:0;
-  background-color:rgb(215,215,215);
+.find-tool-button-container > *:first-child:not(:only-child) {
+  margin-left:4px;
+}
+.find-tool-button-container > *:only-child {
+  margin-left:2px;
 }
 .find-tool-button-container > * {
-  margin:5px;
+  margin:2px;
+  margin-left:0px;
   font-size:22px;
   color:rgb(50,50,50);
   border-radius:50%;
   transition:background-color .85s;
 }
+.find-tool-settings-button {
+  /* Looks bad because the icon takes up most of the space */
+  background-color:initial !important;
+  font-size:18px;
+}
+.find-tool-settings-button:hover {
+  --spin-var-deg: 90deg;
+  -ms-animation:spin-var .25s linear 1;
+  -o-animation:spin-var .25s linear 1;
+  -webkit-animation:spin-var .25s linear 1;
+  -moz-animation:spin-var .25s linear 1;
+  animation:spin-var .25s linear 1;
+}
+.find-tool-close-button {
+  font-size:24px;
+}
 .find-tool-button-container > *:hover {
   background-color:rgb(240,240,240);
 }
 .find-tool-button-container > *:active {
+  transition:background-color .35s;
   background-color:rgb(220,220,220);
 }
-.result-container {
+.find-tool-result-container {
   resize:vertical;
   overflow-y:auto;
   border-top:2px solid rgb(220, 220, 220);
 }
-.result {
+.find-tool-result {
   padding:5px 7.5px;
   display:flex;
   justify-content:center;
@@ -72,16 +88,16 @@
   -o-user-select:none;
   -ms-user-select:none;
 }
-.result:hover {
+.find-tool-result:hover {
   background-color:rgb(235, 235, 235);
 }
-.result-header:hover {
+.find-tool-result-header:hover {
   background-color:inherit;
 }
-.result:not(:last-child) {
+.find-tool-result:not(:last-child) {
   border-bottom:2px solid rgb(220, 220, 220);
 }
-.result > * {
+.find-tool-result > * {
   flex: 1 1 100%;
   min-width:0%;
   word-break:break-word;
@@ -91,7 +107,46 @@
   align-items:center;
   text-align:center;
 }
-.result > div {
+.find-tool-result > div {
   flex: 1 1 50%;
   font-size:24px;
 }
+.find-tool-settings {
+}
+.find-tool-settings-top {
+  display:flex;
+  padding-bottom:0 !important;
+}
+.find-tool-settings-top::after {
+  background-color:rgb(175,175,175) !important;
+}
+.find-tool-settings-top > .find-tool-button-container::before {
+  background-color:rgb(175,175,175) !important;
+}
+.find-tool-settings-header {
+  padding:5px 14px;
+  font-weight:500;
+}
+.find-tool-settings-body {
+  display:flex;
+  flex-direction:column;
+  padding:6px;
+}
+.find-tool-settings-body > * {
+  display:flex;
+  /* justify-content:space-around; */
+  align-items:center;
+}
+.find-tool-settings-body > * > input {
+  margin:6px;
+  margin-top:10px;
+}
+*[data-hide="true"] {
+  display:none;
+}
+
+@keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }
+@-moz-keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }
+@-o-keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }
+@-ms-keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }
+@-webkit-keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }

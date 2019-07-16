@@ -36,7 +36,7 @@ import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import highlightTypes from './highlightTypes.js';
-import { shadeColor, adjustTitle, debounce, scrollIntoView } from './Util.js';
+import { shadeColor, adjustTitle, debounce, scrollIntoView, hydrateState } from './Util.js';
 import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import FindTool from './FindTool.js';
@@ -165,7 +165,7 @@ class App extends Component {
     this._handleUpdateSettings = this._handleUpdateSettings.bind (this);
     this._toggleCheckbox = this._toggleCheckbox.bind (this);
     this._renderCheckboxes = this._renderCheckboxes.bind (this);
-    this._hydrateState = this._hydrateState.bind (this);
+    this._hydrateState = hydrateState.bind (this);
 
     this._handleShowAnswerViewer = this._handleShowAnswerViewer.bind (this);
     this._handleMessageDialog = this._handleMessageDialog.bind (this);
@@ -678,34 +678,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       new LegendFilter (),
       new CurvatureAdjuster ()
     ]);
-  }
-  /**
-   * Restore component state from persistent storage on initialization.
-   *
-   * @private
-   */
-  _hydrateState () {
-    // for all items in state
-    for (let key in this.state) {
-      // if the key exists in localStorage
-      if (localStorage.hasOwnProperty(key)) {
-        // get the key's value from localStorage
-        let value = localStorage.getItem(key);
-        console.log (" setting " + key + " => " + value);
-        // parse the localStorage string and setState
-        try {
-          value = JSON.parse(value);
-          this.setState({ [key]: value });
-        } catch (e) {
-          // handle empty string.
-          console.log (" setting " + key + " => " + value);
-          this.setState({ [key]: value });
-        }
-        console.log (" set " + this.state[key]);
-      }
-    }
-
-    this._updateCacheViewer ();
   }
   /**
    * Updates the queries contained within the cache viewer modal.
@@ -2417,6 +2389,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     window.addEventListener('resize', this._updateDimensionsFunc);
 
     this._hydrateState ();
+
+    // Populate the cache viewer
+    this._updateCacheViewer ();
 
     // Populate concepts and relations metadata.
     this._getModelConcepts ();

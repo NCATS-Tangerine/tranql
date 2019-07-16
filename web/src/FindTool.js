@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
-import { IoIosClose } from 'react-icons/io';
+import { IoIosClose, IoIosSettings } from 'react-icons/io';
 import { FaLongArrowAltRight } from 'react-icons/fa';
 import * as JSON5 from 'json5';
+import * as jp from 'jsonpath';
+import { debounce, hydrateState } from './Util.js';
 import './FindTool.css';
 
 export default class FindTool extends Component {
@@ -16,7 +18,9 @@ export default class FindTool extends Component {
     this.state = {
       active: false,
       results: null,
-      entered: null
+      entered: null,
+      showSettings: false,
+      useJSONPath: false
     };
 
     this.toggleShow = this.toggleShow.bind(this);
@@ -27,11 +31,16 @@ export default class FindTool extends Component {
     this._onInputBlur = this._onInputBlur.bind(this);
     this._onInput = this._onInput.bind(this);
 
+    this._hydrateState = hydrateState.bind(this);
+
     this._findResults = this._findResults.bind(this);
     this._results = this._results.bind(this);
     this.updateResults = this.updateResults.bind(this);
+    this.showSettings = this.showSettings.bind(this);
 
     this._input = React.createRef();
+
+    this._inputHandler = debounce(this._onInput,300);
   }
   show() {
     this.setState({ active : true }, () => {
@@ -43,6 +52,11 @@ export default class FindTool extends Component {
   }
   toggleShow() {
     this.state.active ? this.hide() : this.show();
+  }
+  showSettings() {
+    this.setState({
+      showSettings : true
+    });
   }
   _onInput(e) {
     this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
@@ -357,6 +371,9 @@ export default class FindTool extends Component {
 
     return results;
   }
+  static _sourceElement(element) {
+    element.origin.source_el = { id : element.id, name : element.name };
+  }
   static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables) {
     let elements = {
       nodes: [],
@@ -394,7 +411,7 @@ export default class FindTool extends Component {
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
         const actualElement = element;
-        element.origin.source_el = { id : element.id, name : element.name };
+        FindTool._sourceElement(element);
         element = element.origin;
         let every = Object.entries(attributes).every((obj) => {
           let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
@@ -439,6 +456,19 @@ export default class FindTool extends Component {
     };
 
     const val = this._input.current === null ? "" : this._input.current.value;
+
+    if (this.state.useJSONPath) {
+      let results = [];
+      try {
+        results = jp.query({nodes:this.props.graph.nodes,links:this.props.graph.links},val).filter((el) => el.origin).map((el) => (FindTool._sourceElement(el), el.origin));
+      }
+      catch {}
+      return {
+        grouped: false,
+        groups: results
+      }
+    }
+
     const selectors = FindTool.parse(val);
     if (typeof selectors === "string") {
       return selectors;
@@ -505,7 +535,7 @@ export default class FindTool extends Component {
       // Error
       elements = (
         <div>
-          <div className="result result-header">
+          <div className="find-tool-result find-tool-result-header">
             <span style={{fontWeight:"500"}}>{results}</span>
           </div>
         </div>
@@ -514,13 +544,13 @@ export default class FindTool extends Component {
     else {
       elements = (
         <div>
-          <div className="result result-header">
+          <div className="find-tool-result find-tool-result-header">
             <span style={{fontWeight:"500"}}>{results.groups.length} results</span>
           </div>
           {
             results.groups.map((group, i) => {
               return (
-                <div className="result" onMouseEnter={()=>{this.setState({ entered : results.grouped ? Object.values(group) : [group] });this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group])}}
+                <div className="find-tool-result" onMouseEnter={()=>{this.setState({ entered : results.grouped ? Object.values(group) : [group] });this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group])}}
                                         onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group])}}
                                         onClick={()=>this.props.resultMouseClick(results.grouped ? Object.values(group) : [group])} key={i}>
                   {
@@ -549,29 +579,55 @@ export default class FindTool extends Component {
   componentWillUnmount() {
     window.removeEventListener('keydown',this._onKeyDown);
     this._input.current.removeEventListener('blur', this._onInputBlur);
-    this._input.current.removeEventListener('input',this._onInput);
+    this._input.current.removeEventListener('input',this._inputHandler);
     this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
   }
   componentDidMount() {
     window.addEventListener('keydown',this._onKeyDown);
     this._input.current.addEventListener('blur', this._onInputBlur);
-    this._input.current.addEventListener('input',this._onInput);
+    this._input.current.addEventListener('input',this._inputHandler);
+
+    this._hydrateState();
 
     this.updateResults();
   }
   render() {
     return (
       <div data-hide={!this.state.active} className="FindTool">
-        <div className="find-container">
-          <input type="text" ref={this._input} className="find-tool-input" autoFocus />
-          <div className="find-tool-button-container">
-            <IoIosClose onClick={() => this.hide()}/>
+        <div data-hide={this.state.showSettings} className="find-container">
+          <input type="text" ref={this._input} className="find-tool-input" autoFocus placeholder={this.state.useJSONPath ? "JSONPath:" : "Query:"} />
+          <div className="find-tool-button-container vertical-bar">
+            <IoIosSettings className="find-tool-settings-button" onClick={() => this.showSettings()}/>
+            <IoIosClose className="find-tool-close-button" onClick={() => this.hide()}/>
           </div>
         </div>
-        <div className="result-container">
+        <div data-hide={this.state.showSettings} className="find-tool-result-container">
           {
             this.state.results
           }
+        </div>
+        <div data-hide={!this.state.showSettings} className="find-tool-settings">
+          <div className="find-tool-settings-top horizontal-bar">
+            <span className="find-tool-settings-header">Find Tool Settings</span>
+            <div className="find-tool-button-container vertical-bar">
+              <IoIosClose className="find-tool-close-button" onClick={() => this.setState({ showSettings : false })}/>
+            </div>
+          </div>
+          <div className="find-tool-settings-body">
+            <div>
+              <input type="checkbox"
+                     name="useJSONPath"
+                     checked={this.state.useJSONPath}
+                     onChange={(e) => {
+                       this.setState({
+                         useJSONPath : e.currentTarget.checked
+                       });
+                       localStorage.setItem(e.currentTarget.name,JSON.stringify(e.currentTarget.checked));
+                       this.updateResults();
+                     }}/>
+               <span>Use <a target="_blank" href="https://goessner.net/articles/JsonPath/">JSONPath</a> syntax</span>
+            </div>
+          </div>
         </div>
       </div>
     )

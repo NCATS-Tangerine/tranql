@@ -485,7 +485,30 @@ body {
   -o-user-select:none;
   -ms-user-select:none;
 }
-
+.horizontal-bar {
+  position:relative;
+  padding-bottom:2.5px;
+}
+.horizontal-bar::after {
+  content:'';
+  position:absolute;
+  bottom:-1.5px;
+  left: 0;
+  width:100%;
+  height:1.5px;
+  background-color:rgba(240,240,240,1);
+}
+.vertical-bar {
+  position:relative;
+}
+.vertical-bar::before {
+  content:'';
+  position:absolute;
+  width:1.25px;
+  height:100%;
+  left:-1.25px;
+  background-color:rgb(215,215,215);
+}
 @-ms-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-o-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }

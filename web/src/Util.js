@@ -211,3 +211,29 @@ export function scrollIntoView(selector) {
     behavior: 'smooth'
   });
 }
+
+/**
+ * Restore component state from persistent storage on initialization.
+ *
+ */
+export function hydrateState () {
+  // for all items in state
+  for (let key in this.state) {
+    // if the key exists in localStorage
+    if (localStorage.hasOwnProperty(key)) {
+      // get the key's value from localStorage
+      let value = localStorage.getItem(key);
+      console.log (" setting " + key + " => " + value);
+      // parse the localStorage string and setState
+      try {
+        value = JSON.parse(value);
+        this.setState({ [key]: value });
+      } catch (e) {
+        // handle empty string.
+        console.log (" setting " + key + " => " + value);
+        this.setState({ [key]: value });
+      }
+      console.log (" set " + this.state[key]);
+    }
+  }
+}
