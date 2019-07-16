@@ -377,22 +377,26 @@ export default class FindTool extends Component {
     return results;
   }
   static repr(obj) {
+    let primitive = false;
+    let str;
     if (Array.isArray(obj)) {
       // Array
-      return "[" + obj.length + "]";
+      str = "[" + obj.length + "]";
     }
     else if (obj.constructor.name === "Object") {
       // Object literal
-      return "{" + Object.keys(obj).length + "}";
+      str = "{" + Object.keys(obj).length + "}";
     }
     else if (obj === Object(obj)) {
       // Not primitive or object literal or array
-      return obj.constructor.name;
+      str = obj.constructor.name;
     }
     else {
       // Primitive
-      return obj;
+      str = obj;
+      primitive = true;
     }
+    return {value: str, primitive: primitive};
   }
   static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables) {
     let elements = {
@@ -502,7 +506,6 @@ export default class FindTool extends Component {
         });
       }
       catch {}
-      console.log(results);
       return {
         grouped: false,
         groups: results,
@@ -607,23 +610,32 @@ export default class FindTool extends Component {
                         <span>{group.target.name + " (" + group.target.id + ")"}</span>
                       </> :
                         <div>
-                          <span>
-                            {
-                              (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                                group.value.name + " (" + group.value.id + ")"
-                              ) :
-                                group.path[group.path.length-1] + ": " + FindTool.repr(group.value)
-                            }
-                          </span>
                           {
-                            this.state.useJSONPath && (
-                              <div className="find-tool-select-button-wrapper">
-                                <FaLongArrowAltRight className="find-tool-select-button" onClick={() => {
-                                  this._input.current.value = jp.stringify(group.path) + ".*";
-                                  this._inputHandler();
-                                }}/>
-                              </div>
-                            )
+                            (() => {
+                              const repr = FindTool.repr(group.value);
+                              return (
+                                <>
+                                  <span>
+                                  {
+                                    (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                      group.value.name + " (" + group.value.id + ")"
+                                    ) :
+                                    group.path[group.path.length-1] + ": " + repr.value
+                                  }
+                                  </span>
+                                  {
+                                    this.state.useJSONPath && !repr.primitive && (
+                                      <div className="find-tool-select-button-wrapper">
+                                      <FaLongArrowAltRight className="find-tool-select-button" onClick={() => {
+                                        this._input.current.value = jp.stringify(group.path) + ".*";
+                                        this._inputHandler();
+                                      }}/>
+                                      </div>
+                                    )
+                                  }
+                                </>
+                              );
+                            })()
                           }
                         </div>
                   }
@@ -651,6 +663,10 @@ export default class FindTool extends Component {
     this._input.current.addEventListener('input',this._inputHandler);
 
     this._hydrateState();
+
+    this.setState({},() => {
+      this.state.useJSONPath && this._setDefaultJSONPathQuery();
+    });
 
     this.updateResults();
   }
