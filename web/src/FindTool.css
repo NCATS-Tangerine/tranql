@@ -103,14 +103,20 @@
   min-width:0%;
   word-break:break-word;
 
+  /* display:flex;
+  justify-content:center;
+  align-items:center; */
+  text-align:center;
+}
+.find-tool-result > div.group-arrow {
+  flex: 1 1 30%;
   display:flex;
   justify-content:center;
   align-items:center;
-  text-align:center;
+  font-size:24px;
 }
-.find-tool-result > div:not(:only-child) {
-  flex: 1 1 50%;
-  font-size:20px;
+.result-group > *:first-child {
+  font-weight:500;
 }
 .find-tool-result-header {
   /* flex: 1 1 50%; */
@@ -120,7 +126,7 @@
   flex:1;
   display:flex;
 }
-.find-tool-result > div:only-child > span {
+.find-tool-result > div:only-child > .result-group {
   flex:1;
   text-align:center;
   word-break:break-word;

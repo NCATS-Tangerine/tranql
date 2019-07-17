@@ -37,6 +37,7 @@ class AnswerViewer extends Component {
           </Modal.Header>
           <Modal.Body>
             <iframe src={this.state.answerUrl}
+                    title="Answer Viewer"
                     height={"100%"} width={"100%"}
                     frameBorder={"0"}
                     onLoad={()=>this.setState({ loaded : true })}

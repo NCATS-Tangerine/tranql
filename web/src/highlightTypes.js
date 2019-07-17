@@ -23,7 +23,6 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
     }
     for (let i=0;i<elements.length;i++) {
       let element = elements[i];
-      let graphElementType = element.graphElementType;
       element = element.element;
       if (highlight !== false) {
         if (vMode === "2D") {
@@ -64,7 +63,7 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
               };
             }
             let color;
-            let opacity;
+            // let opacity;
             if (highlight !== false) {
               color = new THREE.Color(highlight);
             }
@@ -90,7 +89,6 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
               let r = lerp(element.start.r, element.end.r, u);
               let g = lerp(element.start.g, element.end.g, u);
               let b = lerp(element.start.b, element.end.b, u);
-              let graphElementType = element.graphElementType;
               element = element.element;
               let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
               let material;
@@ -132,7 +130,6 @@ export default function highlightTypes(elements, type, highlight, outline, fade)
   else {
     for (let i=0;i<elements.length;i++) {
       let element = elements[i];
-      let graphElementType = element.graphElementType;
       element = element.element;
       let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
       let material;

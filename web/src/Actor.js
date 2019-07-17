@@ -1,5 +1,3 @@
-import { Component } from 'react';
-
 class Actor { //extends Component {
 /*  constructor(props) {
     super(props);
@@ -13,4 +11,3 @@ class Actor { //extends Component {
   }
 }
 export default Actor;
-

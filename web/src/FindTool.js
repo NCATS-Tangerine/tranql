@@ -85,7 +85,12 @@ export default class FindTool extends Component {
     if (this._input.current.textContent === "") {
       this._input.current.textContent = "$.*";
       // Update cursor position (required with contenteditable elements)
-      window.getSelection().collapse(this._input.current.firstChild,"$.*".length);
+      let range = document.createRange();
+      range.selectNodeContents(this._input.current);
+      range.collapse(false);
+      let selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
   }
   static parse(text) {
@@ -173,6 +178,8 @@ export default class FindTool extends Component {
         // This allows for unrestrained access of the object but is not recommended unless necessary.
         try {
           if (typeof value === "string") {
+            // Sadly, it's necessary to use eval here. It doesn't really pose as a threat here as long as find tool input is never cached.
+            // eslint-disable-next-line
             value = eval(value);
           }
           return value(elementValue);
@@ -482,7 +489,7 @@ export default class FindTool extends Component {
             // Replace any magic variables
             let re = /[^\\](__.*?__)/g;
             let sel;
-            while (sel = re.exec(attributeValue)) {
+            while ((sel = re.exec(attributeValue))) {
               attributeValue = attributeValue.replace(sel[1],(val) => magicVariables[val]);
             }
             // if (typeof attributeValue === "string") attributeValue = attributeValue.replace(, (val) => magicVariables[val]);
@@ -577,7 +584,7 @@ export default class FindTool extends Component {
         grouped.push({
           source: nodeMap[link.source_id],
           target: nodeMap[link.target_id],
-          link: graph.links.filter((link_2)=>link_2.origin==link)[0]
+          link: graph.links.filter((link_2)=>link_2.origin===link)[0]
         });
       });
 
@@ -630,11 +637,11 @@ export default class FindTool extends Component {
                   {
                     results.grouped ?
                       <>
-                        <span>{group.source.name + " (" + group.source.id + ")"}</span>
-                        <div><FaLongArrowAltRight/></div>
-                        <span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ") + (group.link.hasOwnProperty('id') ? " (" + group.link.id + ")" : "")}</span>
-                        <div><FaLongArrowAltRight/></div>
-                        <span>{group.target.name + " (" + group.target.id + ")"}</span>
+                        <div className="result-group"><span>{group.source.name}</span><span>{" (" + group.source.id + ")"}</span></div>
+                        <div className="group-arrow"><FaLongArrowAltRight/></div>
+                        <div className="result-group"><span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ")}</span><span>{(group.link.hasOwnProperty('id') ? " (" + group.link.id + ")" : "")}</span></div>
+                        <div className="group-arrow"><FaLongArrowAltRight/></div>
+                        <div className="result-group"><span>{group.target.name}</span><span>{" (" + group.target.id + ")"}</span></div>
                       </> :
                         <div>
                           {
@@ -642,14 +649,24 @@ export default class FindTool extends Component {
                               const repr = FindTool.repr(group.value);
                               return (
                                 <>
-                                  <span>
-                                  {
-                                    (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                                      group.value.name + " (" + group.value.id + ")"
-                                    ) :
-                                    group.path[group.path.length-1] + ": " + repr.value
-                                  }
-                                  </span>
+                                  <div className="result-group">
+                                    <span>
+                                    {
+                                      (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                        group.value.name
+                                      ) :
+                                      group.path[group.path.length-1] + ": "
+                                    }
+                                    </span>
+                                    <span>
+                                    {
+                                      (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                        " (" + group.value.id + ")"
+                                      ) :
+                                      repr.value
+                                    }
+                                    </span>
+                                  </div>
                                   {
                                     this.state.useJSONPath && !repr.primitive && (
                                       <div className="find-tool-select-button-wrapper">
@@ -737,7 +754,7 @@ export default class FindTool extends Component {
                        });
                        localStorage.setItem(name,JSON.stringify(checked));
                      }}/>
-               <span>Use <a target="_blank" href="https://goessner.net/articles/JsonPath/">JSONPath</a> syntax</span>
+               <span>Use <a target="_blank" rel="noopener noreferrer" href="https://goessner.net/articles/JsonPath/">JSONPath</a> syntax</span>
             </div>
           </div>
         </div>

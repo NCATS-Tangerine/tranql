@@ -1,11 +1,8 @@
 import React, { Component } from 'react';
-import { FaCircle, FaLongArrowAltLeft, FaLongArrowAltRight, FaTimes } from 'react-icons/fa';
+import { FaCircle, FaLongArrowAltRight, FaTimes } from 'react-icons/fa';
 import './LinkExaminer.css';
 
 export default class LinkExaminer extends Component {
-  constructor(props) {
-    super(props);
-  }
   render() {
     if (!this.props.render) return null;
     return (

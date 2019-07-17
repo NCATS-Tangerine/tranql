@@ -1,43 +1,40 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
-import Dexie from 'dexie';
 import { Button } from 'reactstrap';
-import { Modal, Form, Card, Container, Row, Col, ListGroup, Tab as BsTab, Navbar } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col, ListGroup } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
-import ReactJson from 'react-json-view'
 import JSONTree from 'react-json-tree';
 import * as JSON5 from 'json5';
-import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
+// import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoIosPlayCircle } from 'react-icons/io';
+import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap } from 'react-icons/io';
 import {
-  FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye, FaPen,
-  FaChartBar as FaBarChart, FaCircleNotch, FaSpinner, FaMousePointer,
-  FaBan, FaArrowsAlt, FaTrash, FaEdit, FaPlayCircle
+  FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
+  FaSpinner, FaMousePointer,
+  FaArrowsAlt, FaTrash, FaPlayCircle
 } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
-import ReactTable from 'react-table';
-import { Text as ChartText, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend as ChartLegend } from 'recharts';
+// import ReactTable from 'react-table';
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip } from 'recharts';
 import InlineEdit from 'react-edit-inline2';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
 //import Tooltip from 'rc-tooltip';
 import ReactTooltip from 'react-tooltip';
 import { NotificationContainer , NotificationManager } from 'react-notifications';
 import 'react-notifications/lib/notifications.css';
-import Slider, { Range } from 'rc-slider';
+import { Range } from 'rc-slider';
 import { GridLoader } from 'react-spinners';
 import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
-import Actor from './Actor.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import highlightTypes from './highlightTypes.js';
-import { shadeColor, adjustTitle, debounce, scrollIntoView, hydrateState } from './Util.js';
-import { Toolbar, Tool, ToolGroup } from './Toolbar.js';
+import { shadeColor, adjustTitle, scrollIntoView, hydrateState } from './Util.js';
+import { Toolbar, Tool, /*ToolGroup*/ } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import FindTool from './FindTool.js';
 import Message from './Message.js';
@@ -57,7 +54,9 @@ require('codemirror/addon/hint/show-hint');
 require('codemirror/addon/hint/sql-hint');
 require('codemirror/lib/codemirror.css');
 
+// eslint-disable-next-line
 String.prototype.unquoted = function (){return this.replace (/(^")|("$)/g, '')}
+// eslint-disable-next-line
 Array.prototype.unique = function() {
   return this.filter(function (value, index, self) {
     return self.indexOf(value) === index;
@@ -243,7 +242,6 @@ class App extends Component {
       charge : -100,
 
       // Manage node selection and navigation.
-      selectMode: true,
       selectedNode : {},
       selectedLink : {},
       contextNode : null,
@@ -403,7 +401,7 @@ class App extends Component {
                     The general structure of queries is `selector`{"{`attributes`}"}. A selector can be either "nodes", "links", or "*". The asterisk selector selects both nodes and links.
                     You can also connect these selectors with transitions, with the structure `selector`{"{`attributes`}"} -> `selector`{"{`attributes`}"} -> `selector`{"{`attributes`}"}. Note: only links are applicable in the second selector.
                     The `{"{}"}` following the selector may be omitted if no attributes are present.
-                    Attributes must be valid <a target="_blank" href="https://tools.ietf.org/html/rfc7159">JSON</a>. This means that attributes are structured as key to value, where key is an attribute that a node or link may or may not possess.
+                    Attributes must be valid <a target="_blank" rel="noopener noreferrer" href="https://tools.ietf.org/html/rfc7159">JSON</a>. This means that attributes are structured as key to value, where key is an attribute that a node or link may or may not possess.
                     If you are unsure as to what attributes nodes and links have, you can use the <FaMousePointer style={{fontSize:"14px"}}/> select tool to view a node or link's attributes.
                     However, keep in mind, only some attributes such as "id", "name", "type", and "equivalent_identifiers" are standard. Not all nodes or links are gaurenteeed to have others.
                   </p>
@@ -418,9 +416,11 @@ class App extends Component {
                       <h6>The valid flags are:</h6>
                       <Row>
                         <dl>
-                          <Col><dt>regex</dt></Col><Col><dd>Matches a <a target="_blank" href="http://cecas.clemson.edu/~warner/M865/RegexBasics.html">regular expression</a> against the element's attribute<br/><a href="javascript:void(0)" onClick={
+                          {/*eslint-disable-next-line*/}
+                          <Col><dt>regex</dt></Col><Col><dd>Matches a <a target="_blank" rel="noopener noreferrer" href="http://cecas.clemson.edu/~warner/M865/RegexBasics.html">regular expression</a> against the element's attribute<br/><a href="javascript:void(0)" onClick={
                             ()=>scrollIntoView("#regexFlag")
                           }>Example</a></dd></Col>
+                          {/*eslint-disable-next-line*/}
                           <Col><dt>func</dt></Col><Col><dd>Evals a JavaScript function which is passed the element's attribute as the only argument. Should return true or false to indicate if the node should or should not be included.<br/><a href="javascript:void(0)" onClick={
                             ()=>scrollIntoView("#funcFlag")
                           }>Example</a></dd></Col>
@@ -430,8 +430,9 @@ class App extends Component {
                             <dt>Special</dt>
                             <dd>
                               Any other method in the element's attribute's JavaScript prototype chain (for common references see&nbsp;
-                              <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/prototype">Text</a> and&nbsp;
-                              <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype">Lists</a>).
+                              <a target="_blank" rel="noopener noreferrer" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/prototype">Text</a> and&nbsp;
+                              <a target="_blank" rel="noopener noreferrer" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype">Lists</a>).
+                              {/*eslint-disable-next-line*/}
                               <br/><a href="javascript:void(0)" onClick={
                                 ()=>scrollIntoView("#regexFlag")
                               }>Example (list includes)</a>
@@ -524,8 +525,8 @@ class App extends Component {
                          onClick: () => {
                            const currentQuery = this._cachedQueriesModal.current.currentQuery;
                            // The `id` property is the cache's id of the query.
-                           this.state.cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
-                           this.setState({ cachedQueries : this.state.cachedQueries });
+                           const cachedQueries = this.state.cachedQueries.filter((query) => query.id !== currentQuery.id);
+                           this.setState({ cachedQueries : cachedQueries });
                            // Don't let the query go below 0
                            let newCurrentQueryIndex = Math.max(0, this._cachedQueriesModal.current.state.currentQueryIndex - 1);
                            this._cachedQueriesModal.current.setState({ currentQueryIndex : newCurrentQueryIndex });
@@ -641,8 +642,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
       //showAnswerViewer : true
     };
-    this._cache.read ('cache', this.state.code).
-      then ((result) => {
+    this._cache.read ('cache', this.state.code)
+      .then ((result) => {
         console.log ("-----------> ",result);
         if (result.length > 0) {
           this.setState ({
@@ -1109,17 +1110,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       obj.id = this.state.record.id;
     }
     console.log (obj);
-    var record = this._cache.
-        write ('cache', obj).
-        then ((result) => {
-          this._cache.get ('cache', result,
-                           (result) => {
-                             this.setState ({
-                               record : result
-                             });
-                             localStorage.setItem ('code', obj.key);
-                             this._updateCacheViewer ();
+    this._cache
+      .write ('cache', obj)
+      .then ((result) => {
+        this._cache.get ('cache', result,
+                         (result) => {
+                           this.setState ({
+                             record : result
                            });
+                           localStorage.setItem ('code', obj.key);
+                           this._updateCacheViewer ();
+                         });
         }).catch ((error) => {
           this.setState ({
             error
@@ -1139,7 +1140,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       var result = [];
       if (typeof source == "string") {
         result.push ({ checked : true, label : source });
-      } else if (typeof source == "array") {
+      } else if (Array.isArray(source)) {
         result = source.map ((s, index) => {
           return { checked : true, label : s };
         });
@@ -1167,7 +1168,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _translateGraph (message) {
-    var message = message ? message : this.state.message;
+    message = message ? message : this.state.message;
     if (message) {
       this._renderChain.handle (message, this.state);
 
@@ -1517,7 +1518,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _updateFg () {
-    let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
+    // let graph = this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schema : this.state.graph;
   }
   /**
    * Callback for when a legend button is right clicked
@@ -1693,7 +1694,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     } else if (this.state.visMode === 'VR') {
       result = this._renderForceGraphVR (data, props);
     } else {
-      throw "Unrecognized rendering mode: " + this.state.visMode;
+      throw new Error("Unrecognized rendering mode: " + this.state.visMode);
     }
     return result;
   }
@@ -1947,7 +1948,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _updateDimensions() {
     let node = this.state.selectedNode.node || this.state.selectedLink;
-    let prevWinWidth = this._graphSplitPane.current.state.prevWinWidth;
+    // let prevWinWidth = this._graphSplitPane.current.state.prevWinWidth;
     if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
                this.state.selectedNode !== null &&
                this.state.selectedNode.id !== node.id)
@@ -1997,7 +1998,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     <Card.Text>
                       Documentation for TranQL
                     </Card.Text>
-                    <Card.Link target="_blank" href="https://researchsoftwareinstitute.github.io/data-translator/apps/tranql">Go</Card.Link>
+                    <Card.Link target="_blank" rel="noopener noreferrer" href="https://researchsoftwareinstitute.github.io/data-translator/apps/tranql">Go</Card.Link>
                   </Card.Body>
                 </Card>
               </Col>
@@ -2010,6 +2011,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     <Card.Text>
                       Some example queries to help get you started.
                     </Card.Text>
+                    {/*eslint-disable-next-line*/}
                     <Card.Link href="javascript:void(0)" onClick={() => {
                       this.setState({ showHelpModal : false });
                       this._exampleQueriesModal.current.show();
@@ -2026,6 +2028,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     <Card.Text>
                       More in-depth explanations of Toolbar's functions and what they can be used for.
                     </Card.Text>
+                    {/*eslint-disable-next-line*/}
                     <Card.Link href="javascript:void(0)" onClick={() => {
                       this.setState({ showHelpModal : false, showToolbarHelpModal : true });
                     }}>View</Card.Link>
@@ -2081,6 +2084,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         {
                           values.map((val, n) => {
                             return (
+                              // eslint-disable-next-line
                               <ListGroup.Item className="toolbar-help-tool-button" key={n} action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{this.state.toolbarHelpModalActiveToolType[type] = n; this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })}}>
                                 {
                                   (() => {
@@ -2527,27 +2531,29 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       )
                     }
                     <div id="graphOverlayContainer">
-                      <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
-                        {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
-                        {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
-                        <div id="schemaViewToggleButtonContainer">
-                          <Button color="primary"
-                                  id="schemaViewToggleButton"
-                                  size="sm"
-                                  onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
-                          >
-                          {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
-                          </Button>
+                      <div id="graphOverlayVerticalContainer">
+                        <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
+                          {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
+                          {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
+                          <div id="schemaViewToggleButtonContainer">
+                            <Button color="primary"
+                                    id="schemaViewToggleButton"
+                                    size="sm"
+                                    onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
+                            >
+                            {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
+                            </Button>
+                          </div>
                         </div>
+                        <LinkExaminer link={this.state.selectedNode}
+                                      onClose={() => this.setState({ selectedNode : null })}
+                                      onLinkClick={(link) => {
+                                        this._setSelectMode(true);
+                                        this._selectToolRef.current.setActive(true);
+                                        this.setState({ connectionExaminer : false }, () => this._handleLinkClick(link));
+                                      }}
+                                      render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       </div>
-                      <LinkExaminer link={this.state.selectedNode}
-                                    onClose={() => this.setState({ selectedNode : null })}
-                                    onLinkClick={(link) => (
-                                      this._setSelectMode(true),
-                                      this._selectToolRef.current.setActive(true),
-                                      this.setState({ connectionExaminer : false }, () => this._handleLinkClick(link))
-                                    )}
-                                    render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{
                                   values.forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}

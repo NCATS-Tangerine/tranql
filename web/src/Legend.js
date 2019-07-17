@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactTooltip from 'react-tooltip'
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle } from 'react-icons/io';
 import { ButtonToolbar, ToggleButtonGroup, ToggleButton } from 'react-bootstrap';
-import { adjustTitle, shadeColor } from './Util.js';
+import { shadeColor } from './Util.js';
 import './Legend.css';
 
 // Legend button group component (TypeButton wrapper)
@@ -66,10 +66,6 @@ class TypeButtonGroup extends React.Component {
 
 // Legend button component
 class TypeButton extends Component {
-  constructor(props) {
-    super(props);
-  }
-
   render() {
     //Bootstrap doesn't like custom coloring schemes, but it is necessary here to deviate from the bootstrap color theme as it is specifically color-coded.
     //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the css variable `--highlight-box-shadow-color`,

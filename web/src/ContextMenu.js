@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Menu, Item, Separator, Submenu, MenuProvider, contextMenu } from 'react-contexify';
+import { Menu, Item, Separator } from 'react-contexify';
 import 'react-contexify/dist/ReactContexify.min.css';
 
 class ContextMenu extends Component {

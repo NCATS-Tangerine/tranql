@@ -314,7 +314,7 @@ class LegendFilter extends Actor {
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
-    var nodes = message.graph.nodes.reduce ((acc, node) => {
+    nodes = message.graph.nodes.reduce ((acc, node) => {
       //keep node if all of its types are visible
       if (node.type.every(type => message.hiddenTypes.nodes.indexOf(type) === -1)) {
         acc.push (node);
@@ -323,7 +323,7 @@ class LegendFilter extends Actor {
     }, []);
     // Remove unused links attached to those nodes
     var node_ids = nodes.map ((n, i) => n.id);
-    var links = message.graph.links.reduce ((acc, link) => {
+    links = message.graph.links.reduce ((acc, link) => {
       if (node_ids.includes (link.target) && node_ids.includes (link.source)) {
         acc.push (link);
       }
@@ -344,7 +344,7 @@ class LegendFilter extends Actor {
       links:links
     };
 
-    var links = [];
+    links = [];
     var node_ref = [];
     // Link filter source
     message.graph = {

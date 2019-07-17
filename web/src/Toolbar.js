@@ -228,7 +228,7 @@ export class Tool extends Component {
       if (!e.shiftKey) {
         char = char.toLowerCase();
       }
-      if (typeof this.props.shortcut !== "undefined" && this.state.shortcut.includes(e.keyCode) || this.state.shortcut.includes(char)) {
+      if (typeof this.props.shortcut !== "undefined" && (this.state.shortcut.includes(e.keyCode) || this.state.shortcut.includes(char))) {
         this.props.onMouseUp ? this.props.onMouseUp() : this.setActive(true);
       }
     }
