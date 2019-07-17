@@ -18,7 +18,7 @@ export function rgbToHSL(rgb) {
     rgb = rgb.replace(/^\s*#|\s*$/g, '');
 
     // convert 3 char codes --> 6, e.g. `E0F` --> `EE00FF`
-    if(rgb.length == 3){
+    if(rgb.length === 3){
         rgb = rgb.replace(/(.)/g, '$1$1');
     }
 
@@ -32,20 +32,20 @@ export function rgbToHSL(rgb) {
         h = 0,
         s = 0;
 
-    if (delta == 0) {
+    if (delta === 0) {
         h = 0;
     }
-    else if (cMax == r) {
+    else if (cMax === r) {
         h = 60 * (((g - b) / delta) % 6);
     }
-    else if (cMax == g) {
+    else if (cMax === g) {
         h = 60 * (((b - r) / delta) + 2);
     }
     else {
         h = 60 * (((r - g) / delta) + 4);
     }
 
-    if (delta == 0) {
+    if (delta === 0) {
         s = 0;
     }
     else {

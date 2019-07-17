@@ -23,6 +23,7 @@
   outline:none;
   font-size:.8rem;
   width:100%;
+  min-width:150px;
   border-radius:0;
 }
 .find-tool-input:hover {
@@ -163,6 +164,12 @@
 
 *[data-hide="true"] {
   display:none;
+}
+
+*:not(input):empty[contenteditable="true"][placeholder]::before {
+  /* Pseudo-placeholder attribute on content editable elements */
+  content:attr(placeholder);
+  color:gray;
 }
 
 @keyframes spin-var { 100% { -webkit-transform: rotate(var(--spin-var-deg)); transform:rotate(var(--spin-var-deg)); } }

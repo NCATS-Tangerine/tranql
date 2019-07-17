@@ -318,7 +318,7 @@ export class Toolbar extends Component {
       tools: this.props.tools.map((tool,i) => {
         return React.cloneElement(tool, {
           toolbarCallback: this._setActiveTool,
-          ref:tool.props.hasOwnProperty('ref') ? tool.props.ref : React.createRef()
+          ref:tool.ref !== null ? tool.ref : React.createRef()
         });
       }),
     };

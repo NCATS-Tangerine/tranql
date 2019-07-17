@@ -92,20 +92,19 @@ class IdFilter extends Actor {
       }
     };
     message.graph.links.forEach((link) => {
-      link.id = id.get();
+      if (!link.hasOwnProperty('id')) link.id = id.get();
     });
   }
 }
 class LinkFilter extends Actor {
   handle (message, context) {
     // Filter links:
-    var links = [];
     var node_ref = [];
     var min = context.linkWeightRange[0] / 100;
     var max = context.linkWeightRange[1] / 100;
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
-        if (link.weight === null || link.weight >= min && link.weight <= max) {
+        if (link.weight === null || (link.weight >= min && link.weight <= max)) {
           result.push (link);
           if (! node_ref.includes (link.source)) {
             node_ref.push (link.source);
@@ -171,6 +170,7 @@ class SourceDatabaseFilter extends Actor {
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
         var source_db = link.origin.source_database;
+        let keep_it;
         if (typeof source_db === "undefined") {
           keep_it = true
         }
@@ -179,7 +179,7 @@ class SourceDatabaseFilter extends Actor {
             source_db = [ source_db ];
             link.origin.source_database = source_db;
           }
-          var keep_it = true;
+          keep_it = true;
           for (var c = 0; c < dataSources.length; c++) {
             if (source_db.includes (dataSources[c].label)) {
               if (! dataSources[c].checked) {
@@ -266,6 +266,7 @@ class LegendFilter extends Actor {
     // (Zip structure ( [type, {quantity:x}] ))
     for (let elementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
+      //eslint-disable-next-line
       sortedTypes.forEach((obj) => {
         // let index = elementType === "nodes" ? i : colors.length-(i+1);
         let type = obj[0];

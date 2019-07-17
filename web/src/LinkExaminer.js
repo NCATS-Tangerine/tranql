@@ -10,8 +10,8 @@ export default class LinkExaminer extends Component {
     if (!this.props.render) return null;
     return (
       <div className="LinkExaminer">
-        <div className="link-examiner-header">
-          <span className="link-examiner-header-text horizontal-bar">Examine Connections</span>
+        <div className="link-examiner-header horizontal-bar">
+          <span className="link-examiner-header-text">Examine Connections</span>
           <FaTimes className="link-examiner-close-button" onClick={(e) => this.props.onClose(e)}/>
         </div>
         <div className="link-examiner-header-info">

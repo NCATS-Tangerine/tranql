@@ -91,7 +91,7 @@ class App extends Component {
     //this.tranqlURL = window.location.origin;
     //this.tranqlURL = "http://localhost:8001"; // dev only
     this.robokop_url = "https://robokop.renci.org";
-    this.contextMenuId = "contextMenuId";
+    this._contextMenuId = "contextMenuId";
 
     // Query editor support.
     this._getConfiguration = this._getConfiguration.bind (this);
@@ -280,6 +280,8 @@ class App extends Component {
 
       // Object viewer
       objectViewerEnabled : true,
+      // Portion of split pane that the object viewer takes up when it is opened (where the second figure is the object viewer's size)
+      objectViewerSize : 1 - (1/4),
 
       // Schema viewer
       schema : {
@@ -625,14 +627,15 @@ select disease->anatomical_feature->cell
 --      associated with exposure to these chemicals?
 --
 
-SELECT population_of_individual_organisms->chemical_substance->gene->biological_process->phenotypic_feature
+SELECT population_of_individual_organisms->chemical_substance->gene->biological_process_or_activity<-phenotypic_feature
   FROM "/schema"
  WHERE icees.table = 'patient'
    AND icees.year = 2010
    AND icees.cohort_features.AgeStudyStart = '0-2'
    AND icees.feature.EstResidentialDensity < 1
    AND icees.maximum_p_value = 1
-   AND drug_exposure !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'`
+   AND chemical_substance !=~ '^(SCTID.*|rxcui.*|CAS.*|SMILES.*|umlscui.*)$'
+   AND icees.regex = "(MONDO|HP):.*""`
         }
       ]
 
@@ -1032,15 +1035,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       function success (result) {
         if (result.length > 0) {
           // Translate the knowledge graph given current settings.
-          this._configureMessage (result[0].data)
-          this._translateGraph (result[0].data)
-          if (result[0].data.knowledge_graph.nodes.length + result[0].data.knowledge_graph.edges.length === 0) {
-            this._handleMessageDialog (
-              "Warning",
-              "The query returned no results.",
-              <div style={{whiteSpace:'pre-wrap'}}>Message object: <br/>{JSON.stringify(result[0].data,undefined,4)}</div>
-            );
-          }
+          this._configureMessage (result[0].data);
+          this._translateGraph (result[0].data);
         } else {
           // We didn't find it in the cache. Run the query.
           this.setState ({
@@ -1060,18 +1056,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               (result) => {
                 result = JSON5.parse(result);
                 console.log (result);
-                var worthShowing =
-                    !(
-                      result.knowledge_graph === undefined || (
-                        (
-                          result.knowledge_graph.nodes === undefined ||
-                            result.knowledge_graph.edges === undefined
-                        ) || (
-                          result.knowledge_graph.nodes.length +
-                            result.knowledge_graph.edges.length === 0
-                        )
-                      )
-                    );
 
                 if (result.message) {
                   this._handleMessageDialog (result.status, result.message, result.details);
@@ -1084,27 +1068,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 // If there was no error or if it's just a warning continue on as if nothing happened.
                 // Maybe remove caching on results with warnings?
                 //                if (!result.message || result.status === "Warning") {
-                if (worthShowing) {
                   /* Convert the knowledge graph to a renderable form. */
-                  if (result.answers) {
-                    // answers is not kgs 0.9 compliant. ... longer story.
-                    delete result.answers;
-                  }
-                  if ((result.knowledge_graph.nodes === undefined || result.knowledge_graph.edges === undefined) || (result.knowledge_graph.nodes.length + result.knowledge_graph.edges.length === 0)) {
-                    this._handleMessageDialog (
-                      "Warning",
-                      "The query returned no results.",
-                      <div style={{whiteSpace:'pre-wrap'}}>Message object: <br/>{JSON.stringify(result,undefined,4)}</div>
-                    );
-                  }
-                  else {
-                    this._configureMessage (result);
-                    this._translateGraph (result);
-                    this._cacheWrite (result);
-                  }
-                  this._setSchemaViewerActive(false);
-                  this.setState({ loading : false });
+                if (result.answers) {
+                  // answers is not kgs 0.9 compliant. ... longer story.
+                  delete result.answers;
                 }
+                this._configureMessage (result);
+                this._translateGraph (result);
+                this._cacheWrite (result);
+                this._setSchemaViewerActive(false);
+                this.setState({ loading : false });
               },
               // Note: it's important to handle errors here
               // instead of a catch() block so that we don't swallow
@@ -1197,6 +1170,23 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     var message = message ? message : this.state.message;
     if (message) {
       this._renderChain.handle (message, this.state);
+
+      var worthShowing =
+          !(
+            message.knowledge_graph === undefined || (
+              (
+                message.knowledge_graph.nodes === undefined ||
+                  message.knowledge_graph.edges === undefined
+              ) || (
+                message.knowledge_graph.nodes.length +
+                  message.knowledge_graph.edges.length === 0
+              )
+            )
+          );
+      if (!worthShowing) {
+        // We'll display a warning to make sure that the user knows that the query worked but had no results.
+        NotificationManager.warning('The query returned no results', 'Warning', 4000);
+      }
       this.setState({
         graph: message.graph
       }, () => this._findTool.current.updateResults());
@@ -1427,7 +1417,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState ((prevState, props) => ({
         selectedNode : { link : link.origin }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
       // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
       // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
       let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
@@ -1611,7 +1601,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (1/2);
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
       // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
       // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
       let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
@@ -2076,7 +2066,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 {
                   Object.keys(obj).map((key, index) => {
                     return (
-                      <Tab>{key.charAt(0).toUpperCase()+key.slice(1)}</Tab>
+                      <Tab key={index}>{key.charAt(0).toUpperCase()+key.slice(1)}</Tab>
                     );
                   })
                 }
@@ -2086,12 +2076,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   let type = entry[0];
                   let values = entry[1];
                   return (
-                    <TabPanel className="toolbar-help-tab-panel">
+                    <TabPanel className="toolbar-help-tab-panel" key={i}>
                       <ListGroup className="toolbar-help-tool-group">
                         {
                           values.map((val, n) => {
                             return (
-                              <ListGroup.Item className="toolbar-help-tool-button" action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{this.state.toolbarHelpModalActiveToolType[type] = n; this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })}}>
+                              <ListGroup.Item className="toolbar-help-tool-button" key={n} action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{this.state.toolbarHelpModalActiveToolType[type] = n; this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })}}>
                                 {
                                   (() => {
                                     const noProps = (element) => {
