@@ -11,7 +11,7 @@ import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap } from 'react-icons/io';
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
-  FaSpinner, FaMousePointer,
+  FaSpinner, FaMousePointer, FaTimes,
   FaArrowsAlt, FaTrash, FaPlayCircle
 } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
@@ -893,7 +893,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _setConnectionExaminerActive(bool) {
-    this.setState({ selectedNode: {}, connectionExaminer: bool });
+    this.setState({ connectionExaminer: bool });
   }
   /**
    * Set the state of the highlight types tool and let it clean up when it is turned off
@@ -940,7 +940,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._updateGraphSize(width);
     this.setState ({
       navigateMode: navigate,
-      selectedNode: {},
       selectedLink: {}
     });
   }
@@ -2586,6 +2585,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   </div>
                 </div>
                 <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
+                  <FaTimes className="object-viewer-close-button" onClick={(e) => this._setSelectMode(true)}/>
                   <JSONTree
                   shouldExpandNode={(key,data,level) => level === 1}
                   hideRoot={true}

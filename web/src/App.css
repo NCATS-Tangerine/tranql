@@ -138,8 +138,8 @@ body {
     border-left: 2px solid rgb(166, 226, 46);
 }
 #info > ul {
-    margin:5px !important;
-    margin-bottom: 12.5px !important;
+    margin:0 1em .5em .5em !important;
+    /* margin:5px !important; */
 }
 .type-chart {
   width: 95%;
@@ -173,6 +173,19 @@ body {
     position: absolute;
     overflow: auto;
  }
+.object-viewer-close-button {
+  position:absolute;
+  right:.5em;
+  top:.5em;
+  color:rgb(166, 226, 46);
+  font-size:18px;
+}
+.object-viewer-close-button:hover {
+  color:rgb(147, 199, 42);
+}
+.object-viewer-close-button:active {
+  color:rgb(116, 156, 36);
+}
 .App-logo {
     /*animation: App-logo-spin infinite 20s linear; */
      height: 7vmin;
