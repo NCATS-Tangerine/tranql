@@ -6,6 +6,7 @@
   border:2px solid rgb(215,215,215);
   max-height:calc(100% - 10px);
   max-width:30%;
+  min-width:150px;
   /* padding: 3px 0; */
 }
 .FindTool[data-hide="true"] {
@@ -22,8 +23,11 @@
   border:none;
   outline:none;
   font-size:.8rem;
+  flex:1;
+  word-break:break-all;
+  max-height:400px;
+  overflow:auto;
   width:100%;
-  min-width:150px;
   border-radius:0;
 }
 .find-tool-input:hover {

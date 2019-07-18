@@ -38,11 +38,12 @@ class RenderSchemaInit extends Actor {
   handle(message, context) {
     message.knowledge_graph = {
       nodes: message.knowledge_graph.nodes.map((node) => {
-        if (typeof node === "string") {
+        if (Array.isArray(node)) {
           return {
-            id: node,
-            type: node,
-            name: node
+            id: node[0],
+            type: node[0],
+            name: node[0],
+            ...node[1]
           };
         }
         else {

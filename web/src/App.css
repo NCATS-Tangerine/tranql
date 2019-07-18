@@ -66,6 +66,7 @@ body {
   pointer-events:initial; /* So that the container's children can still receive pointer events */
 }
 #toolbar {
+  flex:0 0 auto;
   background-color:rgba(30,30,30, 1);
   border-bottom-width:5px;
 }
@@ -132,14 +133,15 @@ body {
 #info {
     position: relative;
     background-color: rgb(39, 40, 34);
+    /* We want it to always be at least the same size as the split pane, but we want it to overflow if the JSONTree component is much larger */
+    min-height:100%;
     /* bottom: 0px; */
     /* overflow:auto; */
-    height:100%;
-    width:100%;
     border-left: 2px solid rgb(166, 226, 46);
 }
 #info > ul {
-    margin:0 1em .5em .5em !important;
+    padding:0 1em .5em .5em !important;
+    margin:0 !important;
     /* margin:5px !important; */
 }
 .type-chart {

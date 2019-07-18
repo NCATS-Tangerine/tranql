@@ -653,7 +653,9 @@ export default class FindTool extends Component {
                                     <span>
                                     {
                                       (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                                        group.value.name
+                                        group.value.hasOwnProperty('name') ?
+                                          group.value.name :
+                                          (Array.isArray(group.value.type) ? group.value.type : [group.value.type]).join(" / ")
                                       ) :
                                       group.path[group.path.length-1] + ": "
                                     }
@@ -661,7 +663,7 @@ export default class FindTool extends Component {
                                     <span>
                                     {
                                       (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                                        " (" + group.value.id + ")"
+                                        (group.link.hasOwnProperty('id') ? " (" + group.link.id + ")" : "")
                                       ) :
                                       repr.value
                                     }

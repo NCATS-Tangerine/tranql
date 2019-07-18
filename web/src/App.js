@@ -1244,6 +1244,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
          function success (result) {
            if (result !== undefined) {
              console.log("Got schema from cache");
+             console.log(result);
              let msg = result.data;
              this._schemaRenderChain.handle (msg, this.state);
              this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
