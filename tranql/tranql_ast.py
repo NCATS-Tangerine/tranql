@@ -522,7 +522,7 @@ class SelectStatement(Statement):
                 if 'knowledge_graph' in response:
                     for element in [*response['knowledge_graph'].get('nodes',[]),*response['knowledge_graph'].get('edges',[])]:
                         # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
-                        element["provided_by"] = schema
+                        element["reasoner"] = schema
             result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """

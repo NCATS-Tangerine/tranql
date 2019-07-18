@@ -923,7 +923,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._updateGraphSize(width);
     this.setState ({
       selectMode: select,
-      // selectedNode: {},
+      selectedNode: {},
       selectedLink: {}
     });
   }
@@ -1402,7 +1402,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _handleLinkClick (link) {
     if (this.state.connectionExaminer) {
-      this.setState({ selectedNode : (link === null ? null : { link : link }) });
+      this.setState({ selectedNode : (link === null ? null : { link : link.origin, openedByLinkExaminer : true }) });
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
@@ -2269,51 +2269,73 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             <Modal.Title>Settings</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Tabs>
+            <Tabs className="react-tabs-settings-tab-list">
               <TabList>
                 <Tab><b>General</b></Tab>
                 <Tab><b>Graph Structure</b></Tab>
                 <Tab><b>Knowledge Sources</b></Tab>
               </TabList>
               <TabPanel>
-            <b>Visualization Mode and Graph Colorization</b> <br/>
+            <hr style={{visibility:"hidden",marginTop:0}}/>
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <b>Visualization Mode and Graph Colorization</b>
+              <div style={{display:"flex"}}>
+                <div>
+                  <input type="radio" name="visMode"
+                         value="3D"
+                         checked={this.state.visMode === "3D"}
+                         onChange={this._handleUpdateSettings} />3D &nbsp;
+                </div>
+                <div>
+                  <input type="radio" name="visMode"
+                         value="2D"
+                         checked={this.state.visMode === "2D"}
+                         onChange={this._handleUpdateSettings} />2D &nbsp;
+                </div>
+                <div>
+                  <input type="radio" name="visMode"
+                         value="VR"
+                         checked={this.state.visMode === "VR"}
+                         onChange={this._handleUpdateSettings} />VR &nbsp;&nbsp;
+                </div>
+              <div>
+                <input type="checkbox" name="colorGraph"
+                       checked={this.state.colorGraph}
+                       onChange={this._handleUpdateSettings} /> Color the graph.
+              </div>
+              </div>
+            </div>
 
-            <input type="radio" name="visMode"
-                   value="3D"
-                   checked={this.state.visMode === "3D"}
-                   onChange={this._handleUpdateSettings} />3D &nbsp;
-            <input type="radio" name="visMode"
-                   value="2D"
-                   checked={this.state.visMode === "2D"}
-                   onChange={this._handleUpdateSettings} />2D &nbsp;
-            <input type="radio" name="visMode"
-                   value="VR"
-                   checked={this.state.visMode === "VR"}
-                   onChange={this._handleUpdateSettings} />VR &nbsp;&nbsp;
-            <input type="checkbox" name="colorGraph"
-                   checked={this.state.colorGraph}
-                   onChange={this._handleUpdateSettings} /> Color the graph.
-            <br/>
-            <div className={"divider"}/>
-            <br/>
+            <hr/>
 
-            <b>Use Cache</b> <br/>
-            <input type="checkbox" name="useCache"
-                   checked={this.state.useCache}
-                   onChange={this._handleUpdateSettings} /> Use cached responses.
-            <Button id="clearCache"
-                    outline className="App-control"
-                    color="primary" onClick={this._clearCache}>
-              Clear the cache
-            </Button>
-            <br/>
-            <br/>
-            <div className={"divider"}/>
-            <input type="checkbox" name="useToolCursor"
-                   checked={this.state.useToolCursor}
-                   onChange={this._handleUpdateSettings} /> Use tools as cursor.
-            <br/>
-            <br/>
+            <div style={{display:"flex"}}>
+              <div style={{display:"flex",flexDirection:"column",flexGrow:1}}>
+                <b>Use Cache</b>
+                <div>
+                  <input type="checkbox" name="useCache"
+                         checked={this.state.useCache}
+                         onChange={this._handleUpdateSettings} /> Use cached responses.
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",alignItems:"center"}}>
+                <Button id="clearCache"
+                        outline className="App-control"
+                        color="primary" onClick={this._clearCache}>
+                  Clear the cache
+                </Button>
+              </div>
+            </div>
+
+            <hr/>
+
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <b>Cursor</b>
+              <div>
+                <input type="checkbox" name="useToolCursor"
+                       checked={this.state.useToolCursor}
+                       onChange={this._handleUpdateSettings} /> Use active tool as cursor.
+              </div>
+            </div>
               </TabPanel>
               <TabPanel>
             <br/>
@@ -2524,12 +2546,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           <div id="viewContainer">
             {
               /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
+              /* maxSize property applies max-width to the object viewer pane when it's active. Change first 0 in ternary to the desired max width */
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
                          minSize={0}
                          allowResize={this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)}
-                         maxSize={document.body.clientWidth}
-                         style={{"backgroundColor":"black","position":"static"}}
+                         maxSize={document.body.clientWidth-(this.state.objectViewerEnabled && (this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)) ? 0 : 0)}
+                         style={{backgroundColor:"black",position:"static"}}
+                         pane2Style={{overflowY:"auto",wordBreak:"break-all"}}
                          ref={this._graphSplitPane}
                          onDragFinished={(width) => this._updateGraphSplitPaneResize()}
               >
@@ -2561,14 +2585,28 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                             </Button>
                           </div>
                         </div>
-                        <LinkExaminer link={this.state.selectedNode}
+                        <LinkExaminer link={(() => {
+                                        if (this.state.selectedNode === null || !this.state.selectedNode.hasOwnProperty('link')) return;
+                                        const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+                                        return Object.assign({},this.state.selectedNode,{link:graph.links.filter((link)=>link.origin==this.state.selectedNode.link)[0]});
+                                      })()}
                                       onClose={() => this.setState({ selectedNode : null })}
                                       onLinkClick={(link) => {
-                                        this._setSelectMode(true);
-                                        this._selectToolRef.current.setActive(true);
-                                        this.setState({ connectionExaminer : false }, () => this._handleLinkClick(link));
+                                        if (!this.state.selectMode) {
+                                          this._setSelectMode(true);
+                                          this._selectToolRef.current.setActive(true);
+                                        }
+                                        this.setState({ connectionExaminer : false }, () => {
+                                          // Mutates `selectedNode` state so we want to wait until that is set
+                                          this._handleLinkClick(link);
+                                          this.setState({},() => {
+                                            let selectedNode = this.state.selectedNode;
+                                            selectedNode.openedByLinkExaminer = true;
+                                            this.setState({ selectedNode : selectedNode });
+                                          });
+                                        });
                                       }}
-                                      render={this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
+                                      render={this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link') && this.state.selectedNode.openedByLinkExaminer}/>
                       </div>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{
@@ -2602,7 +2640,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   </div>
                 </div>
                 <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
-                  <FaTimes className="object-viewer-close-button" onClick={(e) => this._setSelectMode(true)}/>
+                  {/*the close button sets the select mode to true, which effectively "resets" it*/}
                   <JSONTree
                   shouldExpandNode={(key,data,level) => level === 1}
                   hideRoot={true}
@@ -2612,7 +2650,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     base0E:"#ae81ff",base0F:"#cc6633"}
                   }
                   invertTheme={false}
-                  data={this.state.selectedNode} />
+                  data={(() => { const { openedByLinkExaminer, ...selectedNode } = this.state.selectedNode||{}; return selectedNode; })()}/>
+                  <FaTimes className="object-viewer-close-button" onClick={(e) => this._setSelectMode(true)}/>
                 </div>
 
               </SplitPane>

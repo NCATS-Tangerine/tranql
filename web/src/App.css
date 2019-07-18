@@ -128,11 +128,12 @@ body {
   color: #007bff;
   pointer-events:initial;
 }
+
 #info {
-    /* position: absolute; */
+    position: relative;
     background-color: rgb(39, 40, 34);
     /* bottom: 0px; */
-    overflow:auto;
+    /* overflow:auto; */
     height:100%;
     width:100%;
     border-left: 2px solid rgb(166, 226, 46);

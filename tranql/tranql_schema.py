@@ -152,7 +152,7 @@ class Schema:
                     links = [links]
                 for link in links:
                     #print (f" {source_name}->{target_type} [{link}]")
-                    self.schema_graph.add_edge (source_name, link, target_type, {"provided_by":name})
+                    self.schema_graph.add_edge (source_name, link, target_type, {"reasoner":name})
 
     def get_edge (self, plan, source_name, source_type, target_name, target_type,
                   predicate, edge_direction):
