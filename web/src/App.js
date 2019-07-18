@@ -1245,6 +1245,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
            if (result !== undefined) {
              console.log("Got schema from cache");
              let msg = result.data;
+             this._configureMessage(msg);
              this._schemaRenderChain.handle (msg, this.state);
              this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
@@ -1265,6 +1266,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                  console.log("Fetched schema:", result);
 
+                 this._configureMessage(result.schema);
                  this._schemaRenderChain.handle (result.schema, this.state);
                  result.schema.graph.links.forEach((link) => {
                    // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
@@ -1595,7 +1597,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
     let newMessage;
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
-      newMessage = this.state.schemaMessage;
+      newMessage = this.state.message;
       newMessage.hiddenTypes = graph.hiddenTypes;
       this._schemaRenderChain.handle(newMessage, this.state);
       // console.log(message);

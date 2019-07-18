@@ -663,7 +663,7 @@ export default class FindTool extends Component {
                                     <span>
                                     {
                                       (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
-                                        (group.link.hasOwnProperty('id') ? " (" + group.link.id + ")" : "")
+                                        (group.value.hasOwnProperty('id') ? " (" + group.value.id + ")" : "")
                                       ) :
                                       repr.value
                                     }
