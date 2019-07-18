@@ -500,8 +500,47 @@ class App extends Component {
           },
           {
             title: "Settings",
-            description: `
-            This button brings up the settings interface, which allows you to customize the behavior of TranQL.`
+            description: (
+              <Tabs>
+                <TabList>
+                  <Tab>Overview</Tab>
+                  <Tab>General</Tab>
+                  <Tab>Graph Structure</Tab>
+                  <Tab>Knowledge Sources</Tab>
+                </TabList>
+                <TabPanel>
+                  This button brings up the settings interface, which allows you to customize the behavior of TranQL.
+                </TabPanel>
+                <TabPanel>
+                  <h6>Visualization Mode and Graph Colorization</h6>
+                    <p>This allows you to change the way that the graph is visualized. You may also disable the coloring of the graph if desired.</p>
+                  <h6>Use Cache</h6>
+                    <p>This allows you to disable the caching of the TranQL schema and any results from TranQL queries. This means that the results will not be stored locally
+                    on your machine for future use. Disabling the cache will not delete your currently cached queries.
+                    You may also clear the cache if desired.</p>
+                  <h6>Cursor</h6>
+                    <p>This sets your mouse cursor to be the same icon as the currently selected tool.</p>
+                </TabPanel>
+                <TabPanel>
+                  <h6>Link Weight Range</h6>
+                    <p>This will filter out any links from the graph whose weights are not within the specified range.</p>
+                  <h6>Node Connectivity Range</h6>
+                    <p>This will filter out any nodes from the graph whose number of connections (links) with other nodes is not within the specified range.</p>
+                  <h6>Force Graph Charge</h6>
+                    <p>This will set the charge force applied to nodes within the graph. Charge is a property that acts like an electrical charge and causes either
+                    the attraction or repulsion of nodes between one another. It can be used to get a more enlarged and spread out view of the graph and prevent
+                    nodes from overlapping. <a target="_blank" rel="reopener noreferrer" href="https://d3-wiki.readthedocs.io/zh_CN/master/Force-Layout/#charge">More comprehensive reference</a></p>
+                  <h6>Legend Display Limit</h6>
+                    <p>This will filter out any node or link types in the legend following the given value. Nodes and links in the legend are ordered
+                    by greatest to least quantity within the graph, thus, it results in the least-present types being filtered out of the legend.</p>
+                </TabPanel>
+                <TabPanel>
+                  <h6>Sources</h6>
+                    <p>When a query is active, this setting will be populated with checkboxes for all source databases that the query was constructed from.
+                    You can then disable sources to filter them out of the graph.</p>
+                </TabPanel>
+              </Tabs>
+            )
           }
         ]
       },
@@ -2361,7 +2400,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               />
             </Form><br/>
 
-            <b>Legend Display Limit</b><br/>
+            <b>Legend Display Limit ({this.state.schemaViewerActive && this.state.schemaViewerEnabled ? "schema" : "graph"})</b><br/>
             <Form>
               <Form.Label>Set the number of nodes that the legend displays:</Form.Label>
               <Form.Control
