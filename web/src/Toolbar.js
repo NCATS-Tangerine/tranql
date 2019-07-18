@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import ReactTooltip from 'react-tooltip';
-import './Toolbar.css'
+import { CSSStringtoRGB } from './Util.js';
+import './Toolbar.css';
 
 class SelectMenu extends Component {
   constructor(props) {
@@ -183,10 +184,10 @@ export class Tool extends Component {
    * Constructs a new Tool component
    *
    * @param {Object} props - Properties of the Tool
-   * @param {string} props.name - Name of the tool
-   * @param {string} props.description - Description of the tool (keep it short). Only functional when contained in a ToolGroup.
-   * @param {onClick} props.callback - Callback invoked on click.
+   * @param {String} props.name - Name of the tool
+   * @param {String} props.description - Description of the tool (keep it short). Only functional when contained in a ToolGroup.
    * @param {Component} props.children - Icon of the child (e.g. <IoIosSettings />).
+   * @param {Function} [props.callback=function(){}] - Callback invoked on click.
    * @param {Number|String|Array<Number|String>} props.shortcut - Keycode or key for the shortcut. When a string, it is case sensitive.
    *    If an array, the shortcut will trigger if any of the keys/key codes contained are pressed.
    *    Array may be of mixed types.
@@ -198,15 +199,101 @@ export class Tool extends Component {
     if (Array.isArray(this.props.children) && this.props.children.length > 1) throw new Error("Tool must contain icon component as the only child");
 
     this.state = {
+      addedCursor: false,
       active: false,
       shortcut: Array.isArray(this.props.shortcut) ? this.props.shortcut : [this.props.shortcut]
     };
 
-    this._keyDownCallback = this._keyDownCallback.bind(this);
+    this._DOMNode = React.createRef();
 
+    this.setActive = this.setActive.bind(this);
+    this.cursorify = this.cursorify.bind(this);
+    this.addCursor = this.addCursor.bind(this);
+    this.revokeCursor = this.revokeCursor.bind(this);
+    this.setCursor = this.setCursor.bind(this);
+
+    this._keyDownCallback = this._keyDownCallback.bind(this);
     // this.setActive = this.setActive.bind(this);
   }
-
+  /**
+   * Convert the child icon to an base64-encoded png that can be used as a cursor
+   *
+   * @returns {String} - The data URL of the image
+   */
+  cursorify() {
+    try {
+      return new Promise((resolve,reject) => {
+        const canvas = document.createElement('canvas');
+        const svgElement = this._DOMNode.current.children[0].cloneNode(true);
+        const size = 28;
+        svgElement.setAttribute('width',size+'px');
+        svgElement.setAttribute('height',size+'px');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const svgString = new XMLSerializer().serializeToString(svgElement);
+        const image = new Image();
+        const svg = new Blob([svgString],{type:'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svg);
+        // const color = CSSStringtoRGB(window.getComputedStyle(this._DOMNode.current.children[0]).color);
+        let color = {
+          r:255,
+          g:255,
+          b:255,
+          a:1
+        };
+        image.onload = function() {
+          ctx.drawImage(image,0,0);
+          let data = ctx.getImageData(0,0,size,size);
+          for (let i=0;i<data.data.length;i+=4) {
+            let r = data.data[i];
+            let g = data.data[i+1];
+            let b = data.data[i+2];
+            let a = data.data[i+3];
+            if (r !== 0 || g !== 0 || b !== 0 || a !== 0) {
+              data.data[i] = color.r;
+              data.data[i+1] = color.g;
+              data.data[i+2] = color.b;
+              data.data[i+3] = color.a * 255;
+            }
+          }
+          ctx.putImageData(data,0,0);
+          resolve(`url(${canvas.toDataURL('image/png')}), auto`);
+        }
+        image.src = url;
+      });
+    }
+    catch (e) {
+      // Probably not an element that can be drawn via `drawImage`
+      console.warn(e);
+    }
+  }
+  addCursor() {
+    this._cursorIcon.then((url) => {
+      if (this.state.addedCursor) {
+        return;
+      }
+      this.setState(({ addedCursor : true }));
+      // console.log('set',this.props.name);
+      document.querySelector('body').style.cursor = url;
+      document.querySelector('body').setAttribute('data-cursor-url',url);
+    });
+  }
+  revokeCursor() {
+    this._cursorIcon.then((url) => {
+      if (!this.state.addedCursor) {
+        return;
+      }
+      this.setState(({ addedCursor : false }));
+      if (document.querySelector('body').getAttribute('data-cursor-url') === url) {
+        // console.log('revoke',this.props.name);
+        document.querySelector('body').style.cursor = `auto`;
+      }
+    });
+  }
+  setCursor() {
+    typeof this._cursorIcon !== "undefined" && (this.props.overrideCursor && this.state.active ? this.addCursor() : this.revokeCursor());
+  }
   setActive(act) {
     this.setState(prevState => {
       if (act !== prevState.active) {
@@ -253,17 +340,22 @@ export class Tool extends Component {
     ) : undefined);
   }
 
-  componentDidMount() {
-    document.addEventListener('keydown', this._keyDownCallback);
-  }
-
   componentWillUnmount() {
     document.removeEventListener('keydown', this._keyDownCallback);
   }
 
+  componentDidMount() {
+    document.addEventListener('keydown', this._keyDownCallback);
+
+    this._cursorIcon = this.cursorify();
+  }
+
+
   render() {
+    this.setCursor();
     return (
       <div className="Tool"
+           ref={this._DOMNode}
            onMouseUp={this.props.onMouseUp || (() => {this.setActive(true);})}
            onMouseDown={this.props.onMouseDown}
            data-tip={Tool.makeTip(this.props.name,this.props.description,this.props.shortcut)}
@@ -298,6 +390,11 @@ const tools = (
 <Toolbar default={1} tools={tools}/>
 */
 export class Toolbar extends Component {
+  static defaultProps = {
+    default: 0,
+    overrideCursor: true,
+    onlyUseShortcutsWhen: []
+  };
   /**
    * Constructs a new Toolbar component
    *
@@ -307,6 +404,7 @@ export class Toolbar extends Component {
    * @param {Component[]} props.buttons - Array of components (icons) contained at the bottom of the toolbar.
    *    The Toolbar does not modify these components in any way. It simply provides a container for them to be better placed within the larger document.
    * @param {int} [props.default=0] - Index in props.tools of the default active tool (its callback will be invoked to select it)
+   * @param {Boolean} [props.overrideCursor=true] - Determines whether or not the tools will override the default page cursor when active.
    * @param {Array<HTMLElement|String>} [props.onlyUseShortcutsWhen=[]] - Shortcuts will only fire when the document's active element is of a type that inherits HTMLElement contained within this array or has the same id as a string in this array.
    */
   constructor(props) {
@@ -322,6 +420,10 @@ export class Toolbar extends Component {
         });
       }),
     };
+  }
+
+  get activeTool() {
+    return this.state.tools.filter((tool) => tool.ref.current.state.active)[0].ref.current;
   }
 
   _setActiveTool(tool) {
@@ -374,7 +476,7 @@ export class Toolbar extends Component {
             this.state.tools.map((tool,i) => {
               return (
                 <div key={i} className='tool-container'>
-                  {React.cloneElement(tool,{onlyUseShortcutsWhen: this.props.onlyUseShortcutsWhen, ...tool.props})}
+                  {React.cloneElement(tool,{onlyUseShortcutsWhen: this.props.onlyUseShortcutsWhen, overrideCursor: this.props.overrideCursor, ...tool.props})}
                 </div>
               )
             })

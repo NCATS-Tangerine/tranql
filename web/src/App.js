@@ -308,6 +308,7 @@ class App extends Component {
       highlightedType : [], // Currently highlighted types
 
       // Tools for the toolbar component
+      useToolCursor : false,
       tools : [
         <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
         <FaArrowsAlt/>
@@ -922,7 +923,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._updateGraphSize(width);
     this.setState ({
       selectMode: select,
-      selectedNode: {},
+      // selectedNode: {},
       selectedLink: {}
     });
   }
@@ -1771,7 +1772,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _handleUpdateSettings (e) {
     var targetName = e.currentTarget.name;
     console.log ("--update settings: " + targetName);
-    if (targetName === 'useCache') {
+    if (targetName === 'useToolCursor') {
+      this.setState ({ useToolCursor : e.currentTarget.checked });
+      localStorage.setItem (targetName, JSON.stringify (e.currentTarget.checked));
+      if (!e.currentTarget.checked) {
+        // this._toolbar.current.activeTool.revokeCursor();
+      }
+      else {
+        // this._toolbar.current.activeTool.addCursor();
+      }
+    } else if (targetName === 'useCache') {
       // Specifies if the cache should be engaged or not.
       var useCache = e.currentTarget.checked;
       console.log (useCache);
@@ -2298,6 +2308,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             </Button>
             <br/>
             <br/>
+            <div className={"divider"}/>
+            <input type="checkbox" name="useToolCursor"
+                   checked={this.state.useToolCursor}
+                   onChange={this._handleUpdateSettings} /> Use tools as cursor.
+            <br/>
+            <br/>
               </TabPanel>
               <TabPanel>
             <br/>
@@ -2523,6 +2539,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       this.state.toolbarEnabled && (
                         <Toolbar id="toolbar"
                                  default={0}
+                                 overrideCursor={this.state.useToolCursor}
                                  tools={this.state.tools}
                                  buttons={this.state.buttons}
                                  onlyUseShortcutsWhen={[HTMLBodyElement]}
@@ -2551,7 +2568,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         this._selectToolRef.current.setActive(true);
                                         this.setState({ connectionExaminer : false }, () => this._handleLinkClick(link));
                                       }}
-                                      render={this.state.connectionExaminer && this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
+                                      render={this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link')}/>
                       </div>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{

@@ -20,7 +20,13 @@
   font-weight:600;
 }
 .link-examiner-close-button {
-  margin-left:3px;
+  margin-left:20px;
+}
+.link-examiner-close-button:hover {
+  color:rgb(200,200,200);
+}
+.link-examiner-close-button:active {
+  color:rgb(175,175,175);
 }
 .link-examiner-header-info {
   font-size:12px;
