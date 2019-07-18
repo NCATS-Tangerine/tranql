@@ -529,7 +529,7 @@ class App extends Component {
                   <h6>Force Graph Charge</h6>
                     <p>This will set the charge force applied to nodes within the graph. Charge is a property that acts like an electrical charge and causes either
                     the attraction or repulsion of nodes between one another. It can be used to get a more enlarged and spread out view of the graph and prevent
-                    nodes from overlapping. <a target="_blank" rel="reopener noreferrer" href="https://d3-wiki.readthedocs.io/zh_CN/master/Force-Layout/#charge">More comprehensive reference</a></p>
+                    nodes from overlapping. <a target="_blank" rel="noopener noreferrer" href="https://d3-wiki.readthedocs.io/zh_CN/master/Force-Layout/#charge">More comprehensive reference</a></p>
                   <h6>Legend Display Limit</h6>
                     <p>This will filter out any node or link types in the legend following the given value. Nodes and links in the legend are ordered
                     by greatest to least quantity within the graph, thus, it results in the least-present types being filtered out of the legend.</p>

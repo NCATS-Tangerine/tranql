@@ -45,7 +45,7 @@ class LoggingUtil(object):
             default_level=logging.INFO,
             env_key='LOG_CFG'):
         """Setup logging configuration
-        
+
         """
         path = default_path
         value = os.getenv(env_key, None)
@@ -60,14 +60,14 @@ class LoggingUtil(object):
             logging.basicConfig(level=default_level)
 
 
-    @staticmethod    
+    @staticmethod
     def setup_logging ():
         logging_config_path = os.path.join(os.path.dirname(__file__), 'logging.yaml')
         with open(logging_config_path, 'rt') as f:
             logging_config = yaml.safe_load(f.read())
-            #    print (json.dumps(logging_config, indent=2))    
+            #    print (json.dumps(logging_config, indent=2))
             logging.config.dictConfig(logging_config)
-            
+
 class Resource:
     @staticmethod
     def get_resource_path(resource_name):
@@ -76,7 +76,7 @@ class Resource:
         if not resource_path.startswith (os.sep):
             resource_path = os.path.join (os.path.dirname (__file__), resource_path)
         return resource_path
-    
+
     @staticmethod
     def load_json (path):
         result = None
@@ -90,7 +90,7 @@ class Resource:
         with open (path, 'r') as stream:
             result = yaml.safe_load (stream.read ())
         return result
-    
+
     def get_resource_obj (resource_name, format=None):
         result = None
         if not format:
@@ -183,16 +183,16 @@ class Context:
         if isinstance(val, int):
             return val
         return self.mem.get (val[1:], None) if val.startswith ("$") else val
-    
+
     def set(self, name, val):
         self.mem[name] = val
-        
+
     def select (self, key, query):
-        """ context.select ('chemical_pathways', '$.knowledge_graph.nodes.[*].id,equivalent_identifiers') 
+        """ context.select ('chemical_pathways', '$.knowledge_graph.nodes.[*].id,equivalent_identifiers')
         context.select ('chemical_pathways', '$.knowledge_graph.edges.[*].type')"""
         if key in self.mem:
             return self.jk.select (query, self.mem[key])
-        
+
     def top (self, type_name, k='result', n=10, start=-1):
         obj = self.mem[k] if k in self.mem else None
         result = []
@@ -221,11 +221,11 @@ class Context:
                     if len(result) == n:
                         break
         return result
-    
+
     def anchor (self, url, s, suffix='', delete=None):
         result = f"<a href='{url}{s}{suffix}' target='x'>{s}</a>"
         return result if delete is None else result.replace(delete,'')
-    
+
     def toph (self, type_name, k='result', n=10, start=0):
         top = self.top (type_name, k, n, start)
         search = "https://www.google.com/search?q="
@@ -245,7 +245,7 @@ class Context:
         ipd = importlib.import_module('IPython.core.display')
         ipd.display(ipd.HTML(result))
         #return result
-    
+
 class Concept:
     def __init__(self, name, type_name, include_patterns = [], exclude_patterns = []):
         self.name = name
@@ -267,7 +267,7 @@ class Concept:
                 if matches is not None:
                     exclude = True
                     break
-            include = not len(self.include_patterns) > 0 
+            include = not len(self.include_patterns) > 0
             for pat in self.include_patterns:
                 identifier = n if isinstance(n, str) else n['id']
                 matches = re.search (pat, identifier, re.IGNORECASE)
@@ -289,16 +289,16 @@ class Text:
     @staticmethod
     def get_curie (text):
         return text.upper().split(':', 1)[0] if ':' in text else None
-        
+
     @staticmethod
     def un_curie (text):
         return text.split (':', 1)[1] if ':' in text else text
-        
+
     @staticmethod
     def short (obj, limit=80):
         text = str(obj) if obj else None
         return (text[:min(len(text),limit)] + ('...' if len(text)>limit else '')) if text else None
-        
+
 def generate_gene_vocab ():
     gene_map = {}
     with open('genes.txt', 'r') as stream:
@@ -352,6 +352,26 @@ class DiseaseVocab:
             stream.write (text)
 
 #{% if i < len(list(disease_map.items ())) %},{%
+
+def deep_join(a,b,list_no_repeat=False):
+  if isinstance(a,dict) and isinstance(b,dict):
+    keys = []
+    for i in a:
+      keys.append(i)
+      a[i] = deep_join(a.get(i),b.get(i),list_no_repeat=list_no_repeat)
+    for i in b:
+      if i not in keys:
+        a[i] = deep_join(b.get(i),a.get(i),list_no_repeat=list_no_repeat)
+    return a
+  elif isinstance(a,list) and isinstance(b,list):
+    new = a + b
+    if list_no_repeat:
+      return list(set(new))
+    else:
+      return new
+  else:
+    # Can't effectively merge this type
+    return a
 
 if __name__ == '__main__':
     #generate_gene_vocab ()
