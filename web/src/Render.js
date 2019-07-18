@@ -47,6 +47,7 @@ class RenderSchemaInit extends Actor {
           };
         }
         else {
+          // Already formatted
           return node;
         }
       }),
