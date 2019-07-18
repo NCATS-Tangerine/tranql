@@ -569,17 +569,21 @@ export default class FindTool extends Component {
 
     let grouped = [];
 
+    let nodeMap = {};
+    results.nodes.forEach((node) => {
+      nodeMap[node.id] = node;
+    });
     if (!anyTransitions) {
       return {
         grouped : false,
-        groups: [...results.nodes, ...results.links].map((el)=>({value:el}))
+        groups: [
+          ...graph.nodes.filter((node)=>nodeMap.hasOwnProperty(node.origin.id)),
+          ...results.links.map((link)=>graph.links.filter((link_2)=>link_2.origin===link)[0])
+        ].map((el)=>({value:el}))
+        // groups: [...results.nodes, ...results.links].map((el)=>({value:el}))
       };
     }
     else {
-      let nodeMap = {};
-      results.nodes.forEach((node) => {
-        nodeMap[node.id] = node;
-      });
       results.links.forEach((link) => {
         grouped.push({
           source: nodeMap[link.source_id],
@@ -617,7 +621,6 @@ export default class FindTool extends Component {
           {
             results.groups.map((group, i) => {
               let value = (results.grouped ? Object.values(group) : [group.value]);
-
               return (
                 <div className="find-tool-result"
                      onMouseEnter={()=>{
