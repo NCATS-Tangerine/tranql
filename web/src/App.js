@@ -735,7 +735,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
       //showAnswerViewer : true
     };
-    this._cache.read ('cache', this.state.code)
+    this._cache.read ('cache', 'key', this.state.code)
       .then ((result) => {
         console.log ("-----------> ",result);
         if (result.length > 0) {
@@ -1123,7 +1123,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
-    var cachePromise = this.state.useCache ? this._cache.read ('cache', this.state.code) : Promise.resolve ([]);
+    var cachePromise = this.state.useCache ? this._cache.read ('cache', 'key', this.state.code) : Promise.resolve ([]);
     cachePromise.then (
       function success (result) {
         if (result.length > 0) {
@@ -1214,9 +1214,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            this._updateCacheViewer ();
                          });
         }).catch ((error) => {
-          this.setState ({
-            error
-          })
+          this._handleMessageDialog ('Cache Error', error.message, error.stack);
         });
   }
   _configureMessageLogic (message) {

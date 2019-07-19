@@ -18,11 +18,27 @@ class Cache extends Component {
   }
   async write (table, data) {
     // Write cache.
-    return await this.db[table].put (data);
+
+    // Iterate over all first-level keys in `data` and check if they are a unique key in `table`'s schema.
+    // If so (there will always be at least one present if the table has at least one unique key), check to
+    // see if there are any existing entries with an identical value in said unique key.
+    // If so, we have to update the entry (we can't replace it).
+    const prop = Object.keys(data)
+      .filter((key) => [this.db[table].schema.primKey,...this.db[table].schema.indexes]
+        .filter((index) => index.unique && index.name === key).length > 0
+      )[0];
+    // This will update the entry if an entry already exists containing a duplicate unique key as `data`
+    if ((await this.read(table, prop, data[prop])).length > 0) {
+      return await this.db[table].update (prop, data);
+    }
+    else {
+      return await this.db[table].put (data);
+    }
+
   }
-  async read (table, key) {
+  async read (table, prop, key) {
     return await this.db[table]
-    .where('key')
+    .where(prop)
     .equals (key)
     .toArray();
   }
