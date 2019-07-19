@@ -426,7 +426,7 @@ export default class FindTool extends Component {
     }
     else {
       // Primitive
-      str = obj;
+      str = obj.toString();
       primitive = true;
     }
     return {value: str, primitive: primitive};
@@ -653,7 +653,15 @@ export default class FindTool extends Component {
                         <div>
                           {
                             (() => {
-                              const repr = FindTool.repr(group.value);
+                              let repr;
+                              // group.value was once undefined, couldn't recreate it but just to be safe
+                              try {
+                                repr = FindTool.repr(group.value);
+                              }
+                              catch {
+                                repr = ['',true]
+                                console.warn('Group value broken',group);
+                              }
                               return (
                                 <>
                                   <div className="result-group">
