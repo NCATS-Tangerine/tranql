@@ -12,7 +12,7 @@ from tranql.concept import BiolinkModelWalker
 from tranql.tranql_schema import Schema
 from tranql.util import Concept
 from tranql.util import JSONKit
-from tranql.util import deep_join
+from tranql.util import deep_merge
 from tranql.request_util import async_make_requests
 from tranql.util import Text
 from tranql.tranql_schema import Schema
@@ -693,7 +693,7 @@ class SelectStatement(Statement):
                             exists = True
                             break
                         if exists:
-                            deep_join(edge,e,list_no_repeat=True)
+                            deep_merge(edge,e)
                     if not exists:
                         kg['edges'].append (e)
                 #result['answers'] += response['answers']
@@ -714,7 +714,7 @@ class SelectStatement(Statement):
                                 exists = True
                                 break
                         if exists:
-                            deep_join(node,n,list_no_repeat=True)
+                            deep_merge(node,n)
                             replace_edge_ids.append([n["id"], node["id"]])
                             break
                     if not exists:

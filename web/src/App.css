@@ -24,7 +24,7 @@ body {
 }
 /* Add additional 5 pixels of margin to the loading icon when it is visible */
 #headerContainer > p ~ div {
-  margin-right: 5px;
+  margin-right: 10px;
 }
 #headerContainer > p {
 }

@@ -353,25 +353,16 @@ class DiseaseVocab:
 
 #{% if i < len(list(disease_map.items ())) %},{%
 
-def deep_join(a,b,list_no_repeat=False):
-  if isinstance(a,dict) and isinstance(b,dict):
-    keys = []
-    for i in a:
-      keys.append(i)
-      a[i] = deep_join(a.get(i),b.get(i),list_no_repeat=list_no_repeat)
-    for i in b:
-      if i not in keys:
-        a[i] = deep_join(b.get(i),a.get(i),list_no_repeat=list_no_repeat)
-    return a
-  elif isinstance(a,list) and isinstance(b,list):
-    new = a + b
-    if list_no_repeat:
-      return list(set(new))
-    else:
-      return new
-  else:
-    # Can't effectively merge this type
-    return a
+def deep_merge(source, destination):
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # get node or create one
+            node = destination.setdefault(key, {})
+            deep_merge(value, node)
+        else:
+            destination[key] = value
+
+    return destination
 
 if __name__ == '__main__':
     #generate_gene_vocab ()
