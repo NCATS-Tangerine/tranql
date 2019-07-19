@@ -29,7 +29,8 @@ class Cache extends Component {
       )[0];
     // This will update the entry if an entry already exists containing a duplicate unique key as `data`
     if ((await this.read(table, prop, data[prop])).length > 0) {
-      return await this.db[table].update (prop, data);
+      console.log("UPDATE",prop,data);
+      return await this.db[table].where(prop).equals(data[prop]).modify(data);
     }
     else {
       return await this.db[table].put (data);
