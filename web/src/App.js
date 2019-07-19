@@ -4,6 +4,8 @@ import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal, Form, Card, Container, Row, Col, ListGroup } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
+import { FilePond } from 'react-filepond';
+import 'filepond/dist/filepond.min.css';
 import JSONTree from 'react-json-tree';
 import * as JSON5 from 'json5';
 // import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
@@ -11,7 +13,7 @@ import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap } from 'react-icons/io';
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
-  FaSpinner, FaMousePointer, FaTimes,
+  FaSpinner, FaMousePointer, FaTimes, FaFolderOpen, FaFileImport, FaFileExport,
   FaArrowsAlt, FaTrash, FaPlayCircle
 } from 'react-icons/fa';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
@@ -153,6 +155,8 @@ class App extends Component {
     this._renderHelpModal = this._renderHelpModal.bind (this);
     this._renderToolbarHelpModal = this._renderToolbarHelpModal.bind (this);
 
+    // Import/Export modal
+    this._renderImportExportModal = this._renderImportExportModal.bind (this);
 
     // Annotate graph
     this._annotateGraph = this._annotateGraph.bind (this);
@@ -337,6 +341,7 @@ class App extends Component {
         <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.show()}/>,
         <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
         <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
+        <FaFolderOpen data-tip="Import/Export - Import or export graphs" id="importExportButton" className="App-control-toolbar fa" onClick={() => this.setState({ showImportExportModal : true })}/>,
         <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />,
         // Perfectly functional but does not provide enough functionality as of now to warrant its presence
         /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
@@ -552,6 +557,12 @@ class App extends Component {
             It allows for you to find previous queries and quickly view them, edit them, or delete them.`
           },
           {
+            title: "Import/Export",
+            description: `
+            This button brings up the import/export interface which allows you to import and export TranQL force graphs
+            into various file formats that can then be loaded by others. The graphs retain their visual state upon exportation.`
+          },
+          {
             title: "Settings",
             description: (
               <Tabs>
@@ -602,6 +613,7 @@ class App extends Component {
       showTypeNodes : true, // When false, shows link types (prevents far too many types being shown at once)
 
       // Modals
+      showImportExportModal : false,
       showSettingsModal : false,
       showTypeChart : false,
       // Cached queries modal
@@ -2145,6 +2157,50 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     );
   }
   /**
+   * Render the import/export modal
+   *
+   * @private
+   */
+  _renderImportExportModal () {
+    return (
+      <Modal show={this.state.showImportExportModal}
+             onHide={() => this.setState({ showImportExportModal : false })}
+             dialogClassName="import-export-modal-dialog"
+             className="import-export-modal">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Import/Export Graph
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="no-select">
+            <div className="import-export-icon-container">
+              <FaFileImport/>
+              <span className="horizontal-bar">Import a graph</span>
+            </div>
+              <div className="import-options-container">
+                <div><input type="checkbox" name="Save graph state"/> Save graph state</div>
+                <FilePond className="import-upload-area"
+                          allowMultiple={false}
+                          maxFiles={1}
+                          onaddfile={((error,file) => console.log(error,file))}>
+                </FilePond>
+              </div>
+          </div>
+          <div className="no-select">
+            <div className="import-export-icon-container">
+              <FaFileExport/>
+              <span className="horizontal-bar">Export graph</span>
+            </div>
+              <div className="export-options-container">
+                <div className="export-button"></div>
+              </div>
+          </div>
+        </Modal.Body>
+      </Modal>
+    );
+  }
+  /**
    * Render the toolbar help modal
    *
    * @private
@@ -2543,6 +2599,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         {this._renderTypeChart ()}
         {this._renderHelpModal ()}
         {this._renderToolbarHelpModal ()}
+        {this._renderImportExportModal ()}
         <NotificationContainer/>
         <QueriesModal ref={this._exampleQueriesModal}
                       runButtonCallback={(code, e) => {

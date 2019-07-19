@@ -251,6 +251,114 @@ body {
   /* Retain the formatting from the message */
   white-space:pre-wrap;
 }
+.import-export-modal {
+  display:flex !important;
+  justify-content:center;
+  align-items:center;
+}
+.import-export-modal-dialog {
+  /* height:400px; */
+  /* width:500px; */
+  max-width:none;
+}
+.import-export-modal-dialog .modal-body {
+  display:flex;
+}
+.import-export-modal-dialog .modal-body > * {
+  /* flex:1; */
+  margin:0 5px;
+  background-color:rgb(245,245,245);
+  border-radius:5px;
+  border:1.5px solid rgb(230,230,230);
+  height:auto;
+  display:flex;
+  flex-direction:column;
+  min-height:200px;
+}
+.import-export-modal-dialog .modal-body > * > * {
+  padding:10px;
+}
+.import-export-modal-dialog .modal-body > * > *:not(:last-child) {
+  padding-bottom:0;
+}
+.import-export-icon-container {
+  position:relative;
+  float:left;
+  width:100%;
+}
+.import-export-icon-container > * {
+}
+.import-export-icon-container > svg {
+  /* float:left; */
+  position:absolute;
+  font-size:28px;
+}
+.import-export-icon-container > span {
+  font-weight:600;
+  font-size:16px;
+  display:block;
+  text-align:center;
+  padding-bottom:10px;
+}
+.import-options-container, .export-options-container {
+  padding:15px !important;
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+}
+.import-options-container > *:not(:last-child), .export-options-container > *:not(:last-child) {
+  margin-bottom:15px;
+}
+.import-options-container > .filepond--wrapper {
+  border:1.5px dashed rgb(210,210,210);
+
+}
+.import-options-container > .filepond--wrapper .filepond--root {
+  position:relative;
+  contain:initial;
+  /* width:fit-content; */
+}
+.import-options-container > .filepond--wrapper .filepond--drop-label {
+  /* width:fit-content; */
+  position:relative;
+  z-index:7;
+}
+.import-options-container > .filepond--wrapper .filepond--panel-root {
+  display:none;
+  position:relative;
+  top:-100%;
+}
+.import-options-container > .filepond--wrapper .filepond--browser {
+  /* position:relative; */
+  /* top:-100%; */
+}
+.import-options-container > .filepond--wrapper .filepond--list-scroller {
+  position:relative;
+  /* width:auto; */
+  margin:0;
+  height:100%;
+  transform:initial !important;
+  top:calc(-100% + 1px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.import-options-container > .filepond--wrapper .filepond--list {
+  position:relative;
+  left:0;
+  /* width:fit-content; */
+}
+.import-options-container > .filepond--wrapper .filepond--item {
+  position:relative;
+}
+.import-upload-area {
+  box-sizing:content-box;
+  margin:0;
+}
+.import-export-icon-container > span.horizontal-bar::after {
+  background-color:rgb(50,50,50);
+  height:2px;
+}
 .help-modal {
   /* height:60%; */
 }
