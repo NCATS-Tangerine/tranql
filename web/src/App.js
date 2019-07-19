@@ -2174,23 +2174,33 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         </Modal.Header>
         <Modal.Body>
           <div className="no-select">
-            <div className="import-export-icon-container">
+            <div className="import-export-icon-container horizontal-bar">
               <FaFileImport/>
-              <span className="horizontal-bar">Import a graph</span>
+              <span>Import a graph</span>
             </div>
               <div className="import-options-container">
-                <div><input type="checkbox" name="Save graph state"/> Save graph state</div>
+                <label><input type="checkbox" name="Save graph state"/> Save graph state</label>
                 <FilePond className="import-upload-area"
                           allowMultiple={false}
                           maxFiles={1}
-                          onaddfile={((error,file) => console.log(error,file))}>
+                          onaddfile={((error,file) => {
+                            if (error) {
+                              this._handleMessageDialog("Graph Upload Error", error.message, error.stack)
+                            }
+                            else {
+                              const fr = new FileReader();
+                              fr.onload = (e) => {
+                                console.log(JSON.parse(e.target.result));
+                              };
+                            }
+                          })}>
                 </FilePond>
               </div>
           </div>
           <div className="no-select">
-            <div className="import-export-icon-container">
+            <div className="import-export-icon-container horizontal-bar">
               <FaFileExport/>
-              <span className="horizontal-bar">Export graph</span>
+              <span>Export graph</span>
             </div>
               <div className="export-options-container">
                 <div className="export-button"></div>
