@@ -123,8 +123,28 @@
   font-weight:500;
 }
 .find-tool-result-header {
-  /* flex: 1 1 50%; */
-  /* font-size:24px; */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.find-tool-result-header > * {
+}
+.find-tool-result-header > .find-tool-back-button-wrapper {
+  font-size:20px;
+  flex:0 !important;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-width:initial;
+}
+.find-tool-result-header > span {
+  width:100%;
+  text-align:center;
+  display:inline-block;
+}
+.find-tool-result-header > span:nth-child(2) {
+  flex:0 !important;
+  flex-grow:1 !important;
 }
 .find-tool-result > div:only-child {
   flex:1;

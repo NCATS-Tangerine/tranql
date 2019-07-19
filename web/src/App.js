@@ -391,17 +391,22 @@ class App extends Component {
               <div>
                 <Tabs>
                   <TabList>
+                    <Tab>Overview</Tab>
                     <Tab>Normal Syntax</Tab>
                     <Tab>JSONPath</Tab>
                   </TabList>
                   <TabPanel>
-                    <div className="section">
-                      <h6>Introduction:</h6>
-                      <p>
-                        This button brings up the find tool, which can also be opened with the keyboard shortcut control+F (the normal browser find tool can be opened with F3).
-                        The find tool enables you to use JSONPath or JSON-like attribute selectors to find objects in the graph. Additionally, you may use tools on the results.
-                      </p>
-                    </div>
+                    <p>
+                      This button brings up the find tool, which can also be opened with the keyboard shortcut control+F (the normal browser find tool can be opened with F3).
+                      The find tool enables you to use JSONPath or JSON-like attribute selectors to find objects in the graph. Additionally, you may use tools on the results.
+                      <br/><br/>
+                      The JSONPath syntax is limited relative to the normal syntax in that you cannot select node pairs ({`nodes->links->nodes`}).
+                      However, JSONPath also allows for the exploration of the entire graph object, rather than only selecting nodes and links.
+                      Another advantage of the JSONPath syntax is that you do not need to know JSONPath to use it, as you can explore the graph via the arrows
+                      on the results.
+                    </p>
+                  </TabPanel>
+                  <TabPanel>
                     <div className="section">
                       <h6>Structure:</h6>
                       <p>
@@ -499,18 +504,6 @@ class App extends Component {
                     </div>
                   </TabPanel>
                   <TabPanel>
-                    <div className="section">
-                      <h6>Introduction:</h6>
-                      <p>
-                        This button brings up the find tool, which can also be opened with the keyboard shortcut control+F (the normal browser find tool can be opened with F3).
-                        The find tool enables you to use JSONPath or JSON-like attribute selectors to find objects in the graph. Additionally, you may use tools on the results.
-
-                        The JSONPath syntax is limited relative to the normal syntax in that you cannot select node pairs ({`nodes->links->nodes`}).
-                        However, JSONPath also allows for the exploration of the entire graph object, rather than only selecting nodes and links.
-                        Another advantage of the JSONPath syntax is that you do not need to know JSONPath to use it, as you can explore the graph via the arrows
-                        on the results.
-                      </p>
-                    </div>
                     <div className="section">
                       <h6>Structure:</h6>
                       <p>

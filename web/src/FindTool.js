@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { IoIosClose, IoIosSettings } from 'react-icons/io';
-import { FaLongArrowAltRight } from 'react-icons/fa';
+import { FaLongArrowAltRight, FaLongArrowAltLeft } from 'react-icons/fa';
 import * as JSON5 from 'json5';
 import * as jp from 'jsonpath';
 import { debounce, hydrateState } from './Util.js';
@@ -620,7 +620,53 @@ export default class FindTool extends Component {
       elements = (
         <div>
           <div className="find-tool-result find-tool-result-header">
-            <span style={{fontWeight:"500"}}>{results.groups.length} results</span>
+            {
+              (() => {
+                let invalid;
+
+                let jsonPathComp;
+
+                let path_on_render;
+                try {
+                  if (this._input.current.textContent === '') {
+                    path_on_render = [];
+                  }
+                  else {
+                    path_on_render = jp.parse(this._input.current.textContent);
+                  }
+                }
+                catch (e) {
+                  path_on_render = [];
+                  if (this.state.useJSONPath) invalid = e.message;
+                }
+                if (!results.grouped && this.state.useJSONPath) jsonPathComp = (
+                  <div className="find-tool-back-button-wrapper">
+                  <FaLongArrowAltLeft className="find-tool-back-button" style={{...(path_on_render.length < 2 ? {display:"none"} : {})}} onClick={() => {
+                    // Remove the second to last path component from the query
+                    // If the path is only one level deep (`$.*`), remove the last because there is no second to last path component.
+                    const path = jp.parse(this._input.current.textContent);
+                    console.log(path,path.length);
+                    const newPath = path.length > 2 ? path.slice(0,-2).concat(path.slice(-1)) : path.slice(0,-1);
+                    this._input.current.textContent = jp.stringify(newPath)
+                    this._inputHandler();
+                  }}/>
+                  </div>
+                )
+
+                return (
+                  <>
+                    {!invalid && jsonPathComp}
+                    <span style={{fontWeight:"500"}}>
+                    {
+                      invalid ?
+                        invalid :
+                        (results.groups.length + " results")
+                    }
+                    </span>
+                  </>
+                );
+            })()
+            }
           </div>
           {
             results.groups.map((group, i) => {
@@ -646,7 +692,7 @@ export default class FindTool extends Component {
                       <>
                         <div className="result-group"><span>{group.source.name}</span><span>{" (" + group.source.id + ")"}</span></div>
                         <div className="group-arrow"><FaLongArrowAltRight/></div>
-                        <div className="result-group"><span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ")}</span><span>{(group.link.hasOwnProperty('id') ? " (" + group.link.id + ")" : "")}</span></div>
+                        <div className="result-group"><span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ")}</span></div>
                         <div className="group-arrow"><FaLongArrowAltRight/></div>
                         <div className="result-group"><span>{group.target.name}</span><span>{" (" + group.target.id + ")"}</span></div>
                       </> :
@@ -659,7 +705,7 @@ export default class FindTool extends Component {
                                 repr = FindTool.repr(group.value);
                               }
                               catch {
-                                repr = ['',true]
+                                repr = ['<Error>',true]
                                 console.warn('Group value broken',group);
                               }
                               return (
@@ -735,7 +781,7 @@ export default class FindTool extends Component {
     return (
       <div data-hide={!this.state.active} className="FindTool">
         <div data-hide={this.state.showSettings} className="find-container">
-          <span contentEditable={true} ref={this._input} className="find-tool-input" autoFocus placeholder={this.state.useJSONPath ? "JSONPath:" : "Query:"}></span>
+          <span contentEditable={true} ref={this._input} className="find-tool-input" autoFocus placeholder={this.state.useJSONPath ? "JSONPath ($):" : "Query:"}></span>
           <div className="find-tool-button-container vertical-bar">
             <IoIosSettings className="find-tool-settings-button" onClick={() => this.showSettings()}/>
             <IoIosClose className="find-tool-close-button" onClick={() => this.hide()}/>
