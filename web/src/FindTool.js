@@ -483,6 +483,10 @@ export default class FindTool extends Component {
                     return false;
                   }
                 }
+                else {
+                  // If the flag is an attribute of the value (as opposed to a method)
+                  return elementValue[flag] === value
+                }
               }
             }
             magicVariables["__element__"] = JSON.stringify(element,(key,val)=>key!=="allConnections"?val:undefined);

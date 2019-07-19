@@ -409,9 +409,16 @@ class App extends Component {
                   <div className="section">
                     <h6>Flags:</h6>
                     <p>
-                      A colon in an attribute key indicates that the following text is an attribute flag. Attribute flags modify the behavior of how the attribute is compared to the provided value.
-                      For example, if an attribute is a list ("['a','b','c']"), you can use the `includes` flag to check if `a` is in the list. This would look like "nodes{`{"attribute:includes" : "a"}`}".
-                      All normal colons inside of attribute keys must be escaped, i.e. preceded by a backslash ("\:"), or it will be assumed that the following text is an attribute flag.
+                      A colon in an attribute key indicates that the following text is an attribute flag.
+                      Attribute flags modify the behavior of how the attribute is compared to the provided value.
+                      For example, if an attribute is a list (['a','b','c']), you can use the `includes` (pseudo) flag to check if `a` is in the list.
+                      This would look like "nodes{`{"attribute:includes" : "a"}`}".
+                      All normal colons inside of attribute keys must be escaped, i.e. preceded by a backslash ("\:"),
+                      or it will be assumed that the following text is an attribute flag. A scenario in which it would be necessary to do this would be
+                      nodes{`{"a:test":'value'}`} where you wanted to select nodes whose attribute "a:test" has the value "value".
+                      Only one attribute flag can currently be used in an attribute.<br/>
+                      <span style={{fontWeight:600}}>Example:</span> nodes{`{"omnicorp_article_count:>=":100}`} selects all nodes whose `omnicorp_article_count`
+                      attribute is greater than or equal to 100. The flag in this query is ">=".
                     </p>
                     <div className="section">
                       <h6>The valid flags are:</h6>
@@ -428,9 +435,9 @@ class App extends Component {
                           <Col><dt>Comparison Operators</dt></Col><Col><dd>The comparison operators <b>({"<"}, {"<="}, {">"}, {">="}, {"=="}, {"==="}, {"!="}, {"!=="})</b> are all valid flags. {"<="} and {">="} compare if a number is less than or equal to and greater than or equal to the given input respectively.
                           "!=" and "!==" both compare if it is not equal to the given input. The "===" and "!==" operators do not allow for implicit conversion when comparing, and therefore should almost always be used over their alternative.</dd></Col>
                           <Col>
-                            <dt>Special</dt>
+                            <dt>Pseudo Flags</dt>
                             <dd>
-                              Any other method in the element's attribute's JavaScript prototype chain (for common references see&nbsp;
+                              Any other method or property in the element's attribute's JavaScript prototype chain (for common references see&nbsp;
                               <a target="_blank" rel="noopener noreferrer" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/prototype">Text</a> and&nbsp;
                               <a target="_blank" rel="noopener noreferrer" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/prototype">Lists</a>).
                               {/*eslint-disable-next-line*/}
