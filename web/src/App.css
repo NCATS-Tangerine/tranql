@@ -305,60 +305,31 @@ body {
 }
 .import-options-container, .export-options-container {
   padding:15px !important;
+  padding-bottom:0 !important;
   /* 2.5px from horizontal-bar */
-  padding-top:calc(15px + 2.5px) !important;
+  /* padding-top:calc(15px + 2.5px) !important; */
   flex-grow:1;
   display:flex;
   flex-direction:column;
 }
-.import-options-container > *:not(:last-child), .export-options-container > *:not(:last-child) {
+.import-options-container > form > div, .export-options-container > form > div {
+  /* display:flex; */
+  /* align-items:center; */
+}
+/* .import-options-container > form > div > label, .export-options-container > form > div > label {
+  margin-left:0.5rem;
+} */
+.import-options-container > form, .export-options-container > form {
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+}
+.import-options-container > form > *, .export-options-container > form > * {
   margin-bottom:15px;
 }
-.import-options-container > .filepond--wrapper {
-  border:1.5px dashed rgb(210,210,210);
-
-}
-.import-options-container > .filepond--wrapper .filepond--root {
-  position:relative;
-  contain:initial;
-  /* width:fit-content; */
-}
-.import-options-container > .filepond--wrapper .filepond--drop-label {
-  /* width:fit-content; */
-  position:relative;
-  z-index:7;
-}
-.import-options-container > .filepond--wrapper .filepond--panel-root {
-  display:none;
-  position:relative;
-  top:-100%;
-}
-.import-options-container > .filepond--wrapper .filepond--browser {
-  /* position:relative; */
-  /* top:-100%; */
-}
-.import-options-container > .filepond--wrapper .filepond--list-scroller {
-  position:relative;
-  /* width:auto; */
-  margin:0;
-  height:100%;
-  transform:initial !important;
-  top:calc(-100% + 1px);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-.import-options-container > .filepond--wrapper .filepond--list {
-  position:relative;
-  left:0;
-  /* width:fit-content; */
-}
-.import-options-container > .filepond--wrapper .filepond--item {
-  position:relative;
-}
-.import-upload-area {
-  box-sizing:content-box;
-  margin:0;
+.import-options-container > *:not(:last-child), .export-options-container > *:not(:last-child) {
+  margin-bottom:15px;
 }
 .import-export-icon-container.horizontal-bar::after {
   width:95%;
@@ -366,6 +337,9 @@ body {
   top:calc(100% + 2.5px);
   background-color:transparent;
   height:2px;
+}
+.export-options-container > form > .form-group.form-inline > *:first-child {
+  margin-right:.3125rem;
 }
 .help-modal {
   /* height:60%; */

@@ -4,10 +4,11 @@ import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
 import { Modal, Form, Card, Container, Row, Col, ListGroup } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
-import { FilePond } from 'react-filepond';
-import 'filepond/dist/filepond.min.css';
+import * as sizeof from 'object-sizeof';
 import JSONTree from 'react-json-tree';
 import * as JSON5 from 'json5';
+import * as YAML from 'js-yaml';
+import FileSaver from 'file-saver';
 // import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap } from 'react-icons/io';
@@ -30,18 +31,20 @@ import { Range } from 'rc-slider';
 import { GridLoader } from 'react-spinners';
 import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
+import FileLoader from './FileLoader.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import highlightTypes from './highlightTypes.js';
-import { shadeColor, adjustTitle, scrollIntoView, hydrateState } from './Util.js';
+import { shadeColor, adjustTitle, scrollIntoView, hydrateState, formatBytes } from './Util.js';
 import { Toolbar, Tool, /*ToolGroup*/ } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
 import FindTool from './FindTool.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
+import GraphSerializer from './GraphSerializer.js';
 import { RenderInit, RenderSchemaInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
@@ -174,6 +177,7 @@ class App extends Component {
     this._handleMessageDialog = this._handleMessageDialog.bind (this);
     this._analyzeAnswer = this._analyzeAnswer.bind (this);
     this._cacheWrite = this._cacheWrite.bind (this);
+    this._cacheFormat = this._cacheFormat.bind (this);
     this._cacheRead = this._cacheRead.bind (this);
     this._clearCache = this._clearCache.bind (this);
     this._updateCacheViewer = this._updateCacheViewer.bind (this);
@@ -191,6 +195,10 @@ class App extends Component {
     this._messageDialog = React.createRef ();
     this._exampleQueriesModal = React.createRef ();
     this._cachedQueriesModal = React.createRef ();
+
+    // Import/Export modal
+    this._importForm = React.createRef ();
+    this._exportForm = React.createRef ();
 
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
@@ -614,6 +622,14 @@ class App extends Component {
 
       // Modals
       showImportExportModal : false,
+        importForm : {
+          cacheGraph : false
+        },
+        exportForm : {
+          saveGraphState : true,
+          readable : false,
+          fileFormat: 'JSON'
+        },
       showSettingsModal : false,
       showTypeChart : false,
       // Cached queries modal
@@ -747,15 +763,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
       //showAnswerViewer : true
     };
-    this._cache.read ('cache', 'key', this.state.code)
-      .then ((result) => {
-        console.log ("-----------> ",result);
-        if (result.length > 0) {
-          this.setState ({
-            record : result[0]
-          });
-        }
-      });
 
     /**
      * We want to reset the interval if user highlights again. Stores `id`:`interval` Structure was too complicated so it is now separated into two objects.
@@ -1126,12 +1133,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     });
     // Automatically switch from schema to graph view when query is run
     this._setSchemaViewerActive (false);
-
-    let width = this._graphSplitPane.current.splitPane.offsetWidth;
-    if (this.state.objectViewerEnabled) {
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-    }
-    this._updateGraphSize(width);
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
     // First check if it's in the cache.
     //var cachePromise = this._cache.read (this.state.code);
@@ -1202,18 +1203,22 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         //console.log ("-- error", result);
       }.bind(this));
   }
-  _cacheWrite (message) {
-    //this._cache.write (this.state.code, result);
-    // Clone message without bloat for storing inside the cache
+  _cacheFormat (message) {
     let {graph, hiddenTypes, ...cacheMessage} = message;
     var obj = {
       'key' : this.state.code,
       'data' : cacheMessage
     };
-    if (this.state.record) {
-      obj.id = this.state.record.id;
-    }
+    // if (this.state.record) {
+    //   obj.id = this.state.record.id;
+    // }
     console.log (obj);
+    return obj;
+  }
+  _cacheWrite (message) {
+    //this._cache.write (this.state.code, result);
+    // Clone message without bloat for storing inside the cache
+    let obj = this._cacheFormat(message);
     this._cache
       .write ('cache', obj)
       .then ((result) => {
@@ -1251,29 +1256,39 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     });
     return [dataSources,nodeDegrees];
   }
-  _configureMessage (message) {
+  /**
+   * When noSetMessageRecord is false, it will not set the message and record on the app's state
+   *
+   */
+  _configureMessage (message,noSetMessageRecord=false) {
     if (message) {
       // Configure node degree range.
       let [dataSources, nodeDegrees] = this._configureMessageLogic(message);
+      let cond = {};
+      if (!noSetMessageRecord) {
+        cond.message = message;
+        cond.record = this._cacheFormat(message);
+      }
       this.setState({
         dataSources : dataSources,
-        message : message,
         nodeDegreeMax : nodeDegrees[0],
-        nodeDegreeRange : [ 0, nodeDegrees[0] ]
+        nodeDegreeRange : [ 0, nodeDegrees[0] ],
+        ...cond
       });
     }
   }
   /**
    * Render the graph via the rendering pipeline.
    *
-   * @param {message} - A KGS message object.
+   * @param {Object} message - A KGS message object.
+   * @param {Boolean} [noRenderChain=false] - The message will not be handled by the render chain when true
    * @private
    */
-  _translateGraph (message) {
+  _translateGraph (message,noRenderChain) {
+    if (typeof noRenderChain === "undefined") noRenderChain = false;
     message = message ? message : this.state.message;
     if (message) {
-      this._renderChain.handle (message, this.state);
-
+      !noRenderChain && this._renderChain.handle (message, this.state);
       var worthShowing =
           !(
             message.knowledge_graph === undefined || (
@@ -1309,8 +1324,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              console.log("Got schema from cache");
              let msg = result.data;
              this._configureMessage(msg);
+             this.setState({ message : null, schemaMessage : msg, record : null });
              this._schemaRenderChain.handle (msg, this.state);
-             this.setState({ schemaLoaded : true, schema : msg.graph, schemaMessage: msg });
+             this.setState({ schemaLoaded : true, schema : msg.graph });
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -1330,6 +1346,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  console.log("Fetched schema:", result);
 
                  this._configureMessage(result.schema);
+                 this.setState({ message : null, schemaMessage : result.schema, record : null });
                  this._schemaRenderChain.handle (result.schema, this.state);
                  result.schema.graph.links.forEach((link) => {
                    // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
@@ -1660,22 +1677,64 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
     let newMessage;
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
-      newMessage = this.state.message;
-      newMessage.hiddenTypes = graph.hiddenTypes;
-      this._schemaRenderChain.handle(newMessage, this.state);
+      newMessage = this.state.schemaMessage;
+      // newMessage.hiddenTypes = graph.hiddenTypes;
+      this._configureMessage(newMessage,true);
+      this.setState({},() => {
+        this._schemaRenderChain.handle(newMessage, this.state);
+        this.setState({ schema : newMessage.graph });
+      });
       // console.log(message);
-      this.setState({ schema : newMessage.graph });
     }
     else {
       newMessage = this.state.message;
-      newMessage.hiddenTypes = graph.hiddenTypes;
-
-      this.setState({ message : newMessage }, () => {
+      // newMessage.hiddenTypes = graph.hiddenTypes;
+      this._configureMessage(newMessage);
+      this.setState({}, () => {
         this._translateGraph();
       });
     }
   }
 
+  /**
+   * Returns the formatted graph for exportation
+   *
+   * @param {Boolean} saveGraphState - Specifies whether or not the graph will save its current state
+   *
+   * @returns {Object} - The exportable graph
+   * @private
+   */
+  _getExportGraph(saveGraphState) {
+    let graph = this.state.record;
+    if (saveGraphState) {
+      graph.data.graph = GraphSerializer.serialize(this.state.graph);
+    }
+    return graph;
+  }
+  /**
+   * Dumps the graph to a given serialization format
+   *
+   * @param {Object} graph - The graph object to dump
+   * @param {String} exportType - A string of type "JSON" or "YAML"
+   * @param {Boolean} readable - A boolean indicating whether the graph should be dumped in a readable form or a minimally-sized form
+   *
+   * @returns {Object} - An object containing the dumped graph and file extension
+   * @private
+   */
+  _dumpGraph(graph,exportType,readable) {
+    let extension;
+    if (exportType === 'JSON') {
+      let indent = readable ? 2 : 0;
+      graph = JSON.stringify(graph,undefined,indent);
+      extension = '.json';
+    }
+    else if (exportType === 'YAML') {
+      let options = readable ? {} : {indent:0,noRefs:true,condenseFlow:true,noArrayIndent:true};
+      graph = YAML.safeDump(graph,options);
+      extension = '.yaml';
+    }
+    return { graph, extension };
+  }
   /**
    * Handle a click on a graph node.
    *
@@ -1746,27 +1805,28 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     var result = null;
     let defaultProps = {
       graphData:data,
-       width:this.state.graphWidth,
-       height:this.state.graphHeight,
-       linkAutoColorBy:"type",
-       nodeAutoColorBy:"type",
-       d3AlphaDecay:0.2,
-       strokeWidth:10,
-       linkWidth:2,
-       linkLabel: (l) => l.concatName,
-       nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
-       enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
-       onLinkClick:this._handleLinkClick,
-       onLinkHover:this._handleLinkHover,
-       onLinkRightClick:this._handleLinkRightClick,
-       onNodeRightClick:this._handleNodeRightClick,
-       onNodeClick:this._handleNodeClick,
-       onNodeHover:this._handleNodeHover
+      width:this.state.graphWidth,
+      height:this.state.graphHeight,
+      linkAutoColorBy:"type",
+      nodeAutoColorBy:"type",
+      d3AlphaDecay:0.2,
+      strokeWidth:10,
+      linkWidth:2,
+      linkLabel: (l) => l.concatName,
+      nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
+      enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
+      onLinkClick:this._handleLinkClick,
+      onLinkHover:this._handleLinkHover,
+      onLinkRightClick:this._handleLinkRightClick,
+      onNodeRightClick:this._handleNodeRightClick,
+      onNodeClick:this._handleNodeClick,
+      onNodeHover:this._handleNodeHover
     };
     props = {
       ...defaultProps,
       ...props
     }
+
     if (this.state.curvedLinks && (this.state.visMode === '3D' || this.state.visMode === 'VR')) {
       // 2D not supported
       props = {
@@ -1791,6 +1851,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         linkDirectionalArrowRelPos: 1
       };
     }
+
+    // If the graph's nodes contain preexisting positional data we don't want to modify it
+    // (Couldn't find any way to stop it from doing this without adverse consequences)
+    // if (props.graphData.nodes.every(el=>el.hasOwnProperty('x')&&el.hasOwnProperty('z')&&el.hasOwnProperty('z')))
     if (this.state.visMode === '3D') {
       result = this._renderForceGraph3D (data, props);
     } else if (this.state.visMode === '2D') {
@@ -1876,7 +1940,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _handleUpdateSettings (e) {
     var targetName = e.currentTarget.name;
     console.log ("--update settings: " + targetName);
-    if (targetName === 'useToolCursor') {
+    if (targetName === 'enableNodeDrag') {
+      const forceGraphOpts = this.state.forceGraphOpts;
+      forceGraphOpts.enableNodeDrag = e.currentTarget.checked;
+      this.setState({ forceGraphOpts });
+      localStorage.setItem('forceGraphOpts', JSON.stringify (forceGraphOpts));
+    } else if (targetName === 'useToolCursor') {
       this.setState ({ useToolCursor : e.currentTarget.checked });
       localStorage.setItem (targetName, JSON.stringify (e.currentTarget.checked));
       if (!e.currentTarget.checked) {
@@ -2179,31 +2248,126 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               <span>Import a graph</span>
             </div>
               <div className="import-options-container">
-                <label><input type="checkbox" name="Save graph state"/> Save graph state</label>
-                <FilePond className="import-upload-area"
-                          allowMultiple={false}
-                          maxFiles={1}
-                          onaddfile={((error,file) => {
-                            if (error) {
-                              this._handleMessageDialog("Graph Upload Error", error.message, error.stack)
-                            }
-                            else {
-                              const fr = new FileReader();
-                              fr.onload = (e) => {
-                                console.log(JSON.parse(e.target.result));
-                              };
-                            }
-                          })}>
-                </FilePond>
+                {<Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._importForm}>
+                  <Form.Check inline label="Cache the graph" name="importCacheGraph" checked={this.state.importForm.cacheGraph} onChange={(e)=>{
+                    const importForm = this.state.importForm;
+                    importForm.cacheGraph = e.target.checked;
+                    this.setState({ importForm });
+                  }}/>
+                  <FileLoader pondProps={{allowMultiple:false,maxFiles:1,acceptedFileTypes:['.json','.yaml','.yml']}}
+                              buttonProps={{type:"submit"}}
+                              filesLoadedCallback={(graph) => {
+                                graph = graph[0];
+                                if (!graph) return;
+                                const options = this.state.importForm;
+                                if (graph.hasOwnProperty('data') && graph.hasOwnProperty('key') && graph.data.hasOwnProperty('knowledge_graph')) {
+                                  this.setState({ showImportExportModal : false });
+                                  this._setSchemaViewerActive(false);
+
+                                  this.setState({ code : graph.key }, () => {
+                                    console.log(JSON.parse(JSON.stringify(graph)));
+                                    this._configureMessage(graph.data);
+
+                                    let noRenderChain = false;
+                                    // If it already has a graph (save state was set to true) we should parse it so that it retains its previous state
+                                    if (graph.data.hasOwnProperty('graph')) {
+                                      noRenderChain = true;
+                                      graph.data.graph = GraphSerializer.parse(graph.data.graph);
+                                    }
+                                    this._translateGraph(graph.data, noRenderChain);
+                                    options.cacheGraph === true && this._cacheWrite(graph.data);
+                                  });
+
+                                }
+                                else {
+                                  this._handleMessageDialog("Graph Parsing Error", "The graph file is corrupted.", (
+                                    <div>
+                                      <p>Contains key: {graph.hasOwnProperty('key').toString()}</p>
+                                      <p>Contains knowledge_graph: {graph.hasOwnProperty('knowledge_graph').toString()}</p>
+                                      <p>Contains data: {graph.hasOwnProperty('data').toString()}</p>
+                                      <div>Object: <pre style={{display:"inline"}}>{JSON.stringify(graph,undefined,2)}</pre></div>
+                                    </div>
+                                  ));
+                                }
+                              }}
+                              loadFile={(mimeType,data) => {
+                                let message;
+                                try {
+                                  if (mimeType === "application/json") {
+                                    message = JSON.parse(data);
+                                  }
+                                  else if (mimeType === "text/yaml") {
+                                    message = YAML.safeLoad(data);
+                                  }
+                                }
+                                catch (error) {
+                                  this._handleMessageDialog("Graph Parsing Error", error.message, error.stack);
+                                }
+                                return message;
+                              }}/>
+                </Form>}
               </div>
           </div>
           <div className="no-select">
             <div className="import-export-icon-container horizontal-bar">
               <FaFileExport/>
-              <span>Export graph</span>
+              <span>Export graph{(() => {
+                if (this.state.record) {
+                  // Was lagging it so it has been removed for now
+                  // const options = this.state.exportForm;
+                  // const obj = this._getExportGraph(options.saveGraphState);
+                  // Assumes ANSI encoding
+                  // return " (" + formatBytes(this._dumpGraph(obj,options.fileFormat).graph.length,1) + ")";
+                }
+              })()}</span>
             </div>
               <div className="export-options-container">
-                <div className="export-button"></div>
+                <Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._exportForm}>
+                  <Form.Check inline label="Save graph state" name="exportSaveState" checked={this.state.exportForm.saveGraphState} onChange={(e)=>{
+                    const exportForm = this.state.exportForm;
+                    exportForm.saveGraphState = e.target.checked;
+                    this.setState({ exportForm });
+                  }}/>
+                  <Form.Check inline label="Export in readable form" name="exportReadable" checked={this.state.exportForm.readable} onChange={(e)=>{
+                    const exportForm = this.state.exportForm;
+                    exportForm.readable = e.target.checked;
+                    this.setState({ exportForm });
+                  }}/>
+                  <Form.Group className="form-inline">
+                    <Form.Label>File format:</Form.Label>
+                    <Form.Control as="select" name="exportFileFormat" value={this.state.exportForm.fileFormat} onChange={(e)=>{
+                      const exportForm = this.state.exportForm;
+                      exportForm.fileFormat = e.target.value;
+                      this.setState({ exportForm });
+                    }}>
+                      <option>JSON</option>
+                      <option>YAML</option>
+                    </Form.Control>
+                  </Form.Group>
+                  <div style={{width:"100%",flexGrow:1,display:"flex",justifyContent:"center",alignItems:"flex-end"}}>
+                    <Button color="primary"
+                            style={{width:"100%"}}
+                            onClick={() => {
+                              // Prevent exportation of graph if one has not been loaded
+                              // Also prevents exportation of schema (would be fairly simple to add but for now is not very useful)
+                              if (!this.state.record) {
+                                NotificationManager.warning('You must load a graph', 'Warning', 4000);
+                                return;
+                              }
+                              const options = this.state.exportForm;
+                              const exportType = options.fileFormat;
+                              const readable = options.readable;
+                              const graph = this._getExportGraph(options.saveGraphState);
+
+                              const {graph: data, extension} = this._dumpGraph(graph,exportType,readable);
+
+                              data && FileSaver.saveAs(new Blob([data]),'graph'+extension);
+                            }}
+                            {...(!this.state.record ? {className: 'disabled'} : {})}>
+                      Confirm
+                    </Button>
+                  </div>
+                </Form>
               </div>
           </div>
         </Modal.Body>
@@ -2492,6 +2656,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 <input type="checkbox" name="useToolCursor"
                        checked={this.state.useToolCursor}
                        onChange={this._handleUpdateSettings} /> Use active tool as cursor.
+              </div>
+            </div>
+
+            <hr/>
+
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <b>Node Drag</b>
+              <div>
+                <input type="checkbox" name="enableNodeDrag"
+                       checked={this.state.forceGraphOpts.enableNodeDrag}
+                       onChange={this._handleUpdateSettings} /> Allow node dragging in the force graph.
               </div>
             </div>
               </TabPanel>
