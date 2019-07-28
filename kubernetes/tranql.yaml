@@ -32,7 +32,8 @@ spec:
       - name: APP_PORT
         value: "8001"
       - name: BACKPLANE
-        value: http://tranql-backplane:8099
+#        value: http://tranql-backplane:8099
+        value: http://localhost:8099
     resources:
       requests:
         memory: 200Mi

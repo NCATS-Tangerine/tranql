@@ -4,7 +4,8 @@ WORKDIR /
 RUN apk add nodejs npm git
 WORKDIR /tranql/web
 RUN npm install
-RUN npm run build
+#RUN npm run build
+RUN node --max-old-space-size=4000 ./node_modules/react-scripts/scripts/build.js
 RUN apk del nodejs npm git
 WORKDIR /
 
