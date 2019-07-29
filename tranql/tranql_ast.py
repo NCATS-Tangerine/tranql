@@ -439,6 +439,13 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
+    def decorate(self, element, is_node, schema):
+        # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
+        element["reasoner"] = [schema]
+        # Only edges have the source_database property
+        if not is_node:
+            element["source_database"] = element.get("source_database",["unknown"])
+
     def execute (self, interpreter, context={}):
         """
         Execute all statements in the abstract syntax tree.
@@ -521,9 +528,11 @@ class SelectStatement(Statement):
                     f"query {self.query}. Unable to continue query. Exiting.")
             for response in responses:
                 if 'knowledge_graph' in response:
-                    for element in [*response['knowledge_graph'].get('nodes',[]),*response['knowledge_graph'].get('edges',[])]:
-                        # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
-                        element["reasoner"] = [schema]
+                    for node in response['knowledge_graph'].get('nodes',[]):
+                        self.decorate(node,True,schema)
+                    for edge in response['knowledge_graph'].get('edges',[]):
+                        self.decorate(edge,False,schema)
+
             result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """

@@ -916,7 +916,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _setSchemaViewerActive (active) {
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
-
+    this._configureMessage(this.state.schemaMessage);
+    this._schemaRenderChain.handle (this.state.schemaMessage, this.state);
     this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
@@ -1129,6 +1130,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       },
       selectedNode: {},
       selectedLink: {},
+      dataSources: []
 
     });
     // Automatically switch from schema to graph view when query is run
@@ -1141,7 +1143,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       function success (result) {
         if (result.length > 0) {
           // Translate the knowledge graph given current settings.
-          this._configureMessage (result[0].data);
+          // this._configureMessage (result[0].data);
           this._translateGraph (result[0].data);
         } else {
           // We didn't find it in the cache. Run the query.
@@ -1180,7 +1182,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       // answers is not kgs 0.9 compliant. ... longer story.
                       delete result.answers;
                     }
-                    this._configureMessage (result);
+                    // this._configureMessage (result);
                     this._translateGraph (result);
                     this._cacheWrite (result);
                     this._setSchemaViewerActive(false);
@@ -1290,6 +1292,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _translateGraph (message,noRenderChain) {
+    this._configureMessage(message);
     if (typeof noRenderChain === "undefined") noRenderChain = false;
     message = message ? message : this.state.message;
     if (message) {
@@ -2114,8 +2117,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             this.setState({ loading : false });
             console.log("Annotated result:", result);
             console.log("Current message:", message);
+            // this._configureMessage (result);
             this._translateGraph (result);
-            this._configureMessage (result);
             this._setSchemaViewerActive(false);
           }
         },
@@ -2271,7 +2274,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                                   this.setState({ code : graph.key }, () => {
                                     console.log(JSON.parse(JSON.stringify(graph)));
-                                    this._configureMessage(graph.data);
+                                    // this._configureMessage(graph.data);
 
                                     let noRenderChain = false;
                                     // If it already has a graph (save state was set to true) we should parse it so that it retains its previous state
