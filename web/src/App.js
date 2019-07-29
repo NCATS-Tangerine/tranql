@@ -1171,19 +1171,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     error : result.message
                   });
                 }
-                // If there was no error or if it's just a warning continue on as if nothing happened.
-                // Maybe remove caching on results with warnings?
-                //                if (!result.message || result.status === "Warning") {
-                  /* Convert the knowledge graph to a renderable form. */
-                if (result.answers) {
-                  // answers is not kgs 0.9 compliant. ... longer story.
-                  delete result.answers;
+                if (result.status !== "Error") {
+                  // If there was no error or if it's just a warning continue on as if nothing happened.
+                  // Maybe remove caching on results with warnings?
+                  //                if (!result.message || result.status === "Warning") {
+                    /* Convert the knowledge graph to a renderable form. */
+                    if (result.answers) {
+                      // answers is not kgs 0.9 compliant. ... longer story.
+                      delete result.answers;
+                    }
+                    this._configureMessage (result);
+                    this._translateGraph (result);
+                    this._cacheWrite (result);
+                    this._setSchemaViewerActive(false);
+                    this.setState({ loading : false });
                 }
-                this._configureMessage (result);
-                this._translateGraph (result);
-                this._cacheWrite (result);
-                this._setSchemaViewerActive(false);
-                this.setState({ loading : false });
               },
               // Note: it's important to handle errors here
               // instead of a catch() block so that we don't swallow
