@@ -353,12 +353,16 @@ class DiseaseVocab:
 
 #{% if i < len(list(disease_map.items ())) %},{%
 
-def deep_merge(source, destination):
+def deep_merge(source, destination, no_list_repeat=True):
     for key, value in source.items():
         if isinstance(value, dict):
             # get node or create one
             node = destination.setdefault(key, {})
-            deep_merge(value, node)
+            deep_merge(value, node, no_list_repeat)
+        elif isinstance(value, list) and key in destination:
+            destination[key] = destination[key] + value
+            if no_list_repeat:
+                destination[key] = list(set(destination[key]))
         else:
             destination[key] = value
 

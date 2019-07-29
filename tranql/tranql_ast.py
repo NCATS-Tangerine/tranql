@@ -728,8 +728,8 @@ class SelectStatement(Statement):
                                 exists = True
                                 break
                         if exists:
-                            deep_merge(node,n)
-                            replace_edge_ids.append([n["id"], node["id"]])
+                            replace_edge_ids.append([node["id"], n["id"]])
+                            deep_merge(n,node)
                             break
                     if not exists:
                         node_map[n['id']] = n
