@@ -1,3 +1,5 @@
 ---
 BACKPLANE: http://localhost:8099
 ASYNCHRONOUS_REQUESTS: true
+NAME_BASED_MERGING: true
+RESOLVE_NAMES: false

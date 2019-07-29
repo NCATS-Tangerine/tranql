@@ -75,7 +75,7 @@ arrow = \
         Group(Literal("-[") + concept_name + Literal("]->")) | \
         Group(Literal("<-[") + concept_name + Literal("]-")) | \
         Literal ("->") | \
-        Literal ("<-") 
+        Literal ("<-")
 question_graph_element = (
     concept_name + ZeroOrMore ( LineEnd () )
 ) | \
@@ -160,7 +160,7 @@ class TranQL:
       Generate an abstract syntax tree
       Execute statements in the abstract syntax tree.
     """
-    def __init__(self, backplane="http://localhost:8099", asynchronous=True):
+    def __init__(self, backplane="http://localhost:8099", asynchronous=True, name_based_merging=True, resolve_names=False):
         """ Initialize the interpreter. """
         self.context = Context ()
         config_path = "conf.yml"
@@ -178,9 +178,12 @@ class TranQL:
 
         # If config has arg use, else use constructor arg
         asynchronous = self.config.get('ASYNCHRONOUS_REQUESTS',asynchronous)
+        name_based_merging = self.config.get('NAME_BASED_MERGING',name_based_merging)
+        resolve_names = self.config.get('RESOLVE_NAMES',resolve_names)
 
         self.asynchronous = asynchronous
-        self.resolve_names = False
+        self.name_based_merging = name_based_merging
+        self.resolve_names = resolve_names
 
     def parse (self, program):
         """ If we just want the AST. """
@@ -298,8 +301,10 @@ def main ():
     arg_parser.add_argument('-o', '--output', help="Output destination")
     arg_parser.add_argument('-a', '--arg', help="Output destination",
                             action="append", default=[])
-    # -x is placeholder as '-a' taken; should eventually replace with better fitting letter
-    arg_parser.add_argument('-x', '--asynchronous', default=False, help="Run requests asynchronously with asyncio")
+    # -x is placeholder as '-a' taken; should eventually replace with a more fitting letter
+    arg_parser.add_argument('-x', '--asynchronous', default=True, help="Run requests asynchronously resulting in faster queries")
+    arg_parser.add_argument('-n', '--name_based_merging', default=True, help="Merge nodes that have the same name properties as one another")
+    arg_parser.add_argument('-r', '--resolve_names', default=False, help="(Experimental) Resolve equivalent identifiers of nodes in responses via the Bionames API. Can result in a more thoroughly merged graph.")
     args = arg_parser.parse_args ()
 
     global logger
@@ -315,7 +320,7 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    tranql = TranQL (backplane = args.backplane, asynchronous = args.asynchronous)
+    tranql = TranQL (backplane = args.backplane, asynchronous = args.asynchronous, name_based_merging = args.name_based_merging, resolve_names = args.resolve_names)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")
         tranql.context.set (k, v)

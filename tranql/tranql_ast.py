@@ -579,6 +579,10 @@ class SelectStatement(Statement):
         As of now, this feature should be left disabled as it results in large queries failing due to the flooding of the Bionames API. Additionally, the Bionames class does not use async requests as of now, so it is also quite slow.
         """
         RESOLVE_EQUIVALENT_IDENTIFIERS = interpreter.resolve_names
+        """
+        If True, all nodes that have identical names will be assumed to be identical nodes and will consequently be merged together.
+        """
+        NAME_BASED_MERGING = interpreter.name_based_merging
 
         # result = responses[0] if len(responses) > 0 else None
         result = {
@@ -648,31 +652,32 @@ class SelectStatement(Statement):
         For instances where multiple nodes have the same name, infer that they are equivalent and give each equivalent identifiers to one another.
         Note: this infers that if a node has the same `name` property as another, then it be the other. If this ever becomes untrue, it needs to be updated.
         """
-        node_name_map = {}
-        for response in responses:
-            if 'knowledge_graph' in response:
-                nodes = response['knowledge_graph'].get('nodes',[])
-                for node in nodes:
-                    """
-                    Add to the node_name_map of duplicate names to nodes
-                    """
-                    name = node.get('name',None)
-                    if name not in node_name_map:
-                        node_name_map[name] = [node]
-                    else:
-                        node_name_map[name].append(node)
+        if NAME_BASED_MERGING:
+            node_name_map = {}
+            for response in responses:
+                if 'knowledge_graph' in response:
+                    nodes = response['knowledge_graph'].get('nodes',[])
+                    for node in nodes:
+                        """
+                        Add to the node_name_map of duplicate names to nodes
+                        """
+                        name = node.get('name',None)
+                        if name not in node_name_map:
+                            node_name_map[name] = [node]
+                        else:
+                            node_name_map[name].append(node)
 
-        for i in node_name_map:
-            """
-            Assign every node the equivalent_identifiers property of all other nodes with the same name
-            """
-            nodes = node_name_map[i]
-            all_equivalent_identifiers = []
-            [all_equivalent_identifiers.extend(node['equivalent_identifiers']) for node in nodes]
-            # Filter out all duplicates
-            all_equivalent_identifiers = list(set(all_equivalent_identifiers))
-            for node in nodes:
-                node['equivalent_identifiers'] = all_equivalent_identifiers
+            for i in node_name_map:
+                """
+                Assign every node the equivalent_identifiers property of all other nodes with the same name
+                """
+                nodes = node_name_map[i]
+                all_equivalent_identifiers = []
+                [all_equivalent_identifiers.extend(node['equivalent_identifiers']) for node in nodes]
+                # Filter out all duplicates
+                all_equivalent_identifiers = list(set(all_equivalent_identifiers))
+                for node in nodes:
+                    node['equivalent_identifiers'] = all_equivalent_identifiers
 
 
         # TODO: This probably needs a rewrite. It should just construct an empty Message object and then iterate over the entire list of repsonses normally, rather than having to start with the first and using that as the starting Message object.
