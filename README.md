@@ -4,6 +4,8 @@ TranQL is a query language for interactive exploration of federated knowledge gr
 
 [![Build Status](https://travis-ci.org/NCATS-Tangerine/tranql.svg?branch=master)](https://travis-ci.org/NCATS-Tangerine/tranql)
 
+[![Coverage Status](https://coveralls.io/repos/github/frostyfan109/tranql/badge.svg?branch=master)](https://coveralls.io/github/frostyfan109/tranql?branch=master)
+
 ## Background
 
 Previous [work](https://github.com/NCATS-Tangerine/ros) focused on a workflow language for automating biomedical queries. We've also [prototyped](https://github.com/NCATS-Tangerine/ros/blob/master/ros/wf5/workflow_5_main.cwl) similar workflows using the [Common Workflow Language (CWL)](https://www.commonwl.org/).
