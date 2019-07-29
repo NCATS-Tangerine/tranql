@@ -916,8 +916,18 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _setSchemaViewerActive (active) {
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
-    this._configureMessage(this.state.schemaMessage);
-    this._schemaRenderChain.handle (this.state.schemaMessage, this.state);
+    const msg = active ? this.state.schemaMessage : this.state.message;
+    if (active) {
+      const prevMsg = this.state.message;
+      const prevRecord = this.state.record;
+      this._configureMessage(msg);
+      this.setState({},() => {
+        this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord },()=>this._schemaRenderChain.handle (msg, this.state));
+      });
+    }
+    else {
+      this._translateGraph(msg);
+    }
     this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
       this._fgAdjustCharge (this.state.charge);
     });
@@ -1293,30 +1303,32 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _translateGraph (message,noRenderChain) {
     this._configureMessage(message);
-    if (typeof noRenderChain === "undefined") noRenderChain = false;
-    message = message ? message : this.state.message;
-    if (message) {
-      !noRenderChain && this._renderChain.handle (message, this.state);
-      var worthShowing =
-          !(
-            message.knowledge_graph === undefined || (
-              (
-                message.knowledge_graph.nodes === undefined ||
-                  message.knowledge_graph.edges === undefined
-              ) || (
-                message.knowledge_graph.nodes.length +
-                  message.knowledge_graph.edges.length === 0
-              )
+    this.setState({},() => {
+      if (typeof noRenderChain === "undefined") noRenderChain = false;
+      message = message ? message : this.state.message;
+      if (message) {
+        !noRenderChain && this._renderChain.handle (message, this.state);
+        var worthShowing =
+        !(
+          message.knowledge_graph === undefined || (
+            (
+              message.knowledge_graph.nodes === undefined ||
+              message.knowledge_graph.edges === undefined
+            ) || (
+              message.knowledge_graph.nodes.length +
+              message.knowledge_graph.edges.length === 0
             )
-          );
-      if (!worthShowing) {
-        // We'll display a warning to make sure that the user knows that the query worked but had no results.
-        NotificationManager.warning('The query returned no results', 'Warning', 4000);
+          )
+        );
+        if (!worthShowing) {
+          // We'll display a warning to make sure that the user knows that the query worked but had no results.
+          NotificationManager.warning('The query returned no results', 'Warning', 4000);
+        }
+        this.setState({
+          graph: message.graph
+        }, () => this._findTool.current.updateResults());
       }
-      this.setState({
-        graph: message.graph
-      }, () => this._findTool.current.updateResults());
-    }
+    });
   }
   /**
    * Fetch the schema data for visualization
