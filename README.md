@@ -2,9 +2,7 @@
 
 TranQL is a query language for interactive exploration of federated knowledge graphs.
 
-[![Build Status](https://travis-ci.org/NCATS-Tangerine/tranql.svg?branch=master)](https://travis-ci.org/NCATS-Tangerine/tranql)
-
-[![Coverage Status](https://coveralls.io/repos/github/frostyfan109/tranql/badge.svg?branch=master)](https://coveralls.io/github/frostyfan109/tranql?branch=master)
+[![Build Status](https://travis-ci.org/NCATS-Tangerine/tranql.svg?branch=master)](https://travis-ci.org/NCATS-Tangerine/tranql) [![Coverage Status](https://coveralls.io/repos/github/frostyfan109/tranql/badge.svg?branch=master)](https://coveralls.io/github/frostyfan109/tranql?branch=master)
 
 ## Background
 
