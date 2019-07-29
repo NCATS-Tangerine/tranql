@@ -8,5 +8,3 @@ install:
 # command to run tests
 script:
   - bin/test
-after_success:
-  - bin/test_coverage
