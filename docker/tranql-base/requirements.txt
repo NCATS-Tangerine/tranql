@@ -99,7 +99,6 @@ testpath==0.4.2
 tornado==5.1.1
 tqdm==4.31.1
 traitlets==4.3.2
-tranql==0.11
 twine==1.13.0
 update-checker==0.16
 urllib3==1.24.1
