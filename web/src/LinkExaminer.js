@@ -23,12 +23,16 @@ export default class LinkExaminer extends Component {
               ))
           }
         </div>
-        {
+        {(() => {
           /*
            * <span>{link.source.name.split("_").map(str=>str.charAt(0)).join("").toUpperCase()}</span>
            * <span title={link.target.name} style={{color:link.target.color}}>{link.target.name.slice(0,10)+(link.target.name.length > 10 ? "..." : "")}</span>
            */
-          this.props.link.link.allConnections.map((link, i) => {
+          const link_1 = this.props.link.link;
+          const allConnections = this.props.graph.links.filter((link_2) => {
+            return (link_1.source === link_2.source && link_1.target === link_2.target) || (link_1.source === link_2.target && link_1.target === link_2.source);
+          });
+          return allConnections.map((link, i) => {
             return (
               <div className="link-label" key={i} onClick={(e) => this.props.onLinkClick(link,e)}>
                 <span title={link.source.name} style={{color:link.source.color}}>{link.source.name.slice(0,3).toUpperCase()}</span>
@@ -39,7 +43,7 @@ export default class LinkExaminer extends Component {
               </div>
             );
           })
-        }
+        })()}
       </div>
     );
   }
