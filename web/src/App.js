@@ -1262,6 +1262,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _configureMessage (message,noSetMessageRecord=false) {
     if (message) {
+      if (!message.hasOwnProperty('knowledge_graph')) {
+        message.knowledge_graph = {nodes:[],edges:[]};
+      }
       // Configure node degree range.
       let [dataSources, nodeDegrees] = this._configureMessageLogic(message);
       let cond = {};
@@ -1820,13 +1823,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       onLinkRightClick:this._handleLinkRightClick,
       onNodeRightClick:this._handleNodeRightClick,
       onNodeClick:this._handleNodeClick,
-      onNodeHover:this._handleNodeHover
+      onNodeHover:this._handleNodeHover,
     };
     props = {
       ...defaultProps,
       ...props
-    }
-
+    };
     if (this.state.curvedLinks && (this.state.visMode === '3D' || this.state.visMode === 'VR')) {
       // 2D not supported
       props = {
@@ -1873,7 +1875,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * nodeAutoColorBy="type"
    */
   _renderForceGraph3D (data, props) {
-      return <ForceGraph3D {...props} />
+    return <ForceGraph3D {...props} />
   }
   /**
    * Render in 3D
@@ -1945,6 +1947,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       forceGraphOpts.enableNodeDrag = e.currentTarget.checked;
       this.setState({ forceGraphOpts });
       localStorage.setItem('forceGraphOpts', JSON.stringify (forceGraphOpts));
+      window.location.reload();
     } else if (targetName === 'useToolCursor') {
       this.setState ({ useToolCursor : e.currentTarget.checked });
       localStorage.setItem (targetName, JSON.stringify (e.currentTarget.checked));
@@ -2666,7 +2669,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               <div>
                 <input type="checkbox" name="enableNodeDrag"
                        checked={this.state.forceGraphOpts.enableNodeDrag}
-                       onChange={this._handleUpdateSettings} /> Allow node dragging in the force graph.
+                       onChange={this._handleUpdateSettings} /> Allow node dragging in the force graph (requires refresh).
               </div>
             </div>
               </TabPanel>
@@ -2804,9 +2807,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         });
                       }}
                       queries={this.state.cachedQueries}
-                      title="Cached queries"
+                      title={"Cached queries"+(!this.state.useCache?' (cache disabled)':'')}
                       tools={this.state.cachedQueriesModalTools}
-                      emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries{!this.state.useCache && " (caching is disabled)"}.</div>/>
+                      emptyText=<div style={{fontSize:"17px"}}>You currently have no cached queries.</div>/>
         <AnswerViewer show={true} ref={this._answerViewer} />
         <ReactTooltip place="left"/>
         <header className="App-header" >
@@ -2924,6 +2927,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
                                         return Object.assign({},this.state.selectedNode,{link:graph.links.filter((link)=>link.origin==this.state.selectedNode.link)[0]});
                                       })()}
+                                      graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                       onClose={() => this.setState({ selectedNode : null })}
                                       onLinkClick={(link) => {
                                         if (!this.state.selectMode) {
