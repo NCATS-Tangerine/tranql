@@ -250,6 +250,7 @@ class App extends Component {
         links: 10
       },
       dataSources : [],
+      reasonerSources : [],
 
       charge : -100,
 
@@ -916,27 +917,29 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _setSchemaViewerActive (active) {
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
-    const msg = active ? this.state.schemaMessage : this.state.message;
-    if (active) {
-      const prevMsg = this.state.message;
-      const prevRecord = this.state.record;
-      this._configureMessage(msg);
-      this.setState({},() => {
-        this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord },()=>this._schemaRenderChain.handle (msg, this.state));
+    this.setState({},() => {
+      const msg = active ? this.state.schemaMessage : this.state.message;
+      if (active) {
+        const prevMsg = this.state.message;
+        const prevRecord = this.state.record;
+        this._configureMessage(msg);
+        this.setState({},() => {
+          this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord },()=>this._schemaRenderChain.handle (msg, this.state));
+        });
+      }
+      else {
+        this._translateGraph(msg);
+      }
+      this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
+        this._fgAdjustCharge (this.state.charge);
       });
-    }
-    else {
-      this._translateGraph(msg);
-    }
-    this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
-      this._fgAdjustCharge (this.state.charge);
+      if (this.state.objectViewerEnabled) {
+        let width = this._graphSplitPane.current.splitPane.offsetWidth;
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+        this._updateGraphSize(width);
+      }
+      this.setState({},()=>this._findTool.current.updateResults());
     });
-    if (this.state.objectViewerEnabled) {
-      let width = this._graphSplitPane.current.splitPane.offsetWidth;
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      this._updateGraphSize(width);
-    }
-    this.setState({},()=>this._findTool.current.updateResults());
   }
   /**
    * Highlight or unhighlight a given node or link type
@@ -1128,6 +1131,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Clear the visualization so it's obvious that data from the last query is gone
     // and we're fetching new data for the current query.
     this.setState ({
+      message: null,
       graph : {
         nodes : [],
         links : [],
@@ -1140,9 +1144,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       },
       selectedNode: {},
       selectedLink: {},
-      dataSources: []
+      dataSources: [],
+      reasonerSources: [],
 
     });
+    this.setState({},()=>console.log(this.state.graph));
     // Automatically switch from schema to graph view when query is run
     this._setSchemaViewerActive (false);
     //localStorage.setItem ("code", JSON.stringify (this.state.code));
@@ -1268,7 +1274,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       }
       return result;
     });
-    return [dataSources,nodeDegrees];
+    var reasonerSources = message.knowledge_graph.edges.flatMap ((edge, index) => {
+      return edge.reasoner;
+    }).unique ().flatMap ((reasoner, index) => {
+      var result = [];
+      console.log(reasoner);
+    });
+    return [dataSources,nodeDegrees,reasonerSources];
   }
   /**
    * When noSetMessageRecord is false, it will not set the message and record on the app's state
