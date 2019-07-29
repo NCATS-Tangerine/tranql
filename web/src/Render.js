@@ -163,7 +163,50 @@ class NodeFilter extends Actor {
     message.graph = { nodes : nodes_2, links: links };
   }
 }
+class ReasonerFilter extends Actor {
+  handle (message, context) {
+    const filteredReasoners = context.reasonerSources.filter((reasoner) => !reasoner.checked);
+    const new_nodes = message.graph.nodes.reduce (function (result, node) {
+      const reasoners = node.origin.reasoner;
+      const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
+      if (keep_it) {
+        result.push(node);
+      }
+      return result;
+    }, []);
+    const new_links = message.graph.links.reduce (function (result, link) {
+      const reasoners = link.origin.reasoner;
+      const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
+      if (keep_it) {
+        result.push(link);
+      }
+      return result;
+    }, []);
 
+    console.log(new_nodes,new_links);
+
+    // Get rid of unused links.
+    var node_ids = new_nodes.map ((n, i) => n.id);
+    var links = new_links.reduce ((acc, link) => {
+      if (node_ids.includes (link.target) && node_ids.includes (link.source)) {
+        acc.push (link);
+      }
+      return acc;
+    }, []);
+    // Filter unreferenced nodes.
+    var nodes_2 = new_nodes.reduce ((acc, node) => {
+      var count = links.reduce ((lacc, link) => {
+        return link.source === node.id || link.target === node.id ? lacc + 1 : lacc;
+      }, 0);
+      if (count > 0) {
+        acc.push (node);
+      }
+      return acc;
+    }, []);
+
+    message.graph = { nodes : nodes_2, links: links };
+  }
+}
 class SourceDatabaseFilter extends Actor {
   handle (message, context) {
     // Filter edges by source database:
@@ -208,7 +251,7 @@ class SourceDatabaseFilter extends Actor {
         }
         return result;
       }, [])
-    }
+    };
   }
 }
 class LegendFilter extends Actor {
@@ -423,6 +466,7 @@ export {
   LegendFilter,
   LinkFilter,
   NodeFilter,
+  ReasonerFilter,
   SourceDatabaseFilter,
   CurvatureAdjuster
 }

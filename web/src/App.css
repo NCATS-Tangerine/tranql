@@ -463,6 +463,9 @@ body {
     height: 95%;
     /*max-height: 95%; */
 }
+.checkbox-container > *:first-child {
+  margin-top:5px;
+}
 #appControlContainer {
   display:flex;
   flex-direction:column;

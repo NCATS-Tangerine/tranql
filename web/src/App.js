@@ -45,7 +45,7 @@ import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
 import GraphSerializer from './GraphSerializer.js';
-import { RenderInit, RenderSchemaInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
+import { RenderInit, RenderSchemaInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, ReasonerFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
 import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
@@ -608,8 +608,11 @@ class App extends Component {
                     by greatest to least quantity within the graph, thus, it results in the least-present types being filtered out of the legend.</p>
                 </TabPanel>
                 <TabPanel>
-                  <h6>Sources</h6>
+                  <h6>Database Sources</h6>
                     <p>When a query is active, this setting will be populated with checkboxes for all source databases that the query was constructed from.
+                    You can then disable sources to filter them out of the graph.</p>
+                  <h6>Reasoner Sources</h6>
+                    <p>When a query is active, this setting will be populated with checkboxes for all source reasoners that the query was constructed from.
                     You can then disable sources to filter them out of the graph.</p>
                 </TabPanel>
               </Tabs>
@@ -778,6 +781,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
      */
     this._renderChain = new Chain ([
       new RenderInit (),
+      new ReasonerFilter (),
       new IdFilter (),
       new LinkFilter (),
       new NodeFilter (),
@@ -790,6 +794,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._schemaRenderChain = new Chain ([
       new RenderSchemaInit (),
       new RenderInit (),
+      new ReasonerFilter(),
       new IdFilter (),
       new NodeFilter (),
       new LegendFilter (),
@@ -928,6 +933,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         });
       }
       else {
+        this._configureMessage(msg);
         this._translateGraph(msg);
       }
       this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
@@ -1159,7 +1165,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       function success (result) {
         if (result.length > 0) {
           // Translate the knowledge graph given current settings.
-          // this._configureMessage (result[0].data);
+          this._configureMessage (result[0].data);
           this._translateGraph (result[0].data);
         } else {
           // We didn't find it in the cache. Run the query.
@@ -1268,7 +1274,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       if (typeof source == "string") {
         result.push ({ checked : true, label : source });
       } else if (Array.isArray(source)) {
-        result = source.map ((s, index) => {
+        result = source.map ((s) => {
           return { checked : true, label : s };
         });
       }
@@ -1278,7 +1284,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       return edge.reasoner;
     }).unique ().flatMap ((reasoner, index) => {
       var result = [];
-      console.log(reasoner);
+      if (typeof reasoner == "string") {
+        result.push ({ checked : true, label : reasoner });
+      } else if (Array.isArray(reasoner)) {
+        result = reasoner.map ((r) => {
+          return { checked : true, label : r };
+        });
+      }
+      return result;
     });
     return [dataSources,nodeDegrees,reasonerSources];
   }
@@ -1292,7 +1305,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         message.knowledge_graph = {nodes:[],edges:[]};
       }
       // Configure node degree range.
-      let [dataSources, nodeDegrees] = this._configureMessageLogic(message);
+      let [dataSources, nodeDegrees, reasonerSources] = this._configureMessageLogic(message);
       let cond = {};
       if (!noSetMessageRecord) {
         cond.message = message;
@@ -1300,6 +1313,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       }
       this.setState({
         dataSources : dataSources,
+        reasonerSources : reasonerSources,
         nodeDegreeMax : nodeDegrees[0],
         nodeDegreeRange : [ 0, nodeDegrees[0] ],
         ...cond
@@ -1314,7 +1328,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _translateGraph (message,noRenderChain) {
-    this._configureMessage(message);
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
       message = message ? message : this.state.message;
@@ -2005,23 +2018,31 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this._translateGraph ();
     }
   }
-  _toggleCheckbox(index) {
-    const checkboxes = this.state.dataSources;
+  _toggleCheckbox(stateKey, index) {
+    const checkboxes = this.state[stateKey];
     checkboxes[index].checked = !checkboxes[index].checked;
-    this.setState({
-      checkboxes : checkboxes
-    });
-    this._translateGraph ();
+    const obj = {};
+    obj[stateKey] = checkboxes;
+    this.setState(obj);
+
+    const schemaActive = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
+    const msg = schemaActive ? this.state.schemaMessage : this.state.message;
+    if (schemaActive) {
+      this._schemaRenderChain.handle (msg, this.state);
+      this.setState({ schema : msg.graph });
+    }
+    else {
+      this._translateGraph(msg);
+    }
   }
-  _renderCheckboxes() {
-    const checkboxes = this.state.dataSources;
-    return checkboxes.map((checkbox, index) =>
+  _renderCheckboxes(stateKey) {
+    return this.state[stateKey].map((checkbox, index) =>
             <div key={index}>
                 <label>
                     <input
                         type="checkbox"
                         checked={checkbox.checked}
-                        onChange={this._toggleCheckbox.bind(this, index)}
+                        onChange={()=>this._toggleCheckbox(stateKey, index)}
                     />
                     {checkbox.label}
                 </label>
@@ -2141,7 +2162,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             this.setState({ loading : false });
             console.log("Annotated result:", result);
             console.log("Current message:", message);
-            // this._configureMessage (result);
+            this._configureMessage (result);
             this._translateGraph (result);
             this._setSchemaViewerActive(false);
           }
@@ -2306,6 +2327,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                       noRenderChain = true;
                                       graph.data.graph = GraphSerializer.parse(graph.data.graph);
                                     }
+                                    this._configureMessage(graph.data);
                                     this._translateGraph(graph.data, noRenderChain);
                                     options.cacheGraph === true && this._cacheWrite(graph.data);
                                   });
@@ -2714,7 +2736,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                    defaultValue={this.state.nodeDegreeRange}
                    onChange={this._onNodeDegreeRangeChange}
                    max={this.state.nodeDegreeMax}/>
-            <br/>
+            <hr/>
             <b>Force Graph Charge</b><br/>
             Set the charge force on the active graph<br/>
             <Form>
@@ -2724,7 +2746,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               onChange={this._onChargeChange}
               onKeyDown={(e) => {if (e.keyCode === 13) e.preventDefault();}}
               />
-            </Form><br/>
+            </Form>
+            <hr/>
 
             <b>Legend Display Limit ({this.state.schemaViewerActive && this.state.schemaViewerEnabled ? "schema" : "graph"})</b><br/>
             <Form>
@@ -2749,8 +2772,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             <br/>
               </TabPanel>
               <TabPanel>
-            <b>Sources</b> Filter graph edges by source database. Deselecting a database deletes all associations from that source.
-            {this._renderCheckboxes()}
+            <b>Database Sources</b><span> Filter graph edges by source database. Deselecting a database deletes all associations from that source.</span>
+            <div className="checkbox-container">{this._renderCheckboxes('dataSources')}</div>
+            <hr/>
+            <b>Reasoner Sources</b><span> Filter graph elements by source reasoner. Deselecting a reasoner deletes all associations from that source.</span>
+            <div className="checkbox-container">{this._renderCheckboxes('reasonerSources')}</div>
               </TabPanel>
             </Tabs>
           </Modal.Body>
