@@ -315,8 +315,16 @@ class LegendFilter extends Actor {
         let type = obj[0];
 
         let color;
-
-        if (index >= colors.length) {
+        if (!context.colorGraph) {
+          // Links should be a slightly different color
+          if (elementType === "links") {
+            color = "#c0c0c0";
+          }
+          else {
+            color = "#808080";
+          }
+        }
+        else if (index >= colors.length) {
           // If run out of colors, start recycling but shift the hues down. Make sure to shift the hues. Ensure that after multiple times iterating colors you continue to shift more.
           // Note - this method runs out of colors and starts cycling after hue has been shifted over 360
           let cycles = Math.ceil(index/colors.length);

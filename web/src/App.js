@@ -2936,14 +2936,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   linkTypeRenderAmount={this.state.queryLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   onContextMenu={this._legendButtonRightClick}
-                  render={(!this.state.schemaViewerActive || !this.state.schemaViewerEnabled) && this.state.colorGraph}/>
+                  render={!this.state.schemaViewerActive || !this.state.schemaViewerEnabled}/>
           <Legend typeMappings={this.state.schema.typeMappings}
                   hiddenTypes={this.state.schema.hiddenTypes}
                   nodeTypeRenderAmount={this.state.schemaLegendRenderAmount.nodes}
                   linkTypeRenderAmount={this.state.schemaLegendRenderAmount.links}
                   callback={this._updateGraphElementVisibility}
                   onContextMenu={this._legendButtonRightClick}
-                  render={this.state.schemaViewerActive && this.state.schemaViewerEnabled && this.state.colorGraph}/>
+                  render={this.state.schemaViewerActive && this.state.schemaViewerEnabled}/>
           <div id="graph"></div>
           <div id="viewContainer">
             {
