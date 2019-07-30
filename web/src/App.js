@@ -1733,7 +1733,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
       newMessage = this.state.schemaMessage;
       // newMessage.hiddenTypes = graph.hiddenTypes;
-      this._configureMessage(newMessage,true);
+      // this._configureMessage(newMessage,true);
       this.setState({},() => {
         this._schemaRenderChain.handle(newMessage, this.state);
         this.setState({ schema : newMessage.graph });
@@ -1743,7 +1743,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     else {
       newMessage = this.state.message;
       // newMessage.hiddenTypes = graph.hiddenTypes;
-      this._configureMessage(newMessage);
+      // this._configureMessage(newMessage);
       this.setState({}, () => {
         this._translateGraph();
       });

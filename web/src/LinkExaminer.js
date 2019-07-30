@@ -13,14 +13,18 @@ export default class LinkExaminer extends Component {
         </div>
         <div className="link-examiner-header-info">
           {
-            [this.props.link.link.source, this.props.link.link.target]
+            (() => {
+              const ids = [this.props.link.link.origin.source_id, this.props.link.link.origin.target_id];
+              const nodes = this.props.graph.nodes.filter((n) => ids.includes(n.id));
+              return nodes
               .sort((a,b)=>a.name.localeCompare(b.name))
               .map((node,i) => (
                 <div className="header-node" key={i}>
-                  <FaCircle color={node.color}/>
-                  <span>{node.name}</span>
+                <FaCircle color={node.color}/>
+                <span>{node.name}</span>
                 </div>
               ))
+            })()
           }
         </div>
         {(() => {
@@ -33,13 +37,15 @@ export default class LinkExaminer extends Component {
             return (link_1.source === link_2.source && link_1.target === link_2.target) || (link_1.source === link_2.target && link_1.target === link_2.source);
           });
           return allConnections.map((link, i) => {
+            const source_node = this.props.graph.nodes.filter((n)=>n.id===link.origin.source_id)[0];
+            const target_node = this.props.graph.nodes.filter((n)=>n.id===link.origin.target_id)[0];
             return (
               <div className="link-label" key={i} onClick={(e) => this.props.onLinkClick(link,e)}>
-                <span title={link.source.name} style={{color:link.source.color}}>{link.source.name.slice(0,3).toUpperCase()}</span>
+                <span title={source_node.name} style={{color:source_node.color}}>{source_node.name.slice(0,3).toUpperCase()}</span>
                 <FaLongArrowAltRight/>
                 <span className="link-label-text" style={{color:link.color}}>{link.type.join()}</span>
                 <FaLongArrowAltRight/>
-                <span title={link.target.name} style={{color:link.target.color}}>{link.target.name.slice(0,3).toUpperCase()}</span>
+                <span title={target_node.name} style={{color:target_node.color}}>{target_node.name.slice(0,3).toUpperCase()}</span>
               </div>
             );
           })

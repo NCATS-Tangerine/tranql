@@ -319,7 +319,8 @@ class SelectStatement(Statement):
         self.query.disable = True # = Query ()
         return statements
 
-    def format_constraints(self,schema):
+    def format_constraints(self):
+        schema = self.getSchemaName()
         for enum, constraint in enumerate(self.where):
             """ Add constraints, if they apply to this schema. """
             name, op, val = constraint
@@ -448,6 +449,14 @@ class SelectStatement(Statement):
         if not is_node:
             element["source_database"] = element.get("source_database",["unknown"])
 
+    def getSchemaName(self):
+        schema = None
+        for s in self.planner.schema.config["schema"]:
+            if self.planner.schema.config["schema"][s]["url"] == self.service:
+                schema = s
+                break
+        return schema
+
     def execute (self, interpreter, context={}):
         """
         Execute all statements in the abstract syntax tree.
@@ -461,13 +470,8 @@ class SelectStatement(Statement):
         else:
             """ We want to find what schema name corresponds to the url we are querying.
             Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces'). """
-            schema = None
-            for s in self.planner.schema.config["schema"]:
-                if self.planner.schema.config["schema"][s]["url"] == self.service:
-                    schema = s
-                    break
 
-            self.format_constraints(schema)
+            self.format_constraints()
 
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)

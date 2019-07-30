@@ -252,6 +252,44 @@ def test_ast_generate_questions (requests_mock):
     questions = ast.statements[0].generate_questions (app)
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
+def test_ast_format_constraints (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    """ Validate that
+            -- The syntax to pass values to reasoners in the where clause (e.g. "icees.foo = bar") functions properly
+    """
+    print("test_ast_format_constraints ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT population_of_individual_organisms->chemical_substance
+          FROM "/clinical/cohort/disease_to_chemical_exposure"
+         WHERE icees.should_format = 1
+           AND robokop.should_not_format = 0
+    """)
+    select = ast.statements[0]
+    select.format_constraints()
+    print(select.where)
+    assert_lists_equal(select.where, [
+        ['should_format', '=', 1],
+        ['should_format', '=', 1],
+        ['robokop.should_not_format', '=', 0],
+        ['robokop.should_not_format', '=', 0]
+    ])
+def test_ast_backwards_arrow (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    print("test_ast_backwards_arrow ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT gene->biological_process<-microRNA
+          FROM "/schema"
+    """)
+    select = ast.statements[0]
+    statements = select.plan (select.planner.plan (select.query))
+    backwards_questions = statements[1].generate_questions(tranql)
+
+    assert len(backwards_questions) == 1
+    assert len(backwards_questions[0]["question_graph"]["edges"]) == 1
+    assert backwards_questions[0]["question_graph"]["edges"][0]["source_id"] == "microRNA"
+    assert backwards_questions[0]["question_graph"]["edges"][0]["target_id"] == "biological_process"
 
 def test_ast_merge_results (requests_mock):
     set_mock(requests_mock, "workflow-5")
