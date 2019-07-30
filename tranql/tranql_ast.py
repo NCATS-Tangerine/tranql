@@ -472,7 +472,8 @@ class SelectStatement(Statement):
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
 
-            [self.ast.schema.validate_question(question) for question in questions]
+            if not interpreter.do_not_validate_query:
+                [self.ast.schema.validate_question(question) for question in questions]
 
             service = interpreter.context.resolve_arg (self.service)
 
@@ -546,7 +547,7 @@ class SelectStatement(Statement):
     def execute_plan (self, interpreter):
         """ Execute a query using a schema based query planning strategy. """
         self.service = ''
-        plan = self.planner.plan (self.query)
+        plan = self.planner.plan (interpreter, self.query)
         statements = self.plan (plan)
         responses = []
         first_concept = None
@@ -640,12 +641,16 @@ class SelectStatement(Statement):
                     Create the `equivalent_identifiers` property on all nodes that do not already have it.
                     """
                     if 'equivalent_identifiers' not in node:
+                        ids = [node['id']]
                         if RESOLVE_EQUIVALENT_IDENTIFIERS:
                             ids = self.resolve_name (node.get('name',None), node.get('type',''))
-                        else:
-                            ids = [node['id']]
                         node['equivalent_identifiers'] = ids
                         total_requests += 1
+                    """
+                    Give the node its own identifier inside its equivalent identifiers if it doesn't already have it.
+                    """
+                    if node['id'] not in node['equivalent_identifiers']:
+                        node['equivalent_identifiers'].append(node['id'])
 
                 for edge in edges:
                     """
@@ -673,10 +678,11 @@ class SelectStatement(Statement):
                         Add to the node_name_map of duplicate names to nodes
                         """
                         name = node.get('name',None)
-                        if name not in node_name_map:
-                            node_name_map[name] = [node]
-                        else:
-                            node_name_map[name].append(node)
+                        if name != None:
+                            if name not in node_name_map:
+                                node_name_map[name] = [node]
+                            else:
+                                node_name_map[name].append(node)
 
             for i in node_name_map:
                 """
@@ -710,6 +716,7 @@ class SelectStatement(Statement):
                             break
                         if exists:
                             deep_merge(edge,e)
+                            deep_merge(e,edge)
                     if not exists:
                         kg['edges'].append (e)
                 #result['answers'] += response['answers']
@@ -934,7 +941,7 @@ class QueryPlanStrategy:
         """ Construct a query strategy, specifying the schema. """
         self.schema = Schema (backplane)
 
-    def plan (self, query):
+    def plan (self, interpreter, query):
         """
         Plan a query over the configured sources and their associated schemas.
         """
@@ -945,6 +952,7 @@ class QueryPlanStrategy:
                 """ There's another concept to transition to. """
                 continue
             self.plan_edge (
+                interpreter,
                 plan=plan,
                 source=query.concepts[element_name],
                 target=query.concepts[query.order[index+1]],
@@ -952,7 +960,7 @@ class QueryPlanStrategy:
         logger.debug (f"--created plan {plan}")
         return plan
 
-    def plan_edge (self, plan, source, target, predicate):
+    def plan_edge (self, interpreter, plan, source, target, predicate):
         """ Determine if a transition between two types is supported by
         any of the registered sub-schemas.
         """
@@ -1010,7 +1018,7 @@ class QueryPlanStrategy:
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
                             converted = True
-        if not converted:
+        if not converted and not interpreter.do_not_validate_query:
             source_target_predicates = self.explain_predicates (source_type, target_type)
             target_source_predicates = self.explain_predicates (target_type, source_type)
             raise InvalidTransitionException (

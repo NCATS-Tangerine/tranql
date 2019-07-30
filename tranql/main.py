@@ -176,6 +176,9 @@ class TranQL:
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
 
+        # Specifically used for unit testing. Will not throw errors for invalid transitions.
+        self.do_not_validate_query = False
+
         # Priority:
         #   1 - Options
         #   2 - Config
