@@ -1135,6 +1135,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _executeQuery () {
     console.log ("--query: ", this.state.code);
+    localStorage.setItem ('code', this.state.code);
     // Clear the visualization so it's obvious that data from the last query is gone
     // and we're fetching new data for the current query.
     this.setState ({
@@ -1188,12 +1189,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 result = JSON5.parse(result);
                 console.log (result);
 
-                if (result.message) {
-                  this._handleMessageDialog (result.status, result.message, result.details);
-                  console.log ("--error: " + result.message);
+                if (result.errors) {
+                  this._handleMessageDialog (result.status, result.errors);
+                  console.log ("--error: " + result.errors);
                   this.setState ({
                     loading : false,
-                    error : result.message
+                    error : result.errors
                   });
                 }
                 if (result.status !== "Error") {
@@ -1254,7 +1255,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            this.setState ({
                              record : result
                            });
-                           localStorage.setItem ('code', obj.key);
                            this._updateCacheViewer ();
                          });
         }).catch ((error) => {
@@ -1383,9 +1383,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              .then((res) => res.json())
              .then(
                (result) => {
-                 if (result.message) {
-                   this._handleMessageDialog (result.status, result.message, result.details);
-                   console.log ("--error: " + result.message);
+                 if (result.errors) {
+                   this._handleMessageDialog (result.status, result.errors);
+                   console.log ("--error: " + result.errors);
                  }
                  if (result.answers) {
                    delete result.answers;
@@ -1958,16 +1958,41 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       });
     }
   }
+  /**
+   * Handles error messages
+   *
+   * @param {String} title - Title of the modal (e.g. "Error" or "Warning")
+   * @param {Object[]|String} - Either an array of objects containing the properties "message" and "details" or a string for the message of a single error.
+   * @param {undefined|String} - If the `message` argument is a string, this should be a string for the details of a single error. Otherwise, it must be left undefined.
+   *
+   * @private
+   */
   _handleMessageDialog (title, message, details) {
     // Should make this a single field such as `activeModal`
     this.setState({
       showSettingsModal: false,
       showTypeChart: false,
       showHelpModal: false,
+      showToolbarHelpModal : false,
+      showImportExportModal : false
     });
     this._exampleQueriesModal.current.hide();
+    this._answerViewer.current.handleHide();
 
-    this._messageDialog.current.handleShow (title, message, details === undefined ? "" : details);
+    if (!Array.isArray(message)) {
+      message = [{
+        message: message,
+        details: details
+      }];
+    }
+    else if (details !== undefined) {
+      // Is array and details is defined (details should be in objects within message array)
+      throw new Error(`
+        Invalid arguments for _handleMessageDialog, message must be a string for details to be defined.
+        Otherwise, message should be an array of objects containing the properties "message" and "details".`);
+    }
+
+    this._messageDialog.current.handleShow (title, message);
   }
   /**
    * Take appropriate actions on the closing of the modal settings dialog.
@@ -2138,12 +2163,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }).then(res => res.json())
       .then(
         (result) => {
-          if (result.message) {
-            this._handleMessageDialog (result.status, result.message, result.details);
-            console.log ("--error: " + result.message);
+          if (result.errors) {
+            this._handleMessageDialog (result.status, result.errors);
+            console.log ("--error: " + result.errors);
             this.setState ({
               loading : false,
-              error : result.message
+              error : result.errors
             });
           } else {
             for (let type in result.knowledge_graph) {

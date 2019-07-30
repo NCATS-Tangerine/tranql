@@ -53,25 +53,26 @@ class StandardAPIResource(Resource):
             logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
     def handle_exception (self, e, warning=False):
-        result = {}
+        result = {"errors": []}
         if isinstance (e, list):
-            result = {
+            result["errors"].append({
                 "message" : "\n\n".join([str(exception) for exception in e]),
                 "details" : "\n\n".join([(str(exception.details) if hasattr(exception,'details') else '') for exception in e])
-            }
+            })
         elif isinstance (e, TranQLException):
-            result = {
+            result["errors"].append({
                 "message" : str(e),
                 "details" : e.details if e.details else ''
-            }
+            })
         elif isinstance (e, Exception):
-            traceback.print_exc ()
-            result = {
+            result["errors"].append({
                 "message" : str(e),
                 "details" : ''
-            }
+            })
         elif isinstance (e, str):
-            result = self.handle_exception(Exception(e))
+            result["errors"].extend(self.handle_exception(Exception(e))["errors"])
+
+        traceback.print_exc ()
 
         if warning:
             result["status"] = "Warning"

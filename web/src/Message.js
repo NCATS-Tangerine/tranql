@@ -10,23 +10,43 @@ class Message extends Component {
     this.state = {
       show: false,
       title: "",
-      message: null,
-      details: null,
+      errors: [],
     };
     this.handleHide = () => {
       this.setState({ show: false });
     };
     this.handleShow = this.handleShow.bind (this);
   }
-  handleShow (title, message, details) {
-    if (typeof message !== 'undefined' && typeof details !== 'undefined') {
+  handleShow (title, errors) {
+    if (typeof errors !== 'undefined') {
+      errors.forEach((error) => {
+        const { message, details } = error;
+        if (details === undefined) details = "There is no advanced information about this error.";
+        error.message = typeof message === "string" ? message.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : message;
+        error.details = typeof details === "string" ? details.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : details;
+      })
       this.setState({
         show: true,
         title : title,
-        message : typeof message === "string" ? message.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : message,
-        details : typeof details === "string" ? details.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : details,
+        errors : errors
       });
     }
+  }
+  _errorTab(error) {
+    return (
+      <Tabs>
+        <TabList>
+          <Tab><b>Message</b></Tab>
+          <Tab><b>Advanced</b></Tab>
+        </TabList>
+        <TabPanel>
+          {error.message}
+        </TabPanel>
+        <TabPanel>
+          {error.details}
+        </TabPanel>
+      </Tabs>
+    )
   }
   render() {
     return (
@@ -43,22 +63,31 @@ class Message extends Component {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Tabs>
-              <TabList>
-                <Tab><b>Message</b></Tab>
-                <Tab><b>Advanced</b></Tab>
-              </TabList>
-              <TabPanel>
-                {this.state.message}
-                <br/>
-                <br/>
-              </TabPanel>
-              <TabPanel>
-                {this.state.details}
-                <br/>
-                <br/>
-              </TabPanel>
-            </Tabs>
+            {
+              // It looks really ugly to have the nested tags when there's only one error so we'll get rid of them for a single error.
+              this.state.errors.length > 1 ?
+              (
+                <Tabs>
+                  <TabList>
+                    {
+                      this.state.errors.map((error,i) => (
+                        <Tab key={i}>Error {i+1}</Tab>
+                      ))
+                    }
+                  </TabList>
+                  {
+                    this.state.errors.map((error,i) => (
+                      <TabPanel key={i}>
+                        {this._errorTab(error)}
+                      </TabPanel>
+                    ))
+                  }
+                </Tabs>
+              )
+              :
+              // We don't want to create an error tab when there are no errors
+              (this.state.errors.length > 0 ? this._errorTab(this.state.errors[0]) : null)
+            }
           </Modal.Body>
         </Modal>
       </>
