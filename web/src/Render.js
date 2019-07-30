@@ -16,7 +16,7 @@ class RenderInit extends Actor {
             origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
-          var weight = edge.weight === undefined ? null : Math.round (edge.weight * 100) / 100;
+          var weight = edge.weight === undefined ? 0.5 : Math.round (edge.weight * 100) / 100;
           var opacity = (100 - (100 * weight) ) / 100;
           return {
             source: edge.source_id,

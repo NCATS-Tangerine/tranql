@@ -1376,12 +1376,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              const prevMsg = this.state.message;
              const prevRecord = this.state.record;
              this._configureMessage(msg);
-             this.setState({},() => {
-               this.setState({ schemaLoaded : true, message : prevMsg, schemaMessage : msg, record : prevRecord }, () => {
-                 this._schemaRenderChain.handle (msg, this.state);
-                 this.state.schemaViewerActive && this._setSchemaViewerActive(true);
-               });
-             });
+             this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord });
+             this._schemaRenderChain.handle (msg, this.state);
+             this.setState({ schemaLoaded : true, schema : msg.graph });
+             this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
                method: "GET"
@@ -1402,24 +1400,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  const prevMsg = this.state.message;
                  const prevRecord = this.state.record;
                  this._configureMessage(result.schema);
-                 this.setState({},() => {
-                   this.setState({ schemaLoaded : true, message : prevMsg, schemaMessage : result.schema, record : prevRecord }, ()=> {
-                     this._schemaRenderChain.handle (result.schema, this.state);
-                     result.schema.graph.links.forEach((link) => {
-                       // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
-                       delete link.linkOpacity;
-                     });
+                 this.setState({ message : prevMsg, schemaMessage : result.schema, record : prevRecord });
+                 this._schemaRenderChain.handle (result.schema, this.state);
+                 result.schema.graph.links.forEach((link) => {
+                   // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
+                   delete link.linkOpacity;
+                 });
 
-                     this.setState({ schema : result.schema.graph, schemaMessage : result.schema });
-                     this.state.schemaViewerActive && this._setSchemaViewerActive(true);
+                 this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
+                 this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
-                     let { graph, hiddenTypes, ...schemaCachedMessage } = result.schema;
+                 let { graph, hiddenTypes, ...schemaCachedMessage } = result.schema;
 
-                     this._cache.write ('schema', {
-                       'id' : 0,
-                       'data' : schemaCachedMessage
-                     });
-                   });
+                 this._cache.write ('schema', {
+                   'id' : 0,
+                   'data' : schemaCachedMessage
                  });
                }
              );
