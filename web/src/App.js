@@ -1331,9 +1331,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _translateGraph (message,noRenderChain) {
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
-      message = message ? message : this.state.message;
+      const isSchema = this.state.schemaViewerEnabled && this.state.schemaViewerActive;
+      message = message ? message : (isSchema ? this.state.schemaMessage : this.state.message);
       if (message) {
-        !noRenderChain && this._renderChain.handle (message, this.state);
+        if (!noRenderChain) {
+          isSchema ? this._schemaRenderChain.handle (message, this.state) : this._renderChain.handle (message, this.state);
+        }
         var worthShowing =
         !(
           message.knowledge_graph === undefined || (
@@ -1350,9 +1353,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           // We'll display a warning to make sure that the user knows that the query worked but had no results.
           NotificationManager.warning('The query returned no results', 'Warning', 4000);
         }
-        this.setState({
-          graph: message.graph
-        }, () => this._findTool.current.updateResults());
+        let graphStateObj = isSchema ? { schema : message.graph } : { graph : message.graph };
+        this.setState(graphStateObj, () => this._findTool.current.updateResults());
       }
     });
   }
