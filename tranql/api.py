@@ -182,16 +182,19 @@ class TranQLQuery(StandardAPIResource):
         ---
         tag: validation
         description: TranQL Query
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            query:
-                                type: string
+        parameters:
+            - in: query
+              name: query
+              schema:
+                type: string
+              description: A TranQL query
+            - in: query
+              name: dynamicIdResolution
+              schema:
+                type: boolean
+              required: false
+              default: false
+              description: Specifies if dynamic id lookup of curies will be performed
         responses:
             '200':
                 description: Success
@@ -210,11 +213,17 @@ class TranQLQuery(StandardAPIResource):
         """
         #self.validate (request)
         result = {}
-        tranql = TranQL ()
         try:
             logging.debug (request.json)
-            query = request.json['query'] if 'query' in request.json else ''
+
+            query = request.json.get('query','')
+            dynamicIdResolution = request.json.get('dynamicIdResolution',False)
             logging.debug (f"--> query: {query}")
+            
+            tranql = TranQL (options = {
+                "dynamic_id_resolution" : dynamicIdResolution
+            })
+
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")

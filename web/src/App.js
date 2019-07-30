@@ -215,6 +215,7 @@ class App extends Component {
     // Configure initial state.
     this.state = {
       code : "select chemical_substance->gene->disease\n  from \"/graph/gamma/quick\"\n where disease=\"asthma\"",
+      dynamicIdResolution: true,
 
       // Concept model concepts and relations.
       modelConcepts : [],
@@ -1181,7 +1182,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               'Content-Type': 'application/json',
             },
             body: JSON.stringify ({
-              'query' : this.state.code
+              'query' : this.state.code,
+              'dynamicIdResolution' : this.state.dynamicIdResolution
             })
           }).then(res => res.text())
             .then(
@@ -2012,7 +2014,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _handleUpdateSettings (e) {
     var targetName = e.currentTarget.name;
     console.log ("--update settings: " + targetName);
-    if (targetName === 'enableNodeDrag') {
+    if (targetName === 'dynamicIdResolution') {
+      this.setState({ dynamicIdResolution : e.currentTarget.checked });
+      localStorage.setItem (targetName, JSON.stringify (e.currentTarget.checked));
+    } else if (targetName === 'enableNodeDrag') {
       const forceGraphOpts = this.state.forceGraphOpts;
       forceGraphOpts.enableNodeDrag = e.currentTarget.checked;
       this.setState({ forceGraphOpts });
@@ -2730,6 +2735,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               </div>
             </div>
 
+            {
+            /* Really *bad* feature...
             <hr/>
 
             <div style={{display:"flex",flexDirection:"column"}}>
@@ -2740,6 +2747,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                        onChange={this._handleUpdateSettings} /> Use active tool as cursor.
               </div>
             </div>
+            */
+            }
 
             <hr/>
 
@@ -2749,6 +2758,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 <input type="checkbox" name="enableNodeDrag"
                        checked={this.state.forceGraphOpts.enableNodeDrag}
                        onChange={this._handleUpdateSettings} /> Allow node dragging in the force graph (requires refresh).
+              </div>
+            </div>
+
+            <hr/>
+
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <b>Dynamic ID Resolution</b>
+              <div>
+                <input type="checkbox" name="dynamicIdResolution"
+                       checked={this.state.dynamicIdResolution}
+                       onChange={this._handleUpdateSettings} /> Enables dynamic id lookup of curies.
               </div>
             </div>
               </TabPanel>

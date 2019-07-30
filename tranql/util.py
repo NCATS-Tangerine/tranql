@@ -360,9 +360,12 @@ def deep_merge(source, destination, no_list_repeat=True):
             node = destination.setdefault(key, {})
             deep_merge(value, node, no_list_repeat)
         elif isinstance(value, list) and key in destination:
-            destination[key] = destination[key] + value
-            if no_list_repeat:
-                destination[key] = list(set(destination[key]))
+            try:
+                destination[key] = destination[key] + value
+                if no_list_repeat:
+                    destination[key] = list(set(destination[key]))
+            except:
+                pass
         else:
             destination[key] = value
 

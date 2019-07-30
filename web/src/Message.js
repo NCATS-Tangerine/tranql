@@ -20,7 +20,7 @@ class Message extends Component {
   handleShow (title, errors) {
     if (typeof errors !== 'undefined') {
       errors.forEach((error) => {
-        const { message, details } = error;
+        let { message, details } = error;
         if (details === undefined) details = "There is no advanced information about this error.";
         error.message = typeof message === "string" ? message.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : message;
         error.details = typeof details === "string" ? details.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : details;

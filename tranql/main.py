@@ -160,7 +160,7 @@ class TranQL:
       Generate an abstract syntax tree
       Execute statements in the abstract syntax tree.
     """
-    def __init__(self, backplane="http://localhost:8099", asynchronous=True, name_based_merging=True, resolve_names=False):
+    def __init__(self, backplane="http://localhost:8099", options={}):
         """ Initialize the interpreter. """
         self.context = Context ()
         config_path = "conf.yml"
@@ -176,14 +176,15 @@ class TranQL:
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
 
-        # If config has arg use, else use constructor arg
-        asynchronous = self.config.get('ASYNCHRONOUS_REQUESTS',asynchronous)
-        name_based_merging = self.config.get('NAME_BASED_MERGING',name_based_merging)
-        resolve_names = self.config.get('RESOLVE_NAMES',resolve_names)
+        # Priority:
+        #   1 - Options
+        #   2 - Config
+        #   3 - Default
 
-        self.asynchronous = asynchronous
-        self.name_based_merging = name_based_merging
-        self.resolve_names = resolve_names
+        self.asynchronous = options.get("asynchronous", self.config.get('ASYNCHRONOUS_REQUESTS', True))
+        self.name_based_merging = options.get("name_based_merging", self.config.get('NAME_BASED_MERGING', True))
+        self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
+        self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
 
     def parse (self, program):
         """ If we just want the AST. """
@@ -320,7 +321,8 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    tranql = TranQL (backplane = args.backplane, asynchronous = args.asynchronous, name_based_merging = args.name_based_merging, resolve_names = args.resolve_names)
+    options = {x: args[x] for x in args if x in ["asynchronous","name_based_merging","resolve_names","dynamic_id_resolution"]}
+    tranql = TranQL (backplane = args.backplane, options = options)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")
         tranql.context.set (k, v)

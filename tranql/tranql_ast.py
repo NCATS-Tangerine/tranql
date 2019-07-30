@@ -283,6 +283,8 @@ class SelectStatement(Statement):
             else:
                 """ Bind a single value to a node. """
                 if not ':' in value:
+                    if not interpreter.dynamic_id_resolution:
+                        raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
                     """ Deprecated. """
                     """ Bind something that's not a curie. Dynamic id lookup.
                     This is frowned upon. While it *may* be useful for prototyping and,
