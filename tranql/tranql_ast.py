@@ -472,8 +472,7 @@ class SelectStatement(Statement):
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
 
-            if not interpreter.do_not_validate_query:
-                [self.ast.schema.validate_question(question) for question in questions]
+            [self.ast.schema.validate_question(question) for question in questions]
 
             service = interpreter.context.resolve_arg (self.service)
 
@@ -547,7 +546,7 @@ class SelectStatement(Statement):
     def execute_plan (self, interpreter):
         """ Execute a query using a schema based query planning strategy. """
         self.service = ''
-        plan = self.planner.plan (interpreter, self.query)
+        plan = self.planner.plan (self.query)
         statements = self.plan (plan)
         responses = []
         first_concept = None
@@ -941,7 +940,7 @@ class QueryPlanStrategy:
         """ Construct a query strategy, specifying the schema. """
         self.schema = Schema (backplane)
 
-    def plan (self, interpreter, query):
+    def plan (self, query):
         """
         Plan a query over the configured sources and their associated schemas.
         """
@@ -952,7 +951,6 @@ class QueryPlanStrategy:
                 """ There's another concept to transition to. """
                 continue
             self.plan_edge (
-                interpreter,
                 plan=plan,
                 source=query.concepts[element_name],
                 target=query.concepts[query.order[index+1]],
@@ -960,7 +958,7 @@ class QueryPlanStrategy:
         logger.debug (f"--created plan {plan}")
         return plan
 
-    def plan_edge (self, interpreter, plan, source, target, predicate):
+    def plan_edge (self, plan, source, target, predicate):
         """ Determine if a transition between two types is supported by
         any of the registered sub-schemas.
         """
@@ -1018,7 +1016,7 @@ class QueryPlanStrategy:
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
                             converted = True
-        if not converted and not interpreter.do_not_validate_query:
+        if not converted:
             source_target_predicates = self.explain_predicates (source_type, target_type)
             target_source_predicates = self.explain_predicates (target_type, source_type)
             raise InvalidTransitionException (

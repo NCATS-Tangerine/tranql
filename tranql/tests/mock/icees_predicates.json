@@ -23,6 +23,9 @@
     ],
     "drug": [
       "association"
+    ],
+    "drug_exposure": [
+      "association"
     ]
   }
 }

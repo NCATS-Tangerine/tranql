@@ -590,7 +590,6 @@ def test_program (requests_mock):
         "asynchronous" : False,
         "resolve_names" : False
     })
-    tranql.do_not_validate_query = True
     ast = tranql.execute ("""
     --
     -- Workflow 5
