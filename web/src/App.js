@@ -277,6 +277,7 @@ class App extends Component {
       visMode : '3D',
       useCache : true,
       cachedQueries : [],
+      databaseSize : '',
       colorGraph : true,
       forceGraphOpts : {
         nodeRelSize : 7,
@@ -2697,7 +2698,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 <Button id="clearCache"
                         outline className="App-control"
                         color="primary" onClick={this._clearCache}>
-                  Clear the cache
+                  Clear the cache {this.state.databaseSize}
                 </Button>
               </div>
             </div>
@@ -2832,6 +2833,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         }
       }
     });
+    const updateDatabaseSize = () => {
+      this._cache.getDatabaseSize().then((size) => {
+        this.setState({ databaseSize : ' (' + formatBytes(size,1) + ')' });
+      });
+    }
+    this._cache.db.on('changes',(changes) => {
+      updateDatabaseSize();
+    });
+    updateDatabaseSize();
   }
 
   render() {

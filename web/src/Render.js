@@ -183,8 +183,6 @@ class ReasonerFilter extends Actor {
       return result;
     }, []);
 
-    console.log(new_nodes,new_links);
-
     // Get rid of unused links.
     var node_ids = new_nodes.map ((n, i) => n.id);
     var links = new_links.reduce ((acc, link) => {

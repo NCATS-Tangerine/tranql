@@ -360,3 +360,75 @@ export function formatBytes(bytes, decimals = 2) {
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + sizes[i];
 }
+
+
+/**
+ * The following methods are for getting the cache size of the IndexedDB database
+ *
+ * Adapted from https://gist.github.com/tralves/9e5de2bd9f582007a52708d7d4209865
+ */
+export const getTableSize = function(db, dbName) {
+ return new Promise((resolve,reject) => {
+   if (db == null) {
+     return reject();
+   }
+   var size = 0;
+   var transaction = db.transaction([dbName])
+     .objectStore(dbName)
+     .openCursor();
+
+   transaction.onsuccess = function(event){
+       var cursor = event.target.result;
+       if(cursor){
+           var storedObject = cursor.value;
+           var json = JSON.stringify(storedObject);
+           size += json.length;
+           cursor.continue();
+       }
+       else{
+         resolve(size);
+       }
+   }.bind(this);
+   transaction.onerror = function(err){
+       reject("error in " + dbName + ": " + err);
+   }
+ });
+}
+/**
+ * Returns object containing the sizes in bytes of each table in a given IndexedDB database
+ *
+ * @param {String} dbName - Name of the indexedDB database (in the Chrome you can go to `application->IndexedDB->${database_name}` to find a database's name)
+ *
+ * @returns {Promise<Object>} - A promise that resolves to an object whose entries are each table in the database and its respective size in bytes.
+ */
+export const getDatabaseSize = function (dbName) {
+ return new Promise((resolve) => {
+   var request = indexedDB.open(dbName);
+   var db;
+   var dbSize = 0;
+   request.onerror = function(event) {
+     // IndexedDB does not work/is disabled on this browser
+     return {};
+   };
+   request.onsuccess = function(event) {
+     db = event.target.result;
+     var tableNames = [ ...db.objectStoreNames ];
+     (function(tableNames, db) {
+       var tableSizeGetters = tableNames
+       .reduce( (acc, tableName) => {
+         acc.push( getTableSize(db, tableName) );
+         return acc;
+       }, []);
+
+       Promise.all(tableSizeGetters)
+       .then(sizes => {
+         const tableSizes = {};
+         tableNames.forEach( (tableName,i) => {
+           tableSizes[tableName] = sizes[i];
+         });
+         resolve(tableSizes);
+       });
+     })(tableNames, db);
+   };
+ });
+}
