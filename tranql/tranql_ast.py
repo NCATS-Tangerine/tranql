@@ -319,8 +319,8 @@ class SelectStatement(Statement):
         self.query.disable = True # = Query ()
         return statements
 
-    def format_constraints(self):
-        schema = self.get_schema_name()
+    def format_constraints(self,interpreter):
+        schema = self.get_schema_name(interpreter)
         for enum, constraint in enumerate(self.where):
             """ Add constraints, if they apply to this schema. """
             name, op, val = constraint
@@ -442,18 +442,22 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
-    def decorate(self, element, is_node):
-        schema = self.get_schema_name()
+    def decorate(self, element, is_node, interpreter):
+        schema = self.get_schema_name(interpreter)
         # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
         element["reasoner"] = [schema]
         # Only edges have the source_database property
         if not is_node:
             element["source_database"] = element.get("source_database",["unknown"])
 
-    def get_schema_name(self):
+    def get_schema_name(self,interpreter):
         schema = None
         for s in self.planner.schema.config["schema"]:
-            if self.planner.schema.config["schema"][s]["url"] == self.service:
+            # In SelectStatement::execute, it sets self.service to the backplane url so we have to check for that as well
+            if (
+                self.planner.schema.config["schema"][s]["url"] == self.service or
+                self.resolve_backplane_url(self.planner.schema.config["schema"][s]["url"],interpreter) == self.service
+            ):
                 schema = s
                 break
         return schema
@@ -472,7 +476,7 @@ class SelectStatement(Statement):
             """ We want to find what schema name corresponds to the url we are querying.
             Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces'). """
 
-            self.format_constraints()
+            self.format_constraints(interpreter)
 
             self.service = self.resolve_backplane_url (self.service, interpreter)
             questions = self.generate_questions (interpreter)
@@ -536,9 +540,9 @@ class SelectStatement(Statement):
             for response in responses:
                 if 'knowledge_graph' in response:
                     for node in response['knowledge_graph'].get('nodes',[]):
-                        self.decorate(node,True)
+                        self.decorate(node,True,interpreter)
                     for edge in response['knowledge_graph'].get('edges',[]):
-                        self.decorate(edge,False)
+                        self.decorate(edge,False,interpreter)
 
             result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)

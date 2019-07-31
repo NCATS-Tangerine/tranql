@@ -267,7 +267,7 @@ def test_ast_format_constraints (requests_mock):
            AND robokop.should_not_format = 0
     """)
     select = ast.statements[0]
-    select.format_constraints()
+    select.format_constraints(tranql)
     print(select.where)
     assert_lists_equal(select.where, [
         ['should_format', '=', 1],
@@ -303,7 +303,6 @@ def test_ast_decorate_element (requests_mock):
           FROM "/graph/gamma/quick"
     """)
     select = ast.statements[0]
-    statement = select.plan (select.planner.plan (select.query))[0]
     node = {
         "id": "CHEBI:36314",
         "name": "glycerophosphoethanolamine",
@@ -333,8 +332,8 @@ def test_ast_decorate_element (requests_mock):
         "type": "directly_interacts_with",
         "weight": 0.4071474314830641
     }
-    statement.decorate(node,True)
-    statement.decorate(edge,False)
+    select.decorate(node,True,tranql)
+    select.decorate(edge,False,tranql)
 
     assert_lists_equal(node["reasoner"],["robokop"])
 
@@ -356,13 +355,13 @@ def test_ast_multiple_reasoners (requests_mock):
     select = ast.statements[0]
     statements = select.plan (select.planner.plan (select.query))
     assert_lists_equal(statements[0].query.order,['chemical_substance','disease'])
-    assert statements[0].get_schema_name() == "robokop"
+    assert statements[0].get_schema_name(tranql) == "robokop"
 
     assert_lists_equal(statements[1].query.order,['chemical_substance','disease'])
-    assert statements[1].get_schema_name() == "rtx"
+    assert statements[1].get_schema_name(tranql) == "rtx"
 
     assert_lists_equal(statements[2].query.order,['disease','gene'])
-    assert statements[2].get_schema_name() == "robokop"
+    assert statements[2].get_schema_name(tranql) == "robokop"
 def test_ast_merge_results (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that

@@ -321,7 +321,7 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    options = {x: args[x] for x in args if x in ["asynchronous","name_based_merging","resolve_names","dynamic_id_resolution"]}
+    options = {x: vars(args)[x] for x in vars(args) if x in ["asynchronous","name_based_merging","resolve_names","dynamic_id_resolution"]}
     tranql = TranQL (backplane = args.backplane, options = options)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")
