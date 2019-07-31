@@ -544,7 +544,7 @@ class SelectStatement(Statement):
                     for edge in response['knowledge_graph'].get('edges',[]):
                         self.decorate(edge,False,interpreter)
 
-            result = self.merge_results (responses, service, interpreter)
+            result = self.merge_results (responses, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
@@ -586,12 +586,13 @@ class SelectStatement(Statement):
                         raise ServiceInvocationError (
                             message = message,
                             details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
-        merged = self.merge_results (responses, self.service, interpreter)
+        merged = self.merge_results (responses, interpreter)
         questions = self.generate_questions (interpreter)
         merged['question_graph'] = questions[0]['question_graph']
         return merged
 
-    def merge_results (self, responses, service, interpreter):
+    @staticmethod
+    def merge_results (responses, interpreter):
         """ Merge results. """
 
         """
@@ -651,7 +652,7 @@ class SelectStatement(Statement):
                     if 'equivalent_identifiers' not in node:
                         ids = [node['id']]
                         if RESOLVE_EQUIVALENT_IDENTIFIERS:
-                            ids = self.resolve_name (node.get('name',None), node.get('type',''))
+                            ids = SelectStatement.resolve_name (node.get('name',None), node.get('type',''))
                         node['equivalent_identifiers'] = ids
                         total_requests += 1
                     """

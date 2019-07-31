@@ -11,7 +11,7 @@ import * as YAML from 'js-yaml';
 import FileSaver from 'file-saver';
 // import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
-import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap } from 'react-icons/io';
+import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoMdBrowsers } from 'react-icons/io';
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
   FaSpinner, FaMousePointer, FaTimes, FaFolderOpen, FaFileImport, FaFileExport,
@@ -34,6 +34,7 @@ import Cache from './Cache.js';
 import FileLoader from './FileLoader.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
+import BrowseNodeInterface from './BrowseNodeInterface.js';
 import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
 import highlightTypes from './highlightTypes.js';
@@ -204,6 +205,7 @@ class App extends Component {
     this._graphSplitPane = React.createRef ();
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
+    this._browseNodeInterface = React.createRef ();
 
     // Create tool-related references (for selecting them to be active)
     this._selectToolRef = React.createRef ();
@@ -322,6 +324,8 @@ class App extends Component {
       highlightTypes : false, // Highlight types tool state
       highlightedType : [], // Currently highlighted types
 
+      browseNodeActive : false,
+
       // Tools for the toolbar component
       useToolCursor : false,
       tools : [
@@ -342,6 +346,17 @@ class App extends Component {
               description="Displays a connection between two nodes and all links between them"
               callback={(bool) => this._setConnectionExaminerActive(bool)}>
           <FaEye/>
+        </Tool>,
+        <Tool name="Browse node"
+              shortcut="e"
+              description="Browse new nodes connected to a node in the graph by a biolink modal type"
+              callback={(bool) => {
+                this.setState({ browseNodeActive : bool });
+                if (!bool) {
+                  this._browseNodeInterface.current.hide();
+                }
+              }}>
+          <IoMdBrowsers/>
         </Tool>
       ],
       buttons : [
@@ -1816,7 +1831,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _handleNodeClick (node) {
     console.log (node);
-    if (this.state.highlightTypes) {
+    if (this.state.browseNodeActive) {
+      this._browseNodeInterface.current.selectNode(node);
+    }
+    else if (this.state.highlightTypes) {
       node !== null && this._updateGraphElementVisibility("nodes", node.type, true);
       this._displayAllHiddenNotification();
     }
@@ -3048,6 +3066,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       )
                     }
                     <div id="graphOverlayContainer">
+                      <BrowseNodeInterface ref={this._browseNodeInterface}
+                                           fg={this.fg}/>
                       <div id="graphOverlayVerticalContainer">
                         <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                           {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}

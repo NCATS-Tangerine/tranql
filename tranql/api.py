@@ -16,6 +16,7 @@ from flasgger import Swagger
 from flask_cors import CORS
 from tranql.concept import ConceptModel
 from tranql.main import TranQL
+from tranql.tranql_ast import SelectStatement
 import networkx as nx
 from tranql.util import JSONKit
 from tranql.tranql_schema import GraphTranslator, Schema
@@ -169,7 +170,50 @@ class Configuration(StandardAPIResource):
             "api_url" : config['API_URL'],
             "robokop_url" : config['ROBOKOP_URL']
         }
+class MergeKG(StandardAPIResource):
+    """ Exposes an endpoint that allows for the merging of an arbitrary number of knowledge graphs """
 
+    def __init__(self):
+        super().__init__()
+
+    def post(self):
+        """
+        query
+        ---
+        tag: validation
+        description: Merge Knowledge Graphs
+        parameters:
+            - in: query
+              name: knowledge_graphs
+              schema:
+                type: array
+              description: An array of KGS 0.9.0 compliant knowledge graph objects
+            - in: query
+              name: interpreter_options
+              schema:
+                type: object
+              description: Any options to pass to the TranQL interpreter (such as 'name_based_merging' or 'resolve_names')
+              required: false
+              default: {}
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+
+        """
+        messages = [{'knowledge_graph' : i, 'knowledge_map' : []} for i in request.json.get('knowledge_graphs',[])]
+        tranql = TranQL (options=request.json.get('interpreter_options',{}))
+        return SelectStatement.merge_results(messages,tranql)
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """
 
@@ -213,17 +257,16 @@ class TranQLQuery(StandardAPIResource):
         """
         #self.validate (request)
         result = {}
+
+        logging.debug (request.json)
+        query = request.json.get('query','')
+        dynamicIdResolution = request.json.get('dynamicIdResolution',False)
+        logging.debug (f"--> query: {query}")
+        tranql = TranQL (options = {
+        "dynamic_id_resolution" : dynamicIdResolution
+        })
+
         try:
-            logging.debug (request.json)
-
-            query = request.json.get('query','')
-            dynamicIdResolution = request.json.get('dynamicIdResolution',False)
-            logging.debug (f"--> query: {query}")
-            
-            tranql = TranQL (options = {
-                "dynamic_id_resolution" : dynamicIdResolution
-            })
-
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
@@ -247,6 +290,8 @@ class AnnotateGraph(StandardAPIResource):
 
     def post(self):
         """
+        query
+        ---
         tag: validation
         description: Graph annotator.
         requestBody:
@@ -439,6 +484,7 @@ class ModelRelationsQuery(StandardAPIResource):
 api.add_resource(TranQLQuery, '/tranql/query')
 api.add_resource(SchemaGraph, '/tranql/schema')
 api.add_resource(AnnotateGraph, '/tranql/annotate')
+api.add_resource(MergeKG,'/tranql/merge_knowledge_graphs')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 
