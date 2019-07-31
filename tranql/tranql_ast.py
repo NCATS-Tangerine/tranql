@@ -320,7 +320,7 @@ class SelectStatement(Statement):
         return statements
 
     def format_constraints(self):
-        schema = self.getSchemaName()
+        schema = self.get_schema_name()
         for enum, constraint in enumerate(self.where):
             """ Add constraints, if they apply to this schema. """
             name, op, val = constraint
@@ -442,14 +442,15 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
-    def decorate(self, element, is_node, schema):
+    def decorate(self, element, is_node):
+        schema = self.get_schema_name()
         # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
         element["reasoner"] = [schema]
         # Only edges have the source_database property
         if not is_node:
             element["source_database"] = element.get("source_database",["unknown"])
 
-    def getSchemaName(self):
+    def get_schema_name(self):
         schema = None
         for s in self.planner.schema.config["schema"]:
             if self.planner.schema.config["schema"][s]["url"] == self.service:
@@ -535,9 +536,9 @@ class SelectStatement(Statement):
             for response in responses:
                 if 'knowledge_graph' in response:
                     for node in response['knowledge_graph'].get('nodes',[]):
-                        self.decorate(node,True,schema)
+                        self.decorate(node,True)
                     for edge in response['knowledge_graph'].get('edges',[]):
-                        self.decorate(edge,False,schema)
+                        self.decorate(edge,False)
 
             result = self.merge_results (responses, service, interpreter)
         interpreter.context.set('result', result)
