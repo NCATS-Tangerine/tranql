@@ -926,18 +926,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
     this.setState({},() => {
       const msg = active ? this.state.schemaMessage : this.state.message;
-      if (active) {
-        const prevMsg = this.state.message;
-        const prevRecord = this.state.record;
-        this._configureMessage(msg);
-        this.setState({},() => {
-          this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord },()=>this._schemaRenderChain.handle (msg, this.state));
-        });
-      }
-      else {
-        this._configureMessage(msg);
-        this._translateGraph(msg);
-      }
+
+      this._configureMessage(msg);
+      this._translateGraph(msg);
+
       this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
         this._fgAdjustCharge (this.state.charge);
       });
@@ -1304,6 +1296,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _configureMessage (message,noSetMessageRecord=false) {
     if (message) {
+      const isSchema = this.state.schemaViewerEnabled && this.state.schemaViewerActive;
+
       if (!message.hasOwnProperty('knowledge_graph')) {
         message.knowledge_graph = {nodes:[],edges:[]};
       }
@@ -1311,8 +1305,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       let [dataSources, nodeDegrees, reasonerSources] = this._configureMessageLogic(message);
       let cond = {};
       if (!noSetMessageRecord) {
-        cond.message = message;
-        cond.record = this._cacheFormat(message);
+        if (isSchema) {
+          cond.schemaMessage = message;
+        }
+        else {
+          cond.message = message;
+          cond.record = this._cacheFormat(message);
+        }
       }
       this.setState({
         dataSources : dataSources,
@@ -1376,9 +1375,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              const prevMsg = this.state.message;
              const prevRecord = this.state.record;
              this._configureMessage(msg);
-             this.setState({ message : prevMsg, schemaMessage : msg, record : prevRecord });
-             this._schemaRenderChain.handle (msg, this.state);
-             this.setState({ schemaLoaded : true, schema : msg.graph });
+             this._translateGraph(msg);
+             this.setState({ schemaLoaded : true});
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -1400,13 +1398,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  const prevMsg = this.state.message;
                  const prevRecord = this.state.record;
                  this._configureMessage(result.schema);
-                 this.setState({ message : prevMsg, schemaMessage : result.schema, record : prevRecord });
-                 this._schemaRenderChain.handle (result.schema, this.state);
+                 this._translateGraph(result.schema)
                  result.schema.graph.links.forEach((link) => {
                    // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
                    delete link.linkOpacity;
                  });
-
+                 // Reset the state to have this updated opacity
                  this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
                  this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
@@ -1732,18 +1729,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     let newMessage;
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
       newMessage = this.state.schemaMessage;
-      // newMessage.hiddenTypes = graph.hiddenTypes;
-      // this._configureMessage(newMessage,true);
       this.setState({},() => {
-        this._schemaRenderChain.handle(newMessage, this.state);
-        this.setState({ schema : newMessage.graph });
+        this._translateGraph(newMessage);
       });
       // console.log(message);
     }
     else {
       newMessage = this.state.message;
-      // newMessage.hiddenTypes = graph.hiddenTypes;
-      // this._configureMessage(newMessage);
       this.setState({}, () => {
         this._translateGraph();
       });
@@ -2091,13 +2083,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     const schemaActive = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
     const msg = schemaActive ? this.state.schemaMessage : this.state.message;
-    if (schemaActive) {
-      this._schemaRenderChain.handle (msg, this.state);
-      this.setState({ schema : msg.graph });
-    }
-    else {
-      this._translateGraph(msg);
-    }
+
+    this._translateGraph(msg);
   }
   _renderCheckboxes(stateKey) {
     return this.state[stateKey].map((checkbox, index) =>
