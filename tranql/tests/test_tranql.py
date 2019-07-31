@@ -8,7 +8,7 @@ from pprint import pprint
 from deepdiff import DeepDiff
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
-from tranql.tranql_ast import SetStatement
+from tranql.tranql_ast import SetStatement, SelectStatement
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
 #set_verbose ()
@@ -339,6 +339,40 @@ def test_ast_decorate_element (requests_mock):
 
     assert_lists_equal(edge["reasoner"],["robokop"])
     assert_lists_equal(edge["source_database"],["unknown"])
+def test_ast_resolve_name (requests_mock):
+    set_mock(requests_mock, "resolve_name")
+    """ Validate that
+            -- The SelectStatement::resolve_name method will correctly retrieve equivalent identifiers from a given name
+    """
+    print("test_ast_resolve_name ()")
+    assert_lists_equal(SelectStatement.resolve_name("ibuprofen","chemical_substance"),[
+        'CHEBI:132922',
+        'CHEBI:5855',
+        'CHEBI:43415',
+        'PUBCHEM:3672',
+        'MESH:D007052',
+        'CHEBI:5855',
+        'CHEMBL:CHEMBL521']
+    )
+def test_ast_predicate_question (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    """ Validate that
+            -- A query with a predicate will be properly formatted into a question graph
+    """
+    print("test_ast_predicates ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT chemical_substance-[treats]->disease
+          FROM "/graph/gamma/quick"
+         WHERE chemical_substance='CHEMBL:CHEMBL521'
+    """)
+    select = ast.statements[0]
+    question = select.generate_questions(tranql)[0]["question_graph"]
+
+    assert len(question["edges"]) == 1
+
+    assert "type" in question["edges"][0]
+    assert question["edges"][0]["type"] == "treats"
 def test_ast_multiple_reasoners (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that

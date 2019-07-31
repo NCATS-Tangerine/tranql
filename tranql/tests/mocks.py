@@ -48,6 +48,16 @@ class MockMap(MockHelper):
                     "path" : "icees_predicates.json",
                     "method" : "get"
                 },
+            },
+            "resolve_name" : {
+                "http://mychem.info/v1/query?q=ibuprofen" : {
+                    "path" : "mychem_ibuprofen.json",
+                    "method" : "get"
+                },
+                "https://bionames.renci.org/lookup/ibuprofen/chemical_substance/" : {
+                    "path" : "bionames_ibuprofen_chemical_substance.json",
+                    "method" : "get"
+                },
             }
         }
         for k, v in self.mock_map[test_name].items ():

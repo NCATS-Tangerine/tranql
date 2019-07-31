@@ -242,10 +242,10 @@ class SelectStatement(Statement):
                 result = None
         return result
 
-    def resolve_name (self, name, type_names):
+    @staticmethod
+    def resolve_name (name, type_names):
         if not isinstance(type_names, list):
             type_names = [type_names]
-        #result += self.synonymize (value, type_name)
         result = []
         for type_name in type_names:
             equivalent_identifiers = Bionames.get_ids (name, type_name)
