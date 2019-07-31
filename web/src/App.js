@@ -1577,7 +1577,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _handleLinkClick (link) {
     if (this.state.connectionExaminer) {
-      this.setState({ selectedNode : (link === null ? null : { link : link.origin, openedByLinkExaminer : true }) });
+      this.setState({ selectedNode : (link === null ? null : { link : JSON.parse(JSON.stringify(link)), openedByLinkExaminer : true }) });
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
@@ -1591,7 +1591,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     {
       // Select the node.
       this.setState ((prevState, props) => ({
-        selectedNode : { link : link.origin }
+        selectedNode : { link : JSON.parse(JSON.stringify(link)) }
       }));
       let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
       // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
@@ -1748,6 +1748,28 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         this._translateGraph();
       });
     }
+
+    // If the selected node/link is hidden we want to deselect it.
+    this.setState({},() => {
+      if (this.state.selectedNode !== null) {
+        if (this.state.selectedNode.hasOwnProperty('node') && newMessage.graph.nodes.filter((node) => node.id === this.state.selectedNode.node.id).length === 0) {
+          delete this.state.selectedNode.node;
+          this._updateDimensions();
+        }
+        if (
+          this.state.selectedNode.hasOwnProperty('link') &&
+          (
+            newMessage.graph.nodes.filter((node) => (
+              node.id === this.state.selectedNode.link.origin.source_id ||
+              node.id === this.state.selectedNode.link.origin.target_id
+            )).length < 2
+          )
+        ) {
+          delete this.state.selectedNode.link;
+          this._updateDimensions();
+        }
+      }
+    })
   }
 
   /**
@@ -3004,7 +3026,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                          defaultSize={this.state.graphWidth}
                          minSize={0}
                          allowResize={this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)}
-                         maxSize={document.body.clientWidth-(this.state.objectViewerEnabled && (this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)) ? 0 : 0)}
+                         maxSize={
+                           document.body.clientWidth-
+                            (
+                              this.state.objectViewerEnabled && (
+                                this.state.objectViewerEnabled && (
+                                  this.state.selectedNode === null ||
+                                  Object.keys(this.state.selectedNode
+                                ).length !== 0)
+                              ) ? 0 : 0
+                            )
+                         }
                          style={{backgroundColor:"black",position:"static"}}
                          pane2Style={{overflowY:"auto",wordBreak:"break-all"}}
                          ref={this._graphSplitPane}
@@ -3040,11 +3072,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                         </div>
                         <LinkExaminer link={(() => {
                                         if (this.state.selectedNode === null || !this.state.selectedNode.hasOwnProperty('link')) return;
-                                        const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-                                        return Object.assign({},this.state.selectedNode,{link:graph.links.filter((link)=>link.origin==this.state.selectedNode.link)[0]});
+                                        return this.state.selectedNode;
                                       })()}
                                       graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                      onClose={() => this.setState({ selectedNode : null })}
+                                      onClose={() => (this.setState({ selectedNode : null }), this._updateDimensions())}
                                       onLinkClick={(link) => {
                                         if (!this.state.selectMode) {
                                           this._setSelectMode(true);

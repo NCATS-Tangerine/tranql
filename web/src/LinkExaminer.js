@@ -34,7 +34,10 @@ export default class LinkExaminer extends Component {
            */
           const link_1 = this.props.link.link;
           const allConnections = this.props.graph.links.filter((link_2) => {
-            return (link_1.source === link_2.source && link_1.target === link_2.target) || (link_1.source === link_2.target && link_1.target === link_2.source);
+            return (
+              (link_1.origin.source_id === link_2.origin.source_id && link_1.origin.target_id === link_2.origin.target_id) ||
+              (link_1.origin.source_id === link_2.origin.target_id && link_1.origin.target_id === link_2.origin.source_id)
+            );
           });
           return allConnections.map((link, i) => {
             const source_node = this.props.graph.nodes.filter((n)=>n.id===link.origin.source_id)[0];
