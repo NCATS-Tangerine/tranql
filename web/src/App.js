@@ -1577,7 +1577,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _handleLinkClick (link) {
     if (this.state.connectionExaminer) {
-      this.setState({ selectedNode : (link === null ? null : { link : JSON.parse(JSON.stringify(link)), openedByLinkExaminer : true }) });
+      this.setState({ selectedNode : (link === null ? null : { link : JSON.parse(JSON.stringify(link.origin)), openedByLinkExaminer : true }) });
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
@@ -1591,7 +1591,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     {
       // Select the node.
       this.setState ((prevState, props) => ({
-        selectedNode : { link : JSON.parse(JSON.stringify(link)) }
+        selectedNode : { link : JSON.parse(JSON.stringify(link.origin)) }
       }));
       let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
       // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
@@ -1760,9 +1760,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           this.state.selectedNode.hasOwnProperty('link') &&
           (
             newMessage.graph.nodes.filter((node) => (
-              node.id === this.state.selectedNode.link.origin.source_id ||
-              node.id === this.state.selectedNode.link.origin.target_id
-            )).length < 2
+              node.id === this.state.selectedNode.link.source_id ||
+              node.id === this.state.selectedNode.link.target_id
+            )).length < 2 ||
+            newMessage.graph.links.filter((link) => (
+              link.origin.source_id === this.state.selectedNode.link.source_id &&
+              link.origin.target_id === this.state.selectedNode.link.target_id &&
+              JSON.stringify(link.origin.type) === JSON.stringify(this.state.selectedNode.link.type)
+            )).length === 0
           )
         ) {
           delete this.state.selectedNode.link;
