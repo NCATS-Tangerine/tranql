@@ -620,7 +620,18 @@ def test_ast_plan_strategy (requests_mock):
         assert sub_schema_plan[2][0][2].type_name == "disease"
         assert sub_schema_plan[2][0][2].name == "diagnoses"
         assert sub_schema_plan[2][0][2].nodes == []
+def test_ast_implicit_conversion (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT drug_exposure->chemical_substance
+         FROM '/schema'
+    """)
+    select = ast.statements[0]
+    statements = select.plan (select.planner.plan (select.query))
 
+    assert_lists_equal(statements[0].query.order,["drug_exposure","chemical_substance"])
+    assert statements[0].get_schema_name(tranql) == "implicit_conversion"
 
 def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")

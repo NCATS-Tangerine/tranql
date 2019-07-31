@@ -180,9 +180,10 @@ class Context:
         return self.mem.get (val[1:], None) if val.startswith ("$") else val
     '''
     def resolve_arg(self, val):
-        if isinstance(val, int):
+        if isinstance(val, str):
+            return self.mem.get (val[1:], None) if val.startswith ("$") else val
+        else:
             return val
-        return self.mem.get (val[1:], None) if val.startswith ("$") else val
 
     def set(self, name, val):
         self.mem[name] = val
