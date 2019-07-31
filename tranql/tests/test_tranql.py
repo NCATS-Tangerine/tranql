@@ -1,6 +1,7 @@
 import json
 import pytest
 import os
+import itertools
 import requests
 import requests_mock as r_mock
 from pprint import pprint
@@ -290,7 +291,78 @@ def test_ast_backwards_arrow (requests_mock):
     assert len(backwards_questions[0]["question_graph"]["edges"]) == 1
     assert backwards_questions[0]["question_graph"]["edges"][0]["source_id"] == "microRNA"
     assert backwards_questions[0]["question_graph"]["edges"][0]["target_id"] == "biological_process"
+def test_ast_decorate_element (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    """ Validate that
+            -- The SelectStatement::decorate method properly decorates both nodes and edges
+    """
+    print("test_ast_decorate_element ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT chemical_substance->disease
+          FROM "/graph/gamma/quick"
+    """)
+    select = ast.statements[0]
+    statement = select.plan (select.planner.plan (select.query))[0]
+    node = {
+        "id": "CHEBI:36314",
+        "name": "glycerophosphoethanolamine",
+        "omnicorp_article_count": 288,
+        "type": "chemical_substance"
+    }
+    edge = {
+        "ctime": [
+            1544077522.7678425
+        ],
+        "edge_source": [
+            "chembio.graph_pubchem_to_ncbigene"
+        ],
+        "id": "df662e2842d44fa2c0b5d945044317e3",
+        "predicate_id": "SIO:000203",
+        "publications": [
+            "PMID:16217747"
+        ],
+        "relation": [
+            "CTD:interacts_with"
+        ],
+        "relation_label": [
+            "interacts"
+        ],
+        "source_id": "CHEBI:36314",
+        "target_id": "HGNC:8971",
+        "type": "directly_interacts_with",
+        "weight": 0.4071474314830641
+    }
+    statement.decorate(node,True)
+    statement.decorate(edge,False)
 
+    assert_lists_equal(node["reasoner"],["robokop"])
+
+    assert_lists_equal(edge["reasoner"],["robokop"])
+    assert_lists_equal(edge["source_database"],["unknown"])
+def test_ast_multiple_reasoners (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    """ Validate that
+            -- A query spanning multiple reasoners will query multiple reasoners.
+            -- A transitions that multiple reasoners support will query each reasoner that supports it.
+    """
+    print("test_ast_multiple_reasoners ()")
+    tranql = TranQL ()
+    ast = tranql.parse ("""
+        SELECT chemical_substance->disease->gene
+          FROM "/schema"
+    """)
+    # RTX and Robokop both support transitions between chemical_substance->disease and only Robokop supports transitions between disease->gene
+    select = ast.statements[0]
+    statements = select.plan (select.planner.plan (select.query))
+    assert_lists_equal(statements[0].query.order,['chemical_substance','disease'])
+    assert statements[0].get_schema_name() == "robokop"
+
+    assert_lists_equal(statements[1].query.order,['chemical_substance','disease'])
+    assert statements[1].get_schema_name() == "rtx"
+
+    assert_lists_equal(statements[2].query.order,['disease','gene'])
+    assert statements[2].get_schema_name() == "robokop"
 def test_ast_merge_results (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that

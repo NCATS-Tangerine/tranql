@@ -103,7 +103,7 @@ export default class FindTool extends Component {
       "links",
       "*"
     ];
-    text = text.replace(/\s/g, "");
+    // text = text.replace(/\s/g, "");
     const transitionRegex = transitionTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
     // This prevents anything that could technically be a selector inside of selector attributes being matched as a new selector
     // Explanation:

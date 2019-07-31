@@ -876,7 +876,7 @@ class Query:
         self.arrows = []
         self.concepts = {}
         self.disable = False
-        self.errors = [];
+        self.errors = []
 
     def add(self, key):
         """ Add a token in the question graph to this query object. """
