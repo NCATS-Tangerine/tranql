@@ -1,3 +1,7 @@
+:root {
+  --background-hover-transition-time: .85s;
+  --background-active-transition-time: .35s;
+}
 .App {
     /*text-align: center;*/
      position : absolute;

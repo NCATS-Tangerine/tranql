@@ -55,6 +55,7 @@ import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/mode/sql/sql';
 import 'codemirror/addon/hint/show-hint.css'; // without this css hints won't show
 import './App.css';
+import 'abortcontroller-polyfill/dist/polyfill-patch-fetch.js';
 require('create-react-class');
 require('codemirror/addon/hint/show-hint');
 require('codemirror/addon/hint/sql-hint');
@@ -186,6 +187,7 @@ class App extends Component {
     // Component rendering.
     this.render = this.render.bind(this);
     this._updateDimensions = this._updateDimensions.bind(this);
+    this._openObjectViewer = this._openObjectViewer.bind(this);
 
     // Create code mirror references.
     // this._codemirror = React.createRef ();
@@ -942,17 +944,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this.setState({},() => {
       const msg = active ? this.state.schemaMessage : this.state.message;
 
-      this._configureMessage(msg);
-      this._translateGraph(msg);
+
+      this._configureMessage(msg,false,active);
+      this._translateGraph(msg,false,active);
 
       this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
         this._fgAdjustCharge (this.state.charge);
+        this._updateDimensions();
       });
-      if (this.state.objectViewerEnabled) {
-        let width = this._graphSplitPane.current.splitPane.offsetWidth;
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-        this._updateGraphSize(width);
-      }
       this.setState({},()=>this._findTool.current.updateResults());
     });
   }
@@ -1056,16 +1055,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _setSelectMode (select) {
-    let width = this._graphSplitPane.current.splitPane.offsetWidth;
-    if (this.state.objectViewerEnabled) {
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-    }
-    this._updateGraphSize(width);
     this.setState ({
       selectMode: select,
       selectedNode: {},
       selectedLink: {}
-    });
+    }, () => this._updateDimensions());
   }
   /**
    * Set if the navigation mode tool is active.
@@ -1074,11 +1068,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _setNavMode (navigate) {
-    let width = this._graphSplitPane.current.splitPane.offsetWidth;
-    if (this.state.objectViewerEnabled) {
-      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-    }
-    this._updateGraphSize(width);
     this.setState ({
       navigateMode: navigate,
       selectedLink: {}
@@ -1102,7 +1091,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       return;
     }
     // Get it.
-    fetch(this.robokop_url + '/api/simple/view', {
+    fetch(this.robokop_url + '/api/simple/view/', {
       method: "POST",
       headers: {
         'Accept': 'application/json',
@@ -1215,8 +1204,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       // answers is not kgs 0.9 compliant. ... longer story.
                       delete result.answers;
                     }
-                    this._configureMessage (result);
-                    this._translateGraph (result);
+                    this._configureMessage (result,false,false);
+                    this._translateGraph (result,false,false);
                     this._cacheWrite (result);
                     this._setSchemaViewerActive(false);
                     this.setState({ loading : false });
@@ -1309,9 +1298,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * When noSetMessageRecord is false, it will not set the message and record on the app's state
    *
    */
-  _configureMessage (message,noSetMessageRecord=false) {
+  _configureMessage (message,noSetMessageRecord=false,schema) {
     if (message) {
-      const isSchema = this.state.schemaViewerEnabled && this.state.schemaViewerActive;
+      if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
+      const isSchema = schema;
 
       if (!message.hasOwnProperty('knowledge_graph')) {
         message.knowledge_graph = {nodes:[],edges:[]};
@@ -1342,12 +1332,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    *
    * @param {Object} message - A KGS message object.
    * @param {Boolean} [noRenderChain=false] - The message will not be handled by the render chain when true
+   * @param {Boolean} [schema=undefined] - If the graph is the schema.
    * @private
    */
-  _translateGraph (message,noRenderChain) {
+  _translateGraph (message,noRenderChain,schema) {
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
-      const isSchema = this.state.schemaViewerEnabled && this.state.schemaViewerActive;
+      if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;;
+      const isSchema = schema;
       message = message ? message : (isSchema ? this.state.schemaMessage : this.state.message);
       if (message) {
         if (!noRenderChain) {
@@ -1389,8 +1381,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              let msg = result.data;
              const prevMsg = this.state.message;
              const prevRecord = this.state.record;
-             this._configureMessage(msg);
-             this._translateGraph(msg);
+             this._configureMessage(msg,false,true);
+             this._translateGraph(msg,false,true);
              this.setState({ schemaLoaded : true});
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
@@ -1412,8 +1404,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                  const prevMsg = this.state.message;
                  const prevRecord = this.state.record;
-                 this._configureMessage(result.schema);
-                 this._translateGraph(result.schema)
+                 this._configureMessage(result.schema,false,true);
+                 this._translateGraph(result.schema,false,true)
                  result.schema.graph.links.forEach((link) => {
                    // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
                    delete link.linkOpacity;
@@ -1605,19 +1597,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState ((prevState, props) => ({
         selectedNode : { link : JSON.parse(JSON.stringify(link.origin)) }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
-      // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
-      // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
-      let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
-      if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
-        // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
-        // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
-        width += toolbar.offsetWidth / 2;
-      }
-      if (this.state.objectViewerEnabled) {
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      this._updateGraphSize(width);
+      this._openObjectViewer(1/2);
     }
   }
   _handleLinkRightClick (link) {
@@ -1745,14 +1725,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     if (this.state.schemaViewerEnabled && this.state.schemaViewerActive) {
       newMessage = this.state.schemaMessage;
       this.setState({},() => {
-        this._translateGraph(newMessage);
+        this._translateGraph(newMessage,false,true);
       });
       // console.log(message);
     }
     else {
       newMessage = this.state.message;
       this.setState({}, () => {
-        this._translateGraph();
+        this._translateGraph(newMessage,false,false);
       });
     }
 
@@ -1856,20 +1836,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState ((prevState, props) => ({
         selectedNode : { node: node.origin }
       }));
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
-      // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
-      // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
-      let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
-      if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
-        // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
-        // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
-        width += toolbar.offsetWidth / 2;
-      }
-      if (this.state.objectViewerEnabled) {
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      this._updateGraphSize(width);
-
+      this._openObjectViewer(1/2);
     }
   }
   /**
@@ -2102,7 +2069,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const schemaActive = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
     const msg = schemaActive ? this.state.schemaMessage : this.state.message;
 
-    this._translateGraph(msg);
+    this._translateGraph(msg,false,schemaActive);
   }
   _renderCheckboxes(stateKey) {
     return this.state[stateKey].map((checkbox, index) =>
@@ -2136,8 +2103,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _onLinkWeightRangeChange (value) {
     this.setState({ linkWeightRange : value});
+    const schemaActive = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
     localStorage.setItem ("linkWeightRange", JSON.stringify (value));
-    this._translateGraph ();
+    this._translateGraph (undefined,false.schemaActive);
   }
   /**
    * Respond to changing the node degree range.
@@ -2147,7 +2115,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _onNodeDegreeRangeChange (value) {
     this.setState({ nodeDegreeRange : value});
-    this._translateGraph ();
+    const schemaActive = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
+    this._translateGraph (undefined,false,schemaActive);
     localStorage.setItem ("minNodeDegree", JSON.stringify (value));
   }
   /**
@@ -2231,8 +2200,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             this.setState({ loading : false });
             console.log("Annotated result:", result);
             console.log("Current message:", message);
-            this._configureMessage (result);
-            this._translateGraph (result);
+            this._configureMessage (result,false,false);
+            this._translateGraph (result,false,false);
             this._setSchemaViewerActive(false);
           }
         },
@@ -2244,7 +2213,27 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         }
       );
   }
-
+  /**
+   * Opens the object viewer
+   *
+   * @param {Number} graphPortion - The portion of the graph that the object viewer should take up
+   * @private
+   */
+  _openObjectViewer(graphPortion) {
+    let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
+    // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
+    // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
+    let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
+    if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
+      // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
+      // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
+      width += toolbar.offsetWidth * 1/2;
+    }
+    if (this.state.objectViewerEnabled) {
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+    }
+    this._updateGraphSize(width);
+  }
   /**
    * Invoked on window resize
    *
@@ -2396,8 +2385,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                       noRenderChain = true;
                                       graph.data.graph = GraphSerializer.parse(graph.data.graph);
                                     }
-                                    this._configureMessage(graph.data);
-                                    this._translateGraph(graph.data, noRenderChain);
+                                    this._configureMessage(graph.data,undefined,false);
+                                    this._translateGraph(graph.data, noRenderChain,false);
                                     options.cacheGraph === true && this._cacheWrite(graph.data);
                                   });
 
@@ -3067,7 +3056,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     }
                     <div id="graphOverlayContainer">
                       <BrowseNodeInterface ref={this._browseNodeInterface}
-                                           fg={this.fg}/>
+                                           fg={this.fg}
+                                           concepts={this.state.modelConcepts}
+                                           relations={this.state.modelRelations}
+                                           robokop_url={this.robokop_url}/>
                       <div id="graphOverlayVerticalContainer">
                         <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                           {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
@@ -3087,19 +3079,22 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         return this.state.selectedNode;
                                       })()}
                                       graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                      onClose={() => (this.setState({ selectedNode : null }), this._updateDimensions())}
+                                      onClose={() => (this.setState({ selectedNode : {} }), this._updateDimensions())}
                                       onLinkClick={(link) => {
                                         if (!this.state.selectMode) {
-                                          this._setSelectMode(true);
+                                          // this._setSelectMode(true);
                                           this._selectToolRef.current.setActive(true);
                                         }
-                                        this.setState({ connectionExaminer : false }, () => {
-                                          // Mutates `selectedNode` state so we want to wait until that is set
-                                          this._handleLinkClick(link);
+                                        // For some reason this has to be double nested
+                                        this.setState({}, () => {
                                           this.setState({},() => {
-                                            let selectedNode = this.state.selectedNode;
-                                            selectedNode.openedByLinkExaminer = true;
-                                            this.setState({ selectedNode : selectedNode });
+                                            // Mutates `selectedNode` state so we want to wait until that is set
+                                            this._handleLinkClick(link);
+                                            this.setState({},() => {
+                                              let selectedNode = this.state.selectedNode;
+                                              selectedNode.openedByLinkExaminer = true;
+                                              this.setState({ selectedNode : selectedNode });
+                                            });
                                           });
                                         });
                                       }}
