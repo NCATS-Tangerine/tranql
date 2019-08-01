@@ -189,6 +189,8 @@ class App extends Component {
     this._updateDimensions = this._updateDimensions.bind(this);
     this._openObjectViewer = this._openObjectViewer.bind(this);
     this._closeObjectViewer = this._closeObjectViewer.bind(this);
+    this._openTableViewer = this._openTableViewer.bind(this);
+    this._closeTableViewer = this._closeTableViewer.bind(this);
 
     // Create code mirror references.
     // this._codemirror = React.createRef ();
@@ -206,6 +208,7 @@ class App extends Component {
 
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
+    this._tableSplitPane = React.createRef ();
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
     this._browseNodeInterface = React.createRef ();
@@ -300,6 +303,9 @@ class App extends Component {
       // Portion of split pane that the object viewer takes up when it is opened (where the second figure is the object viewer's size)
       objectViewerSize : 1 - (1/3),
       objectViewerSelection : null,
+
+      tableView : false,
+      tableViewerSize : 1 - (1/3),
 
       // Schema viewer
       schema : {
@@ -1661,17 +1667,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
    _updateGraphSplitPaneResize () {
-     this._updateGraphSize (this._graphSplitPane.current.pane1.offsetWidth);
+     this._updateGraphSize (this._graphSplitPane.current.pane1.offsetWidth,this._tableSplitPane.current.pane1.offsetHeight);
    }
 
  /**
   * Update graph size
   *
-  * @param {number} width - New width of the graph
+  * @param {Number} width - New width of the graph
+  * @param {Number} height - New height of the graph
   * @private
   */
-  _updateGraphSize (width) {
-    this.setState (prevState => ({ graphWidth: width, graphHeight: this.state.graphHeight }));
+  _updateGraphSize (width, height) {
+    const obj = {};
+    if (typeof width !== "undefined") obj.graphWidth = width;
+    if (typeof height !== "undefined") obj.graphHeight = height;
+    this.setState (prevState => obj);
   }
 
   /**
@@ -2219,7 +2229,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _openObjectViewer(object) {
     if (this.state.objectViewerEnabled) {
       const graphPortion = this.state.objectViewerSize;
-      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * graphPortion;
       // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
       // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
       let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
@@ -2233,6 +2243,18 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState({ objectViewerSelection : object });
     }
   }
+  _closeTableViewer() {
+    let height = this._tableSplitPane.current.splitPane.offsetHeight;
+    this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
+    this.setState({ tableView : false });
+  }
+  _openTableViewer() {
+    const screenPortion = this.state.tableViewerSize;
+    let height = this._tableSplitPane.current.splitPane.offsetHeight * screenPortion;
+    this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
+    this._updateGraphSize(undefined,height);
+    this.setState({ tableView : true });
+  }
   /**
    * Invoked on window resize
    *
@@ -2240,14 +2262,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _updateDimensions() {
     let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - this._graphSplitPane.current.state.prevWinWidth);
+    let height = this._tableSplitPane.current.pane1.offsetHeight + (window.innerHeight - this._tableSplitPane.current.state.prevWinHeight);
     if (this.state.objectViewerEnabled) {
       // console.log(this._graphSplitPane.current.state.pane1Size);
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
     }
-    this._updateGraphSize(width);
+    if (this.state.tableView) {
+      this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
+    }
+    this._updateGraphSize(width, height);
     // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
     // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
     this._graphSplitPane.current.setState({prevWinWidth:window.innerWidth});
+    this._tableSplitPane.current.setState({prevWinHeight:window.innerHeight});
   }
   /**
    * Render the help modal
@@ -3002,121 +3029,132 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   onContextMenu={this._legendButtonRightClick}
                   render={this.state.schemaViewerActive && this.state.schemaViewerEnabled}/>
           <div id="graph"></div>
-          <div id="viewContainer">
-            {
-              /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
-              /* maxSize property applies max-width to the object viewer pane when it's active. Change first 0 in ternary to the desired max width */
-              <SplitPane split="vertical"
-                         defaultSize={this.state.graphWidth}
-                         minSize={0}
-                         allowResize={this.state.objectViewerEnabled && (this.state.objectViewerSelection !== null)}
-                         maxSize={
-                           document.body.clientWidth-
-                            (
-                              this.state.objectViewerEnabled && (
+          <SplitPane split="horizontal"
+                     defaultSize={this.state.graphHeight}
+                     allowResize={this.state.tableView}
+                     minSize={0}
+                     maxSize={window.innerHeight - (this.state.tableView ? 200 : 0)}
+                     style={{backgroundColor:"black",position:"initial",height:"100vh"}}
+                     ref={this._tableSplitPane}
+                     onDragFinished={(height) => this._updateGraphSplitPaneResize()}>
+            <div id="viewContainer">
+              {
+                /* Don't bother rendering split pane if the object viewer isn't enabled. Causes resize issues. */
+                /* maxSize property applies max-width to the object viewer pane when it's active. Change second ternary statement to the desired min width of the object viewer */
+                <SplitPane split="vertical"
+                           defaultSize={this.state.graphWidth}
+                           minSize={0}
+                           allowResize={this.state.objectViewerEnabled && (this.state.objectViewerSelection !== null)}
+                           maxSize={
+                             document.body.clientWidth-
+                              (
                                 this.state.objectViewerEnabled && (
-                                  this.state.objectViewerSelection === null
-                                )
-                              ) ? 0 : 0
-                            )
-                         }
-                         style={{backgroundColor:"black",position:"static"}}
-                         pane2Style={{overflowY:"auto",wordBreak:"break-all"}}
-                         ref={this._graphSplitPane}
-                         onDragFinished={(width) => this._updateGraphSplitPaneResize()}
-              >
-                <div>
-                  <div id="bottomContainer">
-                    {
-                      this.state.toolbarEnabled && (
-                        <Toolbar id="toolbar"
-                                 default={0}
-                                 overrideCursor={this.state.useToolCursor}
-                                 tools={this.state.tools}
-                                 buttons={this.state.buttons}
-                                 onlyUseShortcutsWhen={[HTMLBodyElement]}
-                                 ref={this._toolbar}/>
-                      )
-                    }
-                    <div id="graphOverlayContainer">
-                      <BrowseNodeInterface ref={this._browseNodeInterface}
-                                           fg={this.fg}
-                                           concepts={this.state.modelConcepts}
-                                           relations={this.state.modelRelations}
-                                           robokop_url={this.robokop_url}/>
-                      <div id="graphOverlayVerticalContainer">
-                        <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
-                          {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
-                          {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
-                          <div id="schemaViewToggleButtonContainer">
-                            <Button color="primary"
-                                    id="schemaViewToggleButton"
-                                    size="sm"
-                                    onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
-                            >
-                            {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
-                            </Button>
+                                  this.state.objectViewerEnabled && (
+                                    this.state.objectViewerSelection === null
+                                  )
+                                ) ? 0 : 200
+                              )
+                           }
+                           style={{backgroundColor:"black",position:"initial"}}
+                           pane2Style={{overflowY:"auto",wordBreak:"break-all"}}
+                           ref={this._graphSplitPane}
+                           onDragFinished={(width) => this._updateGraphSplitPaneResize()}
+                >
+                  <div>
+                    <div id="bottomContainer">
+                      {
+                        this.state.toolbarEnabled && (
+                          <Toolbar id="toolbar"
+                                   default={0}
+                                   overrideCursor={this.state.useToolCursor}
+                                   tools={this.state.tools}
+                                   buttons={this.state.buttons}
+                                   onlyUseShortcutsWhen={[HTMLBodyElement]}
+                                   ref={this._toolbar}/>
+                        )
+                      }
+                      <div id="graphOverlayContainer">
+                        <BrowseNodeInterface ref={this._browseNodeInterface}
+                                             fg={this.fg}
+                                             concepts={this.state.modelConcepts}
+                                             relations={this.state.modelRelations}
+                                             robokop_url={this.robokop_url}/>
+                        <div id="graphOverlayVerticalContainer">
+                          <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
+                            {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}
+                            {this.state.schemaViewerActive ? "Schema:" : "Graph:"}
+                            <div id="schemaViewToggleButtonContainer">
+                              <Button color="primary"
+                                      id="schemaViewToggleButton"
+                                      size="sm"
+                                      onClick={(e) => this._setSchemaViewerActive (!this.state.schemaViewerActive)}
+                              >
+                              {this.state.schemaViewerActive ? "Show graph" : "Show schema"}
+                              </Button>
+                            </div>
                           </div>
+                          <LinkExaminer graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                        ref={this._linkExaminer}
+                                        onClose={() => {}}
+                                        onLinkClick={(link) => {
+                                          this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
+                                        }}/>
                         </div>
-                        <LinkExaminer graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                      ref={this._linkExaminer}
-                                      onClose={() => {}}
-                                      onLinkClick={(link) => {
-                                        this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
-                                      }}/>
+                        <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                  resultMouseEnter={(values)=>{
+                                    values.forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
+                                  }
+                                  resultMouseLeave={(values)=>{
+                                    values.forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
+                                  }
+                                  resultMouseClick={(values)=>{}}
+                                  ref={this._findTool}/>
                       </div>
-                      <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                resultMouseEnter={(values)=>{
-                                  values.forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
-                                }
-                                resultMouseLeave={(values)=>{
-                                  values.forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
-                                }
-                                resultMouseClick={(values)=>{}}
-                                ref={this._findTool}/>
+                    </div>
+                    <div onContextMenu={this._handleContextMenu}>
+                      {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
+                        (
+                          this._renderForceGraph (
+                            this.state.schema,
+                            {
+                            ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
+                          })
+                        )
+                      :
+                        (
+                          this._renderForceGraph (
+                            this.state.graph, {
+                            ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
+                          })
+                        )
+                      }
+                      <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
                     </div>
                   </div>
-                  <div onContextMenu={this._handleContextMenu}>
-                    {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
-                      (
-                        this._renderForceGraph (
-                          this.state.schema,
-                          {
-                          ref: (el) => {if (this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
-                        })
-                      )
-                    :
-                      (
-                        this._renderForceGraph (
-                          this.state.graph, {
-                          ref: (el) => {if (!this.state.schemaViewerActive) this.fg = el; this._updateFg ()}
-                        })
-                      )
+                  <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
+                    {/*the close button sets the select mode to true, which effectively "resets" it*/}
+                    <div className="object-viewer-header">
+                      <h6> Object Viewer </h6>
+                      <FaTimes className="object-viewer-close-button" onClick={(e) => this._closeObjectViewer()}/>
+                    </div>
+                    <JSONTree
+                    shouldExpandNode={(key,data,level) => level === 1}
+                    hideRoot={true}
+                    theme={
+                      {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
+                      base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
+                      base0E:"#ae81ff",base0F:"#cc6633"}
                     }
-                    <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                    invertTheme={false}
+                    data={this.state.objectViewerSelection || {}}/>
                   </div>
-                </div>
-                <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
-                  {/*the close button sets the select mode to true, which effectively "resets" it*/}
-                  <div className="object-viewer-header">
-                    <h6> Object Viewer </h6>
-                    <FaTimes className="object-viewer-close-button" onClick={(e) => this._closeObjectViewer()}/>
-                  </div>
-                  <JSONTree
-                  shouldExpandNode={(key,data,level) => level === 1}
-                  hideRoot={true}
-                  theme={
-                    {scheme:"monokai", author:"wimer hazenberg (http://www.monokai.nl)", base00:"#272822",base01:"#383830",base02:"#49483e",base03:"#75715e",base04:"#a59f85",
-                    base05:"#f8f8f2",base06:"#f5f4f1",base07:"#f9f8f5", base08:"#f92672",base09:"#fd971f",base0A:"#f4bf75",base0B:"#a6e22e",base0C:"#a1efe4",base0D:"#66d9ef",
-                    base0E:"#ae81ff",base0F:"#cc6633"}
-                  }
-                  invertTheme={false}
-                  data={this.state.objectViewerSelection || {}}/>
-                </div>
 
-              </SplitPane>
-            }
-          </div>
+                </SplitPane>
+              }
+            </div>
+            <div id="tableView">
+            </div>
+          </SplitPane>
         </div>
         <div id='next'/>
       </div>

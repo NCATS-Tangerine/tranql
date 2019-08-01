@@ -111,7 +111,8 @@ body {
 .FindTool {
   margin: 8px;
   margin-left:0;
-  max-height:calc(100vh - 10px);
+  /* 16px for margin */
+  max-height:calc(100% - 16px);
   /* position:absolute;
   right:5px;
   top:5px; */
