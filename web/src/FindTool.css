@@ -17,7 +17,7 @@
   display:flex;
 }
 .find-tool-input {
-  transition:background-color .85s;
+  transition:background-color var(--background-hover-transition-time);
   background-color:inherit;
   padding:5px;
   border:none;
@@ -50,7 +50,7 @@
   font-size:22px;
   color:rgb(50,50,50);
   border-radius:50%;
-  transition:background-color .85s;
+  transition:background-color var(--background-hover-transition-time);
 }
 .find-tool-settings-button {
   /* Looks bad because the icon takes up most of the space */
@@ -72,7 +72,7 @@
   background-color:rgb(240,240,240);
 }
 .find-tool-button-container > *:active {
-  transition:background-color .35s;
+  transition:background-color var(--background-active-transition-time);
   background-color:rgb(220,220,220);
 }
 .find-tool-result-container {
@@ -85,7 +85,7 @@
   display:flex;
   justify-content:center;
   align-items:center;
-  transition:background-color .85s;
+  transition:background-color var(--background-transition-time);
 
   user-select:none;
   -webkit-user-select:none;

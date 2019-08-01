@@ -188,6 +188,7 @@ class App extends Component {
     this.render = this.render.bind(this);
     this._updateDimensions = this._updateDimensions.bind(this);
     this._openObjectViewer = this._openObjectViewer.bind(this);
+    this._closeObjectViewer = this._closeObjectViewer.bind(this);
 
     // Create code mirror references.
     // this._codemirror = React.createRef ();
@@ -208,6 +209,7 @@ class App extends Component {
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
     this._browseNodeInterface = React.createRef ();
+    this._linkExaminer = React.createRef ();
 
     // Create tool-related references (for selecting them to be active)
     this._selectToolRef = React.createRef ();
@@ -260,8 +262,6 @@ class App extends Component {
       charge : -100,
 
       // Manage node selection and navigation.
-      selectedNode : {},
-      selectedLink : {},
       contextNode : null,
       navigateMode: false,
       selectMode: false,
@@ -298,7 +298,8 @@ class App extends Component {
       // Object viewer
       objectViewerEnabled : true,
       // Portion of split pane that the object viewer takes up when it is opened (where the second figure is the object viewer's size)
-      objectViewerSize : 1 - (1/4),
+      objectViewerSize : 1 - (1/3),
+      objectViewerSelection : null,
 
       // Schema viewer
       schema : {
@@ -940,6 +941,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _setSchemaViewerActive (active) {
+    this._linkExaminer.current.hide();
+    this._closeObjectViewer();
+
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
     this.setState({},() => {
       const msg = active ? this.state.schemaMessage : this.state.message;
@@ -948,7 +952,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this._configureMessage(msg,false,active);
       this._translateGraph(msg,false,active);
 
-      this.setState({ selectedNode : {}, schemaViewerActive : active }, () => {
+      this.setState({ schemaViewerActive : active }, () => {
         this._fgAdjustCharge (this.state.charge);
         this._updateDimensions();
       });
@@ -1057,9 +1061,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _setSelectMode (select) {
     this.setState ({
       selectMode: select,
-      selectedNode: {},
-      selectedLink: {}
-    }, () => this._updateDimensions());
+    });
   }
   /**
    * Set if the navigation mode tool is active.
@@ -1147,11 +1149,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         },
         typeMappings: {}
       },
-      selectedNode: {},
-      selectedLink: {},
       dataSources: [],
       reasonerSources: [],
-
     });
     this.setState({},()=>console.log(this.state.graph));
     // Automatically switch from schema to graph view when query is run
@@ -1581,7 +1580,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
   _handleLinkClick (link) {
     if (this.state.connectionExaminer) {
-      this.setState({ selectedNode : (link === null ? null : { link : JSON.parse(JSON.stringify(link.origin)), openedByLinkExaminer : true }) });
+      this._linkExaminer.current.show(JSON.parse(JSON.stringify(link)));
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
@@ -1593,11 +1592,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 //        this.state.selectedLink.target !== link.target_id &&
         this.state.selectMode)
     {
-      // Select the node.
-      this.setState ((prevState, props) => ({
-        selectedNode : { link : JSON.parse(JSON.stringify(link.origin)) }
-      }));
-      this._openObjectViewer(1/2);
+      this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
     }
   }
   _handleLinkRightClick (link) {
@@ -1737,31 +1732,31 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
 
     // If the selected node/link is hidden we want to deselect it.
-    this.setState({},() => {
-      if (this.state.selectedNode !== null) {
-        if (this.state.selectedNode.hasOwnProperty('node') && newMessage.graph.nodes.filter((node) => node.id === this.state.selectedNode.node.id).length === 0) {
-          delete this.state.selectedNode.node;
-          this._updateDimensions();
-        }
-        if (
-          this.state.selectedNode.hasOwnProperty('link') &&
-          (
-            newMessage.graph.nodes.filter((node) => (
-              node.id === this.state.selectedNode.link.source_id ||
-              node.id === this.state.selectedNode.link.target_id
-            )).length < 2 ||
-            newMessage.graph.links.filter((link) => (
-              link.origin.source_id === this.state.selectedNode.link.source_id &&
-              link.origin.target_id === this.state.selectedNode.link.target_id &&
-              JSON.stringify(link.origin.type) === JSON.stringify(this.state.selectedNode.link.type)
-            )).length === 0
-          )
-        ) {
-          delete this.state.selectedNode.link;
-          this._updateDimensions();
-        }
-      }
-    })
+    // this.setState({},() => {
+    //   if (this.state.selectedNode !== null) {
+    //     if (this.state.selectedNode.hasOwnProperty('node') && newMessage.graph.nodes.filter((node) => node.id === this.state.selectedNode.node.id).length === 0) {
+    //       delete this.state.selectedNode.node;
+    //       this._updateDimensions();
+    //     }
+    //     if (
+    //       this.state.selectedNode.hasOwnProperty('link') &&
+    //       (
+    //         newMessage.graph.nodes.filter((node) => (
+    //           node.id === this.state.selectedNode.link.source_id ||
+    //           node.id === this.state.selectedNode.link.target_id
+    //         )).length < 2 ||
+    //         newMessage.graph.links.filter((link) => (
+    //           link.origin.source_id === this.state.selectedNode.link.source_id &&
+    //           link.origin.target_id === this.state.selectedNode.link.target_id &&
+    //           JSON.stringify(link.origin.type) === JSON.stringify(this.state.selectedNode.link.type)
+    //         )).length === 0
+    //       )
+    //     ) {
+    //       delete this.state.selectedNode.link;
+    //       this._updateDimensions();
+    //     }
+    //   }
+    // })
   }
 
   /**
@@ -1828,15 +1823,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         node, // lookAt ({ x, y, z })
         3000  // ms transition duration
       );
-    } else if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
-               this.state.selectedNode !== null &&
-               this.state.selectedNode.id !== node.id)
+    } else if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null)
     {
-      // Select the node.
-      this.setState ((prevState, props) => ({
-        selectedNode : { node: node.origin }
-      }));
-      this._openObjectViewer(1/2);
+      this._openObjectViewer(JSON.parse(JSON.stringify(node.origin)));
     }
   }
   /**
@@ -2213,26 +2202,36 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         }
       );
   }
+  _closeObjectViewer() {
+    if (this.state.objectViewerEnabled) {
+      let width = this._graphSplitPane.current.splitPane.offsetWidth;
+        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      this._updateGraphSize(width);
+      this.setState({ objectViewerSelection : null });
+    }
+  }
   /**
    * Opens the object viewer
    *
-   * @param {Number} graphPortion - The portion of the graph that the object viewer should take up
+   * @param {Object} object - The object to display in the object viewer
    * @private
    */
-  _openObjectViewer(graphPortion) {
-    let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
-    // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
-    // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
-    let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
-    if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
-      // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
-      // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
-      width += toolbar.offsetWidth * 1/2;
-    }
+  _openObjectViewer(object) {
     if (this.state.objectViewerEnabled) {
+      const graphPortion = this.state.objectViewerSize;
+      let width = this._graphSplitPane.current.splitPane.offsetWidth * (this.state.objectViewerSize);
+      // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
+      // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
+      let toolbar = ReactDOM.findDOMNode(this._toolbar.current);
+      if (toolbar.offsetHeight === this._graphSplitPane.current.splitPane.clientHeight) {
+        // If the height of the toolbar has not been resized to be smaller, adjust the width so that it does not appear incorrect.
+        // (If the toolbar covers that entire part of the graph, it looks incorrect and the object viewer appears larger)
+        width += toolbar.offsetWidth * graphPortion;
+      }
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
+      this._updateGraphSize(width);
+      this.setState({ objectViewerSelection : object });
     }
-    this._updateGraphSize(width);
   }
   /**
    * Invoked on window resize
@@ -2240,26 +2239,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _updateDimensions() {
-    let node = this.state.selectedNode.node || this.state.selectedLink;
-    // let prevWinWidth = this._graphSplitPane.current.state.prevWinWidth;
-    if (this.state.selectMode && node !== null && node.id !== undefined && node.id !== null &&
-               this.state.selectedNode !== null &&
-               this.state.selectedNode.id !== node.id)
-    {
-      let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - this._graphSplitPane.current.state.prevWinWidth);
-      if (this.state.objectViewerEnabled) {
-        // console.log(this._graphSplitPane.current.state.pane1Size);
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      this._updateGraphSize(width);
+    let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - this._graphSplitPane.current.state.prevWinWidth);
+    if (this.state.objectViewerEnabled) {
+      // console.log(this._graphSplitPane.current.state.pane1Size);
+      this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
     }
-    else {
-      let width = this._graphSplitPane.current.splitPane.offsetWidth;
-      if (this.state.objectViewerEnabled) {
-        this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
-      }
-      this._updateGraphSize(width);
-    }
+    this._updateGraphSize(width);
     // For some reason react won't assign the underlying DOM element to the ref when using a callback ref.
     // Should replace this if possible as it is an escape hatch and not recommended for use, but the recommended alternative won't work.
     this._graphSplitPane.current.setState({prevWinWidth:window.innerWidth});
@@ -3024,15 +3009,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               <SplitPane split="vertical"
                          defaultSize={this.state.graphWidth}
                          minSize={0}
-                         allowResize={this.state.objectViewerEnabled && (this.state.selectedNode === null || Object.keys(this.state.selectedNode).length !== 0)}
+                         allowResize={this.state.objectViewerEnabled && (this.state.objectViewerSelection !== null)}
                          maxSize={
                            document.body.clientWidth-
                             (
                               this.state.objectViewerEnabled && (
                                 this.state.objectViewerEnabled && (
-                                  this.state.selectedNode === null ||
-                                  Object.keys(this.state.selectedNode
-                                ).length !== 0)
+                                  this.state.objectViewerSelection === null
+                                )
                               ) ? 0 : 0
                             )
                          }
@@ -3074,31 +3058,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                             </Button>
                           </div>
                         </div>
-                        <LinkExaminer link={(() => {
-                                        if (this.state.selectedNode === null || !this.state.selectedNode.hasOwnProperty('link')) return;
-                                        return this.state.selectedNode;
-                                      })()}
-                                      graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                      onClose={() => (this.setState({ selectedNode : {} }), this._updateDimensions())}
+                        <LinkExaminer graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                      ref={this._linkExaminer}
+                                      onClose={() => {}}
                                       onLinkClick={(link) => {
-                                        if (!this.state.selectMode) {
-                                          // this._setSelectMode(true);
-                                          this._selectToolRef.current.setActive(true);
-                                        }
-                                        // For some reason this has to be double nested
-                                        this.setState({}, () => {
-                                          this.setState({},() => {
-                                            // Mutates `selectedNode` state so we want to wait until that is set
-                                            this._handleLinkClick(link);
-                                            this.setState({},() => {
-                                              let selectedNode = this.state.selectedNode;
-                                              selectedNode.openedByLinkExaminer = true;
-                                              this.setState({ selectedNode : selectedNode });
-                                            });
-                                          });
-                                        });
-                                      }}
-                                      render={this.state.selectedNode !== null && this.state.selectedNode.hasOwnProperty('link') && this.state.selectedNode.openedByLinkExaminer}/>
+                                        this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
+                                      }}/>
                       </div>
                       <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                 resultMouseEnter={(values)=>{
@@ -3133,6 +3098,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 </div>
                 <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
                   {/*the close button sets the select mode to true, which effectively "resets" it*/}
+                  <div className="object-viewer-header">
+                    <h6> Object Viewer </h6>
+                    <FaTimes className="object-viewer-close-button" onClick={(e) => this._closeObjectViewer()}/>
+                  </div>
                   <JSONTree
                   shouldExpandNode={(key,data,level) => level === 1}
                   hideRoot={true}
@@ -3142,8 +3111,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     base0E:"#ae81ff",base0F:"#cc6633"}
                   }
                   invertTheme={false}
-                  data={(() => { const { openedByLinkExaminer, ...selectedNode } = this.state.selectedNode||{}; return selectedNode; })()}/>
-                  <FaTimes className="object-viewer-close-button" onClick={(e) => this._setSelectMode(true)}/>
+                  data={this.state.objectViewerSelection || {}}/>
                 </div>
 
               </SplitPane>

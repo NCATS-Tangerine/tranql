@@ -148,6 +148,38 @@ body {
     margin:0 !important;
     /* margin:5px !important; */
 }
+.react-json-view {
+    height:100%;
+    position: absolute;
+    overflow: auto;
+ }
+.object-viewer-header {
+  position:relative;
+  width:100%;
+  padding:.5em;
+  padding-bottom:.25em;
+  text-align:center;
+  /* border-bottom:2px solid rgb(166, 226, 46); */
+ }
+.object-viewer-header > h6 {
+  color:rgb(166, 226, 46);
+  margin-bottom:0;
+}
+.object-viewer-close-button {
+  position:absolute;
+  /* Margin is for the 10px padding */
+  margin:.5em;
+  top:0;
+  right:0;
+  color:rgb(166, 226, 46);
+  font-size:18px;
+}
+.object-viewer-close-button:hover {
+  color:rgb(147, 199, 42);
+}
+.object-viewer-close-button:active {
+  color:rgb(116, 156, 36);
+}
 .type-chart {
   width: 95%;
   height: 100%;
@@ -175,24 +207,6 @@ body {
     height : 200px;
     border-top: 2px solid lightblue;
  }
-.react-json-view {
-    height:100%;
-    position: absolute;
-    overflow: auto;
- }
-.object-viewer-close-button {
-  position:absolute;
-  right:.5em;
-  top:.5em;
-  color:rgb(166, 226, 46);
-  font-size:18px;
-}
-.object-viewer-close-button:hover {
-  color:rgb(147, 199, 42);
-}
-.object-viewer-close-button:active {
-  color:rgb(116, 156, 36);
-}
 .App-logo {
     /*animation: App-logo-spin infinite 20s linear; */
      height: 7vmin;

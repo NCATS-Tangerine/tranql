@@ -3,24 +3,35 @@ import { FaCircle, FaLongArrowAltRight, FaTimes } from 'react-icons/fa';
 import './LinkExaminer.css';
 
 export default class LinkExaminer extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      link: null
+    };
+
+    this.show = this.show.bind(this);
+    this.hide = this.hide.bind(this);
+  }
+  show(link) {
+    this.setState({ link : link });
+  }
+  hide() {
+    this.setState({ link : null });
+  }
   render() {
-    if (!this.props.render) return null;
+    if (this.state.link === null) return null;
     return (
       <div className="LinkExaminer">
         <div className="link-examiner-header horizontal-bar">
           <span className="link-examiner-header-text">Examine Connections</span>
-          <FaTimes className="link-examiner-close-button" onClick={(e) => this.props.onClose(e)}/>
+          <FaTimes className="link-examiner-close-button" onClick={(e) => { this.props.onClose(e); this.hide(); }}/>
         </div>
         <div className="link-examiner-header-info">
           {
             (() => {
-              const link = this.props.graph.links.filter((link) => (
-                this.props.link.link.source_id === link.origin.source_id &&
-                this.props.link.link.target_id === link.origin.target_id &&
-                JSON.stringify(this.props.link.link.type) === JSON.stringify(link.origin.type)
-              ))[0]
-              const ids = [link.origin.source_id, link.origin.target_id];
-              const nodes = this.props.graph.nodes.filter((n) => ids.includes(n.id));
+              const link = this.state.link;
+              const nodes = [link.source, link.target];
               return nodes
               .sort((a,b)=>a.name.localeCompare(b.name))
               .map((node,i) => (
@@ -37,11 +48,7 @@ export default class LinkExaminer extends Component {
            * <span>{link.source.name.split("_").map(str=>str.charAt(0)).join("").toUpperCase()}</span>
            * <span title={link.target.name} style={{color:link.target.color}}>{link.target.name.slice(0,10)+(link.target.name.length > 10 ? "..." : "")}</span>
            */
-           const link_1 = this.props.graph.links.filter((link) => (
-             this.props.link.link.source_id === link.origin.source_id &&
-             this.props.link.link.target_id === link.origin.target_id &&
-             JSON.stringify(this.props.link.link.type) === JSON.stringify(link.origin.type)
-           ))[0]
+          const link_1 = this.state.link;
           const allConnections = this.props.graph.links.filter((link_2) => {
             return (
               (link_1.origin.source_id === link_2.origin.source_id && link_1.origin.target_id === link_2.origin.target_id) ||
