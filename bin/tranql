@@ -1,3 +1,83 @@
 #!/bin/bash
 
-PYTHONPATH=$PWD python tranql/main.py $*
+################################################################
+##
+## TranQL compiles a graph query language into requests to 
+## REST endpoints. It also provides a web front end and it's own
+## OpenAPI.
+##
+##   This is the Bash command line interface (CLI) for TranQL.
+##   
+##   author: steven cox
+##   version: 0.1
+##   usage:
+##      
+##     exec: 
+##      
+##       tranql exec <query.tranql>
+##       ex: tranql exec tranql/query/workflow-5_v3.tranql
+##      
+##     backplane:
+##      
+##       tranql backplane [--debug]
+##       ex: tranql backplane
+##      
+##     api:
+##      
+##       tranql api [--debug]
+##       ex: tranql api
+##
+##     app:
+##
+##       tranql app
+##       
+################################################################
+set -e
+
+##
+## Get our location and configure the path.
+##
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+TRANQL_ROOT=$( dirname $DIR )
+export PYTHONPATH=$TRANQL_ROOT
+export TRANQL=$TRANQL_ROOT/tranql
+
+##
+## Run a TranQL query. 
+##
+exec () {
+    python $TRANQL/main.py -s $*
+}
+
+##
+## Run the API. 
+##
+api () {
+    python $TRANQL/api.py $*
+}
+
+##
+## Run the backplane.
+##
+backplane () {
+    python $TRANQL/backplane/server.py $*
+}
+
+##
+## Run the app
+##
+app () {
+    cd $TRANQL_ROOT/web
+    npm run start $*
+}
+
+##
+## Run tests.
+##
+test () {
+    pytest $TRANQL/tests $*
+}
+
+$*
+
+exit 0
