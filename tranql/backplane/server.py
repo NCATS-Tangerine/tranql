@@ -135,6 +135,7 @@ class StandardAPIResource(Resource):
 
         ''' downcast 0.9.1 to 0.9 '''
         ''' alter once tranql AST speaks 0.9.1 '''
+        self.rename_key (message, old='query_graph', new='question_graph')
         self.rename_key (message, old='machine_question', new='question_graph')
         self.rename_key (message, old='query_options', new='options')
         if not 'knowledge_graph' in message:

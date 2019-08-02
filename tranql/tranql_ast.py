@@ -611,7 +611,8 @@ class SelectStatement(Statement):
                     "nodes": [],
                     "edges": []
                 },
-                "knowledge_map": []
+                "knowledge_map": [],
+                "question_graph": {}
         }
         # if not 'knowledge_graph' in result:
         #     message = "Malformed response does not contain knowledge_graph element."
@@ -730,6 +731,7 @@ class SelectStatement(Statement):
                         kg['edges'].append (e)
                 #result['answers'] += response['answers']
                 result['knowledge_map'] += response['knowledge_map']
+                result['question_graph'] = response['question_graph']
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
                     """

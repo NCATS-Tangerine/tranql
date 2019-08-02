@@ -904,7 +904,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _setSchemaViewerActive (active) {
     this._linkExaminer.current.hide();
     this._closeObjectViewer();
-    this._closeTableViewer();
 
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
     this.setState({},() => {
@@ -1146,7 +1145,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             .then(
               (result) => {
                 result = JSON5.parse(result);
-                console.log (result);
 
                 if (result.errors) {
                   this._handleMessageDialog (result.status, result.errors);
