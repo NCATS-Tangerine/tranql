@@ -140,7 +140,20 @@ body {
   color: #007bff;
   pointer-events:initial;
 }
-
+.tableViewPane {
+  flex:initial !important;
+  position:initial !important;
+  overflow-y:auto;
+}
+#tableView {
+  padding:15px;
+}
+#tableView table {
+  margin-bottom:0;
+}
+#tableView > .nav-tabs, #tableView > .nav-tabs > .nav-item {
+  border-bottom:0;
+}
 #info {
     position: relative;
     background-color: rgb(39, 40, 34);

@@ -1343,7 +1343,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              const prevRecord = this.state.record;
              this._configureMessage(msg,false,true);
              this._translateGraph(msg,false,true);
-             this.setState({ schemaLoaded : true});
+             this.setState({ schemaLoaded : true });
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -1365,7 +1365,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  const prevMsg = this.state.message;
                  const prevRecord = this.state.record;
                  this._configureMessage(result.schema,false,true);
-                 this._translateGraph(result.schema,false,true)
+                 this._translateGraph(result.schema,false,true);
                  result.schema.graph.links.forEach((link) => {
                    // Since opacity is based on weights and the schema lacks weighting, set it back to the default opacity.
                    delete link.linkOpacity;
@@ -3054,6 +3054,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                      minSize={0}
                      maxSize={window.innerHeight - (this.state.tableView ? 200 : 0)}
                      style={{backgroundColor:"white",position:"initial",height:"100vh"}}
+                     pane2ClassName="tableViewPane"
                      ref={this._tableSplitPane}
                      onDragFinished={(height) => this._updateGraphSplitPaneResize()}>
             <div id="viewContainer">
@@ -3172,27 +3173,54 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
             </div>
             <div id="tableView">
-              <div id="tableViewHeader">
-                <Tabs>
-                </Tabs>
-              </div>
-              <Table responsive>
+              <Tabs defaultActiveKey="0">
                 {
                   (() => {
-                    const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-                    return (
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          {
-                            null
-                          }
-                        </tr>
-                      </thead>
-                    );
+                    const elementTypes = ["nodes", "links"];
+                    return elementTypes.map((elementType,index) => (
+                      <Tab eventKey={index.toString()} title={elementType} key={index.toString()}>
+                        {
+                          (() => {
+                            const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+                            const elements = graph[elementType];
+                            const keys = elements.flatMap((el) => Object.keys(el.origin)).unique();
+                            return (
+                              <Table responsive bordered striped>
+                                <thead>
+                                  <tr>
+                                    <th>#</th>
+                                    {
+                                      keys.map((key, i) => {
+                                        return <th key={i}>{key}</th>
+                                      })
+                                    }
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {
+                                    elements.map((el, i) => {
+                                      return (
+                                        <tr key={i}>
+                                          <td>{i}</td>
+                                          {
+                                            keys.map((key, n) => {
+                                              return <td key={n}>{el.origin[key]}</td>
+                                            })
+                                          }
+                                        </tr>
+                                      )
+                                    })
+                                  }
+                                </tbody>
+                              </Table>
+                            );
+                          })()
+                        }
+                      </Tab>
+                    ));
                   })()
                 }
-              </Table>
+              </Tabs>
             </div>
           </SplitPane>
         </div>
