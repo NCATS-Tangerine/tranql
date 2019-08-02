@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fa';
 // import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
-// import ReactTable from 'react-table';
+import ReactTable from 'react-table';
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip } from 'recharts';
 import InlineEdit from 'react-edit-inline2';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
@@ -3179,11 +3179,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     const elementTypes = ["nodes", "links"];
                     return elementTypes.map((elementType,index) => (
                       <Tab eventKey={index.toString()} title={elementType} key={index.toString()}>
+                        <Button id="tableViewerCloseButton" size="sm" color="danger" onClick={() => this._closeTableViewer()}>Close</Button>
                         {
                           (() => {
                             const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-                            const elements = graph[elementType];
-                            const keys = elements.flatMap((el) => Object.keys(el.origin)).unique();
+                            const elements = graph[elementType].map((el) => el.origin);
+                            const keys = elements.flatMap((el) => Object.keys(el)).unique();
 
                             // const serialize = (object) => {
                             //   if (Array.isArray(object)) {
@@ -3198,35 +3199,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                             //     return <div>{object}</div>;
                             //   }
                             // }
+                            const columns = keys.map((key,i) => {
+                              return ({
+                                Header: key,
+                                accessor: (el) => typeof el[key] === "object" ? YAML.safeDump(el[key]) : el[key],
+                                id:key
+                              });
+                            });
                             return (
-                              <Table responsive bordered striped hover>
-                                <thead>
-                                  <tr>
-                                    <th>#</th>
-                                    {
-                                      keys.map((key, i) => {
-                                        return <th key={i}>{key}</th>
-                                      })
-                                    }
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {
-                                    elements.map((el, i) => {
-                                      return (
-                                        <tr key={i}>
-                                          <td>{i}</td>
-                                          {
-                                            keys.map((key, n) => {
-                                              return <td key={n}>{typeof el.origin[key] === "object" ? JSON.stringify(el.origin[key],undefined,2) : el.origin[key]}</td>
-                                            })
-                                          }
-                                        </tr>
-                                      )
-                                    })
-                                  }
-                                </tbody>
-                              </Table>
+                              <ReactTable data={elements}
+                                          columns={columns}
+                                          defaultPageSize={15}
+                                          filterable
+                                          className="-striped -highlight"/>
                             );
                           })()
                         }
