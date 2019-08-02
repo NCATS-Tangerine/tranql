@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import { Modal } from 'react-bootstrap';
+// import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import { Modal, Tabs, Tab } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import "react-tabs/style/react-tabs.css";
+// import "react-tabs/style/react-tabs.css";
 
 class Message extends Component {
   constructor(props, context) {
@@ -34,17 +34,13 @@ class Message extends Component {
   }
   _errorTab(error) {
     return (
-      <Tabs>
-        <TabList>
-          <Tab><b>Message</b></Tab>
-          <Tab><b>Advanced</b></Tab>
-        </TabList>
-        <TabPanel>
+      <Tabs defaultActiveKey="message">
+        <Tab eventKey="message" title="Message">
           {error.message}
-        </TabPanel>
-        <TabPanel>
+        </Tab>
+        <Tab eventKey="advanced" title="Advanced">
           {error.details}
-        </TabPanel>
+        </Tab>
       </Tabs>
     )
   }
@@ -67,19 +63,12 @@ class Message extends Component {
               // It looks really ugly to have the nested tags when there's only one error so we'll get rid of them for a single error.
               this.state.errors.length > 1 ?
               (
-                <Tabs>
-                  <TabList>
-                    {
-                      this.state.errors.map((error,i) => (
-                        <Tab key={i}>Error {i+1}</Tab>
-                      ))
-                    }
-                  </TabList>
+                <Tabs defaultActiveKey="0">
                   {
                     this.state.errors.map((error,i) => (
-                      <TabPanel key={i}>
+                      <Tab eventKey={i.toString()} key={i} title={'Error '+(i+1).toString()}>
                         {this._errorTab(error)}
-                      </TabPanel>
+                      </Tab>
                     ))
                   }
                 </Tabs>

@@ -117,6 +117,12 @@ body {
   right:5px;
   top:5px; */
 }
+.find-tool-tabs {
+  border-bottom:1px solid #dee2e6;
+}
+.tab-content .tab-content {
+  margin-top:25px;
+}
 .fa-spin {
   /* Pseudo fa-spin class because react-icons doesn't seem to natively support it */
   -ms-animation:spin 2s linear infinite;
@@ -237,6 +243,9 @@ body {
 .App-control-toolbar {
   color: rgba(220,220,220,.9);
 }
+.App-control-toolbar[data-active="true"] {
+  color: rgba(160,160,160,.9);
+}
 .App-control-toolbar.ionic {
   font-size: 22px;
 }
@@ -266,7 +275,10 @@ body {
     /* max-height: 90%; */
     height: 100%;
 }
-.messageDialog .react-tabs__tab-panel {
+.messageDialog .tab-content {
+  margin-top:10px;
+}
+.messageDialog .tab-pane {
   /* Retain the formatting from the message */
   white-space:pre-wrap;
 }
@@ -378,20 +390,29 @@ body {
 }
 .toolbar-help-modal-dialog .modal-body {
   display:flex;
+  flex-direction:column;
+}
+.toolbar-help-modal-dialog .modal-body > .tab-content {
+  height:calc(90% - 5px);
+  margin-top:10px;
+  display:flex;
 }
 .toolbar-help-tabs {
-  flex-grow:1;
-  display:flex;
-  flex-direction:column;
-  height:100%;
+  /* flex-grow:1; */
+  /* display:flex; */
+  /* flex-direction:column; */
+  /* height:100%; */
 }
 .toolbar-help-tab-panel {
-  display:flex;
   flex-grow:1;
 }
-.toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
-  display:none;
+.toolbar-help-tab-panel.active {
+  display:flex !important;
+  flex-grow:1;
 }
+/* .toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
+  display:none;
+} */
 .toolbar-help-content {
   flex-grow:1;
   margin-left:10px;

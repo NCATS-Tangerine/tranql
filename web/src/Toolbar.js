@@ -399,9 +399,9 @@ export class Toolbar extends Component {
    * Constructs a new Toolbar component
    *
    * @param {Object} props - Properties of toolbar
-   * @param {Array<ToolGroup|Tool>} props.tools - Array of tool groups and tools contained within the toolbar.
+   * @param {React.Fragment<ToolGroup|Tool>} props.tools - Fragment of tool groups and tools contained within the toolbar.
    *    NOTE: Tools are not required to be contained inside of ToolGroups, the name may be misleading. Make sure to check out what a ToolGroup actually does.
-   * @param {Component[]} props.buttons - Array of components (icons) contained at the bottom of the toolbar.
+   * @param {React.Fragment} props.buttons - Fragment of components (icons) contained at the bottom of the toolbar.
    *    The Toolbar does not modify these components in any way. It simply provides a container for them to be better placed within the larger document.
    * @param {int} [props.default=0] - Index in props.tools of the default active tool (its callback will be invoked to select it)
    * @param {Boolean} [props.overrideCursor=true] - Determines whether or not the tools will override the default page cursor when active.
@@ -413,7 +413,7 @@ export class Toolbar extends Component {
     this._setActiveTool = this._setActiveTool.bind(this);
 
     this.state = {
-      tools: this.props.tools.map((tool,i) => {
+      tools: React.Children.toArray(this.props.tools.props.children).map((tool,i) => {
         return React.cloneElement(tool, {
           toolbarCallback: this._setActiveTool,
           ref:tool.ref !== null ? tool.ref : React.createRef()
@@ -462,7 +462,7 @@ export class Toolbar extends Component {
         <div className="toolbar-header"></div>
         <div className="toolbar-content toolbar-button-container">
         {
-          this.props.buttons.map((button,i) => {
+          React.Children.toArray(this.props.buttons.props.children).map((button,i) => {
             return (
               <div key={i} className='tool-container'>
               {button}

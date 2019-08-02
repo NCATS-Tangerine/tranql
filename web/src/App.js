@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
-import { Modal, Form, Card, Container, Row, Col, ListGroup } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col, ListGroup, Table, Tabs, Tab } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import * as sizeof from 'object-sizeof';
 import JSONTree from 'react-json-tree';
@@ -15,9 +15,9 @@ import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoMdBrowse
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
   FaSpinner, FaMousePointer, FaTimes, FaFolderOpen, FaFileImport, FaFileExport,
-  FaArrowsAlt, FaTrash, FaPlayCircle
+  FaArrowsAlt, FaTrash, FaPlayCircle, FaTable
 } from 'react-icons/fa';
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+// import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 // import ReactTable from 'react-table';
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip } from 'recharts';
@@ -47,7 +47,7 @@ import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
 import GraphSerializer from './GraphSerializer.js';
 import { RenderInit, RenderSchemaInit, IdFilter, LegendFilter, LinkFilter, NodeFilter, ReasonerFilter, SourceDatabaseFilter, CurvatureAdjuster } from './Render.js';
-import "react-tabs/style/react-tabs.css";
+// import "react-tabs/style/react-tabs.css";
 import 'rc-slider/assets/index.css';
 import "react-table/react-table.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -112,6 +112,9 @@ class App extends Component {
     // Toolbar
     this._setNavMode = this._setNavMode.bind(this);
     this._setSelectMode = this._setSelectMode.bind(this);
+
+    this._getTools = this._getTools.bind(this);
+    this._getButtons = this._getButtons.bind(this);
 
     this._setHighlightTypesMode = this._setHighlightTypesMode.bind(this);
     this._highlightType = this._highlightType.bind(this);
@@ -217,7 +220,6 @@ class App extends Component {
     // Create tool-related references (for selecting them to be active)
     this._selectToolRef = React.createRef ();
 
-
     // Cache graphs locally using IndexedDB web component.
     this._cache = new Cache ();
 
@@ -305,7 +307,7 @@ class App extends Component {
       objectViewerSelection : null,
 
       tableView : false,
-      tableViewerSize : 1 - (1/3),
+      tableViewerSize : 1 - (2/7),
 
       // Schema viewer
       schema : {
@@ -337,54 +339,7 @@ class App extends Component {
 
       // Tools for the toolbar component
       useToolCursor : false,
-      tools : [
-        <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
-        <FaArrowsAlt/>
-        </Tool>,
-        <Tool name="Select" shortcut="g" description="Open a node or link in the object viewer" ref={this._selectToolRef} callback={(bool) => this._setSelectMode(bool)}>
-          <FaMousePointer/>
-        </Tool>,
-        <Tool name="Highlight Types"
-              shortcut="h"
-              description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
-              callback={(bool) => this._setHighlightTypesMode(bool)}>
-          <FaHighlighter/>
-        </Tool>,
-        <Tool name="Examine Connection"
-              shortcut="f"
-              description="Displays a connection between two nodes and all links between them"
-              callback={(bool) => this._setConnectionExaminerActive(bool)}>
-          <FaEye/>
-        </Tool>,
-        <Tool name="Browse node"
-              shortcut="e"
-              description="Browse new nodes connected to a node in the graph by a biolink modal type"
-              callback={(bool) => {
-                this.setState({ browseNodeActive : bool });
-                if (!bool) {
-                  this._browseNodeInterface.current.hide();
-                }
-              }}>
-          <IoMdBrowsers/>
-        </Tool>
-      ],
-      buttons : [
-        <FaPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
-                         id="answerViewerToolbar"
-                         className="App-control-toolbar fa"
-                         onClick={this._handleShowAnswerViewer} />,
-        <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.show()}/>,
-        <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>,
-        <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>,
-        <FaFolderOpen data-tip="Import/Export - Import or export graphs" id="importExportButton" className="App-control-toolbar fa" onClick={() => this.setState({ showImportExportModal : true })}/>,
-        <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />,
-        // Perfectly functional but does not provide enough functionality as of now to warrant its presence
-        /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
-                    className="App-control-toolbar fa"
-                    onClick={() => this.setState ({ showTypeChart : true })} />,*/
-        // The tool works as intended but the annotator does not yet.
-        /*<FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>*/
-      ],
+
       toolHelpDescriptions : {
         tools : [
           {
@@ -418,6 +373,13 @@ class App extends Component {
             If you forget a node's name, you can hover over the abbreviation, and it will display its name in full.
             Clicking on a link will bring it up in the object viewer.
             `
+          },
+          {
+            title: "Browse Node",
+            description: `
+            This tool allows you to select a node and browse connections it has with nodes of a given type, optionally along a given prediate. It will
+            query the Robokop API and return new nodes.
+            `
           }
         ],
         buttons: [
@@ -429,13 +391,8 @@ class App extends Component {
             title: "Find Tool",
             description: (
               <div>
-                <Tabs>
-                  <TabList>
-                    <Tab>Overview</Tab>
-                    <Tab>Normal Syntax</Tab>
-                    <Tab>JSONPath</Tab>
-                  </TabList>
-                  <TabPanel>
+                <Tabs className="find-tool-tabs" defaultActiveKey="overview">
+                  <Tab eventKey="overview" title="Overview">
                     <p>
                       This button brings up the find tool, which can also be opened with the keyboard shortcut control+F (the normal browser find tool can be opened with F3).
                       The find tool enables you to use JSONPath or JSON-like attribute selectors to find objects in the graph. Additionally, you may use tools on the results.
@@ -445,8 +402,8 @@ class App extends Component {
                       Another advantage of the JSONPath syntax is that you do not need to know JSONPath to use it, as you can explore the graph via the arrows
                       on the results.
                     </p>
-                  </TabPanel>
-                  <TabPanel>
+                  </Tab>
+                  <Tab eventKey="normalSyntax" title="Normal Syntax">
                     <div className="section">
                       <h6>Structure:</h6>
                       <p>
@@ -542,8 +499,8 @@ class App extends Component {
                         </dl>
                       </Row>
                     </div>
-                  </TabPanel>
-                  <TabPanel>
+                  </Tab>
+                  <Tab eventKey="JSONPath" title="JSONPath">
                     <div className="section">
                       <h6>Structure:</h6>
                       <p>
@@ -575,7 +532,7 @@ class App extends Component {
                         </dl>
                       </Row>
                     </div>
-                  </TabPanel>
+                  </Tab>
                 </Tabs>
               </div>
           )
@@ -600,17 +557,11 @@ class App extends Component {
           {
             title: "Settings",
             description: (
-              <Tabs>
-                <TabList>
-                  <Tab>Overview</Tab>
-                  <Tab>General</Tab>
-                  <Tab>Graph Structure</Tab>
-                  <Tab>Knowledge Sources</Tab>
-                </TabList>
-                <TabPanel>
+              <Tabs defaultActiveKey="overview">
+                <Tab eventKey="overview" title="Overview">
                   This button brings up the settings interface, which allows you to customize the behavior of TranQL.
-                </TabPanel>
-                <TabPanel>
+                </Tab>
+                <Tab eventKey="general" title="General">
                   <h6>Visualization Mode and Graph Colorization</h6>
                     <p>This allows you to change the way that the graph is visualized. You may also disable the coloring of the graph if desired.</p>
                   <h6>Use Cache</h6>
@@ -619,8 +570,8 @@ class App extends Component {
                     You may also clear the cache if desired.</p>
                   <h6>Cursor</h6>
                     <p>This sets your mouse cursor to be the same icon as the currently selected tool.</p>
-                </TabPanel>
-                <TabPanel>
+                </Tab>
+                <Tab eventKey="graphStructure" title="Graph Structure">
                   <h6>Link Weight Range</h6>
                     <p>This will filter out any links from the graph whose weights are not within the specified range.</p>
                   <h6>Node Connectivity Range</h6>
@@ -632,17 +583,21 @@ class App extends Component {
                   <h6>Legend Display Limit</h6>
                     <p>This will filter out any node or link types in the legend following the given value. Nodes and links in the legend are ordered
                     by greatest to least quantity within the graph, thus, it results in the least-present types being filtered out of the legend.</p>
-                </TabPanel>
-                <TabPanel>
+                </Tab>
+                <Tab eventKey="knowledgeSources" title="Knowledge Sources">
                   <h6>Database Sources</h6>
                     <p>When a query is active, this setting will be populated with checkboxes for all source databases that the query was constructed from.
                     You can then disable sources to filter them out of the graph.</p>
                   <h6>Reasoner Sources</h6>
                     <p>When a query is active, this setting will be populated with checkboxes for all source reasoners that the query was constructed from.
                     You can then disable sources to filter them out of the graph.</p>
-                </TabPanel>
+                </Tab>
               </Tabs>
             )
+          },
+          {
+            title: "Table View",
+            description: "This button brings up a tabular representation of the active graph."
           }
         ]
       },
@@ -1343,7 +1298,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _translateGraph (message,noRenderChain,schema) {
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
-      if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;;
+      if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
       const isSchema = schema;
       message = message ? message : (isSchema ? this.state.schemaMessage : this.state.message);
       if (message) {
@@ -1949,6 +1904,78 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       return <ForceGraphVR {...props} />
   }
   /**
+  * Render the toolbar buttons
+  *
+  * @private
+  */
+  _getButtons() {
+    return (
+      <>
+      <FaPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance"
+                       id="answerViewerToolbar"
+                       className="App-control-toolbar fa"
+                       onClick={this._handleShowAnswerViewer} />
+      <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.show()}/>
+      <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>
+      <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>
+      <FaFolderOpen data-tip="Import/Export - Import or export graphs" id="importExportButton" className="App-control-toolbar fa" onClick={() => this.setState({ showImportExportModal : true })}/>
+      <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />
+      <FaTable data-active={this.state.tableView} data-tip="View a tabular representation of the active graph" id="tableViewButton" className="App-control-toolbar fa" onClick={() => {
+        // We want to close the table viewer if they press the button and it is already active
+        this.state.tableView ? this._closeTableViewer () : this._openTableViewer ();
+      }}/>
+      {
+      // Perfectly functional but does not provide enough functionality as of now to warrant its presence
+      /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
+                  className="App-control-toolbar fa"
+                  onClick={() => this.setState ({ showTypeChart : true })} />*/
+      // The tool works as intended but the annotator does not yet.
+      /*<FaPen className="App-control-toolbar fa" data-tip="Annotate Graph" onClick={() => this._annotateGraph ()}/>*/
+      }
+      </>
+    );
+  }
+  /**
+   * Render the toolbar tools
+   *
+   * @private
+   */
+  _getTools() {
+    return (
+      <>
+      <Tool name="Navigate" shortcut="v" description="Click a node to move the camera to it and make it the center of rotation." callback={(bool) => this._setNavMode(bool)}>
+      <FaArrowsAlt/>
+      </Tool>
+      <Tool name="Select" shortcut="g" description="Open a node or link in the object viewer" ref={this._selectToolRef} callback={(bool) => this._setSelectMode(bool)}>
+        <FaMousePointer/>
+      </Tool>
+      <Tool name="Highlight Types"
+            shortcut="h"
+            description="Highlights all elements of the type that is being hovered over.<br/> Left click filters all of that type. Right click filters all not of that type."
+            callback={(bool) => this._setHighlightTypesMode(bool)}>
+        <FaHighlighter/>
+      </Tool>
+      <Tool name="Examine Connection"
+            shortcut="f"
+            description="Displays a connection between two nodes and all links between them"
+            callback={(bool) => this._setConnectionExaminerActive(bool)}>
+        <FaEye/>
+      </Tool>
+      <Tool name="Browse node"
+            shortcut="e"
+            description="Browse new nodes connected to a node in the graph by a biolink modal type"
+            callback={(bool) => {
+              this.setState({ browseNodeActive : bool });
+              if (!bool) {
+                this._browseNodeInterface.current.hide();
+              }
+            }}>
+        <IoMdBrowsers/>
+      </Tool>
+      </>
+    );
+  }
+  /**
    * Show the modal settings dialog.
    *
    * @private
@@ -2505,8 +2532,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    */
    _renderToolbarHelpModal () {
      const obj = {
-       buttons:this.state.buttons,
-       tools:this.state.tools
+       buttons:React.Children.toArray(this._getButtons().props.children),
+       tools:React.Children.toArray(this._getTools().props.children)
      };
      return (
        <Modal show={this.state.showToolbarHelpModal}
@@ -2519,28 +2546,24 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
            </Modal.Title>
          </Modal.Header>
          <Modal.Body>
-           <Tabs className="toolbar-help-tabs">
-              <TabList>
-                {
-                  Object.keys(obj).map((key, index) => {
-                    return (
-                      <Tab key={index}>{key.charAt(0).toUpperCase()+key.slice(1)}</Tab>
-                    );
-                  })
-                }
-              </TabList>
+           <Tabs defaultActiveKey="0" className="toolbar-help-tabs">
               {
                 Object.entries(obj).map((entry, i) => {
                   let type = entry[0];
                   let values = entry[1];
+
+                  const title = type.charAt(0).toUpperCase()+type.slice(1)
                   return (
-                    <TabPanel className="toolbar-help-tab-panel" key={i}>
+                    <Tab eventKey={i.toString()} className="toolbar-help-tab-panel" key={i} title={title}>
                       <ListGroup className="toolbar-help-tool-group">
                         {
                           values.map((val, n) => {
                             return (
                               // eslint-disable-next-line
-                              <ListGroup.Item className="toolbar-help-tool-button" key={n} action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{this.state.toolbarHelpModalActiveToolType[type] = n; this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })}}>
+                              <ListGroup.Item className="toolbar-help-tool-button" key={n} action active={n===this.state.toolbarHelpModalActiveToolType[type]} onClick={()=>{
+                                this.state.toolbarHelpModalActiveToolType[type] = n;
+                                this.setState({ toolbarHelpModalActiveToolType : this.state.toolbarHelpModalActiveToolType })
+                              }}>
                                 {
                                   (() => {
                                     const noProps = (element) => {
@@ -2575,7 +2598,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                           </Card.Text>
                         </Card.Body>
                       </Card>
-                    </TabPanel>
+                    </Tab>
                   );
                 })
               }
@@ -2715,13 +2738,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             <Modal.Title>Settings</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <Tabs className="react-tabs-settings-tab-list">
-              <TabList>
-                <Tab><b>General</b></Tab>
-                <Tab><b>Graph Structure</b></Tab>
-                <Tab><b>Knowledge Sources</b></Tab>
-              </TabList>
-              <TabPanel>
+            <Tabs defaultActiveKey="general" className="react-tabs-settings-tab-list">
+              <Tab eventKey="general" title="General">
             <hr style={{visibility:"hidden",marginTop:0}}/>
             <div style={{display:"flex",flexDirection:"column"}}>
               <b>Visualization Mode and Graph Colorization</b>
@@ -2808,9 +2826,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                        onChange={this._handleUpdateSettings} /> Enables dynamic id lookup of curies.
               </div>
             </div>
-              </TabPanel>
-              <TabPanel>
-            <br/>
+              </Tab>
+              <Tab eventKey="graphStructure" title="Graph Structure">
+            <hr style={{visibility:"hidden",marginTop:0}}/>
             <b>Link Weight Range</b> Min: [{this.state.linkWeightRange[0] / 100}] Max: [{this.state.linkWeightRange[1] / 100}]<br/>
             Include only links with a weight in this range.
             <Range allowCross={false} defaultValue={this.state.linkWeightRange} onChange={this._onLinkWeightRangeChange} />
@@ -2855,14 +2873,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
             {/*<div className={"divider"}/>*/}
             <br/>
-              </TabPanel>
-              <TabPanel>
+              </Tab>
+              <Tab eventKey="knowledgeSources" title="Knowledge Sources">
+            <hr style={{visibility:"hidden",marginTop:0}}/>
             <b>Database Sources</b><span> Filter graph edges by source database. Deselecting a database deletes all associations from that source.</span>
             <div className="checkbox-container">{this._renderCheckboxes('dataSources')}</div>
             <hr/>
             <b>Reasoner Sources</b><span> Filter graph elements by source reasoner. Deselecting a reasoner deletes all associations from that source.</span>
             <div className="checkbox-container">{this._renderCheckboxes('reasonerSources')}</div>
-              </TabPanel>
+              </Tab>
             </Tabs>
           </Modal.Body>
           <Modal.Footer>
@@ -3034,7 +3053,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                      allowResize={this.state.tableView}
                      minSize={0}
                      maxSize={window.innerHeight - (this.state.tableView ? 200 : 0)}
-                     style={{backgroundColor:"black",position:"initial",height:"100vh"}}
+                     style={{backgroundColor:"white",position:"initial",height:"100vh"}}
                      ref={this._tableSplitPane}
                      onDragFinished={(height) => this._updateGraphSplitPaneResize()}>
             <div id="viewContainer">
@@ -3067,8 +3086,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                           <Toolbar id="toolbar"
                                    default={0}
                                    overrideCursor={this.state.useToolCursor}
-                                   tools={this.state.tools}
-                                   buttons={this.state.buttons}
+                                   tools={this._getTools()}
+                                   buttons={this._getButtons()}
                                    onlyUseShortcutsWhen={[HTMLBodyElement]}
                                    ref={this._toolbar}/>
                         )
@@ -3153,6 +3172,27 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
             </div>
             <div id="tableView">
+              <div id="tableViewHeader">
+                <Tabs>
+                </Tabs>
+              </div>
+              <Table responsive>
+                {
+                  (() => {
+                    const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+                    return (
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          {
+                            null
+                          }
+                        </tr>
+                      </thead>
+                    );
+                  })()
+                }
+              </Table>
             </div>
           </SplitPane>
         </div>
