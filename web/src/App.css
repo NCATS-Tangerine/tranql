@@ -141,15 +141,18 @@ body {
   pointer-events:initial;
 }
 .tableViewPane {
-  flex:initial !important;
-  position:initial !important;
-  overflow-y:auto;
-}
-#tableView {
+  /* Has to be scroll because a bug with chrome causes it not to display for whatever reason otherwise */
+  overflow-y:scroll;
   padding:15px;
 }
 #tableView table {
   margin-bottom:0;
+  /* For some reason this is necessary to get the scrollbar to render in Chrome... */
+  position:relative;
+}
+#tableView > .nav-tabs {
+  /* For some reason this is necessary to get the tab buttons to render in Chrome...  */
+  position:relative;
 }
 #tableView > .nav-tabs, #tableView > .nav-tabs > .nav-item {
   border-bottom:0;

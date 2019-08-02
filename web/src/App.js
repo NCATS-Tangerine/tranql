@@ -3184,8 +3184,22 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                             const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
                             const elements = graph[elementType];
                             const keys = elements.flatMap((el) => Object.keys(el.origin)).unique();
+
+                            // const serialize = (object) => {
+                            //   if (Array.isArray(object)) {
+                            //     return <div>{object.map((obj) => <>{serialize(obj)}<br/></>)}</div>;
+                            //   }
+                            //   else if (typeof object === "object") {
+                            //     return (<div>{Object.entries(object).map((object) => {
+                            //       return <>{serialize(object[0])} = {serialize(object[1])}}<br/></>;
+                            //     })}</div>);
+                            //   }
+                            //   else {
+                            //     return <div>{object}</div>;
+                            //   }
+                            // }
                             return (
-                              <Table responsive bordered striped>
+                              <Table responsive bordered striped hover>
                                 <thead>
                                   <tr>
                                     <th>#</th>
@@ -3204,7 +3218,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                           <td>{i}</td>
                                           {
                                             keys.map((key, n) => {
-                                              return <td key={n}>{el.origin[key]}</td>
+                                              return <td key={n}>{typeof el.origin[key] === "object" ? JSON.stringify(el.origin[key],undefined,2) : el.origin[key]}</td>
                                             })
                                           }
                                         </tr>
