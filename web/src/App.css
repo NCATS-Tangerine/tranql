@@ -141,18 +141,17 @@ body {
   pointer-events:initial;
 }
 .tableViewPane {
-  /* Has to be scroll because a bug with chrome causes it not to display for whatever reason otherwise */
   overflow-y:auto;
   padding:15px;
 }
 #tableView {
   position:relative;
+  width:100%;
 }
 #tableView .rt-td {
   white-space:pre;
 }
 #tableView > .nav-tabs {
-  /* For some reason this is necessary to get the tab buttons to render in Chrome...  */
   position:relative;
 }
 #tableView > .nav-tabs, #tableView > .nav-tabs > .nav-item {

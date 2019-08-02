@@ -904,6 +904,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _setSchemaViewerActive (active) {
     this._linkExaminer.current.hide();
     this._closeObjectViewer();
+    this._closeTableViewer();
 
     // Don't set state, thereby reloading the graph, if the schema viewer isn't enabled
     this.setState({},() => {
@@ -2273,6 +2274,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _closeTableViewer() {
     let height = this._tableSplitPane.current.splitPane.offsetHeight;
     this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
+    this._updateGraphSize(undefined,height);
     this.setState({ tableView : false });
   }
   _openTableViewer() {
@@ -3211,6 +3213,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                           columns={columns}
                                           defaultPageSize={15}
                                           filterable
+                                          defaultFilterMethod={(filter,row) => {
+                                            return row[filter.id].includes(filter.value);
+                                          }}
                                           className="-striped -highlight"/>
                             );
                           })()
