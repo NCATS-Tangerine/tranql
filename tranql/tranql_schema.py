@@ -110,15 +110,18 @@ class Schema:
                 # If schema_data is a URL
                 try:
                     response = requests.get (schema_data)
+                    old_s_d = schema_data
                     schema_data = response.json()
-                except requests.exceptions.RequestException as e:
+                    if 'message' in schema_data:
+                        raise Exception(schema_data['message'])
+                except Exception as e:
                     # If the request errors for any number of reasons (likely a timeout), append an error message
                     if isinstance(e,requests.exceptions.Timeout):
-                        error = 'Request timed out while fetching schema at "'+schema_data+'"'
+                        error = 'Request timed out while fetching schema at "'+old_s_d+'"'
                     elif isinstance(e,requests.exceptions.ConnectionError):
-                        error = 'Request could not connect while fetching schema at "'+schema_data+'"'
+                        error = 'Request could not connect while fetching schema at "'+old_s_d+'"'
                     else:
-                        error = 'Request failed while fetching schema at "'+schema_data+'"'
+                        error = TranQLException('Request failed while fetching schema at "'+old_s_d+'"',details=json.dumps(next(iter(e.args)),indent=2))
                     self.loadErrors.append(error)
                     # Delete the key here because it has no data.
                     del self.config['schema'][schema_name]

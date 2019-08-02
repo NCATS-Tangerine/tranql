@@ -178,9 +178,23 @@ class ICEESSchema(StandardAPIResource):
                             type: string
 
         """
-        return requests.get (
+        response = requests.get (
             self.schema_url,
-            verify=False).json()['return value']
+            verify=False)
+        if not response.ok:
+            return {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad ICEES schema response. url: {self.schema_url} request: {request.json} response: {response.text}."
+            }
+        elif 'return value' in response.json():
+            return response.json()['return value']
+        else:
+            return {
+                'status' : 'error',
+                'message' : 'Unrecognized response from ICEES schema',
+                'code' : 'service_invocation_failure'
+            }
 
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
