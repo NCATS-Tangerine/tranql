@@ -2194,7 +2194,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify (message)
+      body: JSON.stringify ({ message : message })
     }).then(res => res.json())
       .then(
         (result) => {

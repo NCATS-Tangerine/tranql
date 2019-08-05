@@ -37,9 +37,10 @@ CORS(app)
 app.config['SWAGGER'] = {
     'title': 'TranQL API',
     'description': 'Translator Query Language (TranQL) API',
-    'uiversion': 3
+    'uiversion': 3,
+    'swagger': '3.2.0'
 }
-swagger = Swagger(app) #, template=template)
+swagger = Swagger(app)
 
 class StandardAPIResource(Resource):
     def validate (self, request):
@@ -290,13 +291,12 @@ class AnnotateGraph(StandardAPIResource):
         ---
         tag: validation
         description: Graph annotator.
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        $ref: '#/definitions/Message'
+        parameters:
+            - in: query
+              name: message
+              schema:
+                type: object
+              description: KGS 0.1.0 compliant message object
         responses:
             '200':
                 description: Success
@@ -313,7 +313,7 @@ class AnnotateGraph(StandardAPIResource):
                             type: string
         """
         tranql = TranQL ()
-        messageObject = request.json
+        messageObject = request.json['message']
         url = tranql.context.mem.get('backplane') + '/graph/gnbr/decorate'
 
         logger.info(url)
@@ -343,6 +343,10 @@ class SchemaGraph(StandardAPIResource):
 
     def get(self):
         """
+        query
+        ---
+        tag: validation
+        description: Get the TranQL schema
         responses:
             '200':
                 description: Success
@@ -350,6 +354,7 @@ class SchemaGraph(StandardAPIResource):
                     text/plain:
                         schema:
                             type: string
+                            example: "Successfully validated"
             '400':
                 description: Malformed message
                 content:
@@ -385,17 +390,7 @@ class ModelConceptsQuery(StandardAPIResource):
         query
         ---
         tag: validation
-        description: TranQL Query
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            query:
-                                type: string
+        description: Get biolink model concepts
         responses:
             '200':
                 description: Success
@@ -434,17 +429,7 @@ class ModelRelationsQuery(StandardAPIResource):
         query
         ---
         tag: validation
-        description: TranQL concept model relations query.
-        requestBody:
-            description: Input message
-            required: true
-            content:
-                application/json:
-                    schema:
-                        type: object
-                        properties:
-                            query:
-                                type: string
+        description: Get biolink model relations
         responses:
             '200':
                 description: Success
