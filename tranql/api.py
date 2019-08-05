@@ -174,8 +174,8 @@ class Configuration(StandardAPIResource):
             "api_url" : config['API_URL'],
             "robokop_url" : config['ROBOKOP_URL']
         }
-class MergeKG(StandardAPIResource):
-    """ Exposes an endpoint that allows for the merging of an arbitrary number of knowledge graphs """
+class MergeMessages(StandardAPIResource):
+    """ Exposes an endpoint that allows for the merging of an arbitrary amount of messages """
 
     def __init__(self):
         super().__init__()
@@ -185,36 +185,38 @@ class MergeKG(StandardAPIResource):
         query
         ---
         tag: validation
-        description: Merge Knowledge Graphs
+        description: Merge Messages
         parameters:
             - in: query
-              name: knowledge_graphs
+              name: messages
               schema:
                 type: array
                 items:
-                  $ref: '#/definitions/KGraph'
+                  $ref: '#/definitions/Message'
                 example:
-                  - nodes:
-                      - id: n0
-                        type: chemical_substance
-                      - id: n1
-                        type: gene
-                    edges:
-                      - id: e0
-                        type: targets
-                        source_id: n0
-                        target_id: n1
-                  - nodes:
-                      - id: n0
-                        type: chemical_substance
-                      - id: n1
-                        type: gene
-                    edges:
-                      - id: e0
-                        type: interacts_with
-                        source_id: n0
-                        target_id: n1
-              description: An array of KGS 0.9.0 compliant knowledge graph objects
+                  - knowledge_graph:
+                      nodes:
+                        - id: n0
+                          type: chemical_substance
+                        - id: n1
+                          type: gene
+                      edges:
+                        - id: e0
+                          type: targets
+                          source_id: n0
+                          target_id: n1
+                  - knowledge_graph:
+                      nodes:
+                        - id: n0
+                          type: chemical_substance
+                        - id: n1
+                          type: gene
+                      edges:
+                        - id: e0
+                          type: interacts_with
+                          source_id: n0
+                          target_id: n1
+              description: An array of KGS 0.1.0 compliant message objects
             - in: query
               name: interpreter_options
               schema:
@@ -250,7 +252,7 @@ class MergeKG(StandardAPIResource):
 
         """
         options = request.json.get('interpreter_options',{})
-        messages = [{'knowledge_graph' : i, 'knowledge_map' : []} for i in request.json.get('knowledge_graphs',[])]
+        messages = request.json.get('messages',[])
         tranql = TranQL (options=options)
         return SelectStatement.merge_results(messages,tranql)
 class TranQLQuery(StandardAPIResource):
@@ -506,7 +508,7 @@ class ModelRelationsQuery(StandardAPIResource):
 api.add_resource(TranQLQuery, '/tranql/query')
 api.add_resource(SchemaGraph, '/tranql/schema')
 api.add_resource(AnnotateGraph, '/tranql/annotate')
-api.add_resource(MergeKG,'/tranql/merge_knowledge_graphs')
+api.add_resource(MergeMessages,'/tranql/merge_messages')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 

@@ -442,8 +442,17 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
-    def decorate(self, element, is_node, interpreter):
-        schema = self.get_schema_name(interpreter)
+    def decorate_result(self, response, schema):
+        if 'knowledge_graph' in response:
+            for node in response['knowledge_graph'].get('nodes',[]):
+                self.decorate(node, True, schema)
+
+            for edge in response['knowledge_graph'].get('edges',[]):
+                self.decorate(edge, False, schema)
+    def decorate_results(self, responses, schema):
+        for response in responses:
+            self.decorate_result(response, schema)
+    def decorate(self, element, is_node, schema):
         # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
         element["reasoner"] = [schema]
         # Only edges have the source_database property
@@ -537,13 +546,7 @@ class SelectStatement(Statement):
                 raise ServiceInvocationError (
                     f"No valid results from service {self.service} executing " +
                     f"query {self.query}. Unable to continue query. Exiting.")
-            for response in responses:
-                if 'knowledge_graph' in response:
-                    for node in response['knowledge_graph'].get('nodes',[]):
-                        self.decorate(node,True,interpreter)
-                    for edge in response['knowledge_graph'].get('edges',[]):
-                        self.decorate(edge,False,interpreter)
-
+            self.decorate_results(responses, self.get_schema_name(interpreter))
             result = self.merge_results (responses, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
@@ -707,7 +710,6 @@ class SelectStatement(Statement):
                     node['equivalent_identifiers'] = all_equivalent_identifiers
 
 
-        # TODO: This probably needs a rewrite. It should just construct an empty Message object and then iterate over the entire list of repsonses normally, rather than having to start with the first and using that as the starting Message object.
         for response in responses:
             #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
             # TODO: Preserve reasoner provenance. This treats nodes as equal if
@@ -715,22 +717,8 @@ class SelectStatement(Statement):
             # Edges, we may keep distinct and whole or merge to some tbd extent.
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
-                other_edges = rkg['edges'] if 'edges' in rkg else []
-                for e in other_edges:
-                    exists = False
-                    for edge in kg['edges']:
-                        edge_type = edge.get('type',None)
-                        e_type = e.get('type',None)
-                        if edge_type == e_type and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
-                            exists = True
-                            break
-                        if exists:
-                            deep_merge(edge,e)
-                            deep_merge(e,edge)
-                    if not exists:
-                        kg['edges'].append (e)
                 #result['answers'] += response['answers']
-                result['knowledge_map'] += response['knowledge_map']
+                result['knowledge_map'] += response.get('knowledge_map',[])
                 result['question_graph'].update(response.get('question_graph',{}))
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
@@ -763,6 +751,24 @@ class SelectStatement(Statement):
                     edge['source_id'] = new_id
                 if old_id == edge['target_id']:
                     edge['target_id'] = new_id
+
+        for response in responses:
+            if 'knowledge_graph' in response:
+                rkg = response['knowledge_graph']
+                other_edges = rkg['edges'] if 'edges' in rkg else []
+                for e in other_edges:
+                    exists = False
+                    for edge in kg['edges']:
+                        edge_type = edge.get('type',None)
+                        e_type = e.get('type',None)
+                        if sorted(edge_type) == sorted(e_type) and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
+                            exists = True
+                            break
+                    if exists:
+                        deep_merge(edge,e)
+                        deep_merge(e,edge)
+                    else:
+                        kg['edges'].append (e)
         return result
 
 class TranQL_AST:

@@ -78,6 +78,20 @@ export default class BrowseNodeInterface extends Component {
         });
         if (resp.ok) {
           const json = await resp.json();
+          this._controller = new window.AbortController();
+          const decorated_resp = await fetch(this.props.tranqlURL+'/tranql/decorate_kg',{
+            signal: this._controller.signal,
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              'knowledge_graph' : json.knowledge_graph,
+              'reasoner' : 'robokop'
+            })
+          });
+          json.knowledge_graph = await decorated_resp.json();
           fetches.push(
             json
           );
@@ -97,7 +111,7 @@ export default class BrowseNodeInterface extends Component {
     console.log('Beginning merge request');
     try {
       this._controller = new window.AbortController();
-      const resp = await fetch(this.props.tranqlURL+'/tranql/merge_knowledge_graphs',{
+      const resp = await fetch(this.props.tranqlURL+'/tranql/merge_messages',{
         signal: this._controller.signal,
         method: 'POST',
         headers: {
@@ -105,8 +119,8 @@ export default class BrowseNodeInterface extends Component {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          'knowledge_graphs' : [
-            this.props.message.knowledge_graph,
+          'messages' : [
+            this.props.message,
             ...fetches
           ],
           'interpreter_options' : {
