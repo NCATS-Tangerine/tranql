@@ -38,9 +38,15 @@ app.config['SWAGGER'] = {
     'title': 'TranQL API',
     'description': 'Translator Query Language (TranQL) API',
     'uiversion': 3,
-    'swagger': '3.2.0'
+    'openapi': '3.2.0'
 }
-swagger = Swagger(app)
+filename = 'translator_interchange.yaml'
+filename = os.path.join ('backplane',filename)
+with open(filename, 'r') as file_obj:
+    template = {
+        "definitions" : yaml.load(file_obj)["definitions"]
+    }
+swagger = Swagger(app, template=template)
 
 class StandardAPIResource(Resource):
     def validate (self, request):
@@ -185,14 +191,48 @@ class MergeKG(StandardAPIResource):
               name: knowledge_graphs
               schema:
                 type: array
+                items:
+                  $ref: '#/definitions/KGraph'
+                example:
+                  - nodes:
+                      - id: n0
+                        type: chemical_substance
+                      - id: n1
+                        type: gene
+                    edges:
+                      - id: e0
+                        type: targets
+                        source_id: n0
+                        target_id: n1
+                  - nodes:
+                      - id: n0
+                        type: chemical_substance
+                      - id: n1
+                        type: gene
+                    edges:
+                      - id: e0
+                        type: interacts_with
+                        source_id: n0
+                        target_id: n1
               description: An array of KGS 0.9.0 compliant knowledge graph objects
             - in: query
               name: interpreter_options
               schema:
                 type: object
+                properties:
+                  asynchronous:
+                    type: boolean
+                  name_based_merging:
+                    type: boolean
+                  resolve_names:
+                    type: boolean
+                  dynamic_id_resolution:
+                    type: boolean
+              example:
+                name_based_merging: true
+                resolve_names: false
               description: Any options to pass to the TranQL interpreter (such as 'name_based_merging' or 'resolve_names')
               required: false
-              default: {}
         responses:
             '200':
                 description: Success
@@ -209,8 +249,9 @@ class MergeKG(StandardAPIResource):
                             type: string
 
         """
+        options = request.json.get('interpreter_options',{})
         messages = [{'knowledge_graph' : i, 'knowledge_map' : []} for i in request.json.get('knowledge_graphs',[])]
-        tranql = TranQL (options=request.json.get('interpreter_options',{}))
+        tranql = TranQL (options=options)
         return SelectStatement.merge_results(messages,tranql)
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """

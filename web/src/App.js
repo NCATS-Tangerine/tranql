@@ -169,6 +169,8 @@ class App extends Component {
     // Annotate graph
     this._annotateGraph = this._annotateGraph.bind (this);
 
+    // Browse node interface
+    this._browseNodeResult = this._browseNodeResult.bind (this);
 
     // Settings management
     this._handleShowModal = this._handleShowModal.bind (this);
@@ -902,6 +904,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _setSchemaViewerActive (active) {
+    this._browseNodeInterface.current.hide();
     this._linkExaminer.current.hide();
     this._closeObjectViewer();
 
@@ -1190,6 +1193,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   }
   _cacheFormat (message) {
     let {graph, hiddenTypes, ...cacheMessage} = message;
+
+    if (cacheMessage.hasOwnProperty('knowledge_map')) {
+      // Rename knowledge_map to answers
+      cacheMessage.answers = cacheMessage.knowledge_map;
+      delete cacheMessage.knowledge_map;
+    }
+
     var obj = {
       'key' : this.state.code,
       'data' : cacheMessage
@@ -1197,7 +1207,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // if (this.state.record) {
     //   obj.id = this.state.record.id;
     // }
-    console.log (obj);
     return obj;
   }
   _cacheWrite (message) {
@@ -1994,7 +2003,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this._analyzeAnswer({
         "question_graph"  : message.question_graph,
         "knowledge_graph" : message.knowledge_graph,
-        "answers"         : message.knowledge_map
+        "answers"         : message.answers
       });
     }
   }
@@ -2169,6 +2178,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     renderAmountObj[type] = value;
     value !== "" && this.setState({ prop : renderAmountObj });
     localStorage.setItem(prop, JSON.stringify(renderAmountObj));
+  }
+  /**
+   * Update the current graph with the new results from the browse node tool
+   *
+   * @private
+   */
+  _browseNodeResult (result) {
+    this._configureMessage (result);
+    this._translateGraph (result);
   }
   /**
    * Send graph message to backplane which annotates it and relays it back
@@ -3107,7 +3125,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                              fg={this.fg}
                                              concepts={this.state.modelConcepts}
                                              relations={this.state.modelRelations}
-                                             robokop_url={this.robokop_url}/>
+                                             onReturnResult={this._browseNodeResult}
+                                             onReturnError={(errors) => {
+                                               errors = errors.map((e) => {
+                                                 return {
+                                                   message:e.message,
+                                                   details:e.stack
+                                                 };
+                                               });
+                                               this._handleMessageDialog ('Error', errors);
+                                             }}
+                                             robokop_url={this.robokop_url}
+                                             tranqlURL={this.tranqlURL}
+                                             message={this.state.schemaViewerEnabled && this.state.schemaViewerActive ? this.state.schemaMessage : this.state.message}/>
                         <div id="graphOverlayVerticalContainer">
                           <div id="schemaBanner" className="no-select" style={{display:(this.state.schemaViewerEnabled ? "" : "none")}}>
                             {((this.state.schemaViewerActive && !this.state.schemaLoaded) || (!this.state.schemaViewerActive && this.state.loading)) && <FaSpinner style={{marginRight:"10px"}} className="fa-spin"/>}

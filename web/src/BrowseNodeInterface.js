@@ -24,6 +24,7 @@ export default class BrowseNodeInterface extends Component {
     this._browseNode = this._browseNode.bind(this);
     this._getPos = this._getPos.bind(this);
     this._updatePosition = this._updatePosition.bind(this);
+    this._error = this._error.bind(this);
 
     this._root = React.createRef ();
 
@@ -53,22 +54,75 @@ export default class BrowseNodeInterface extends Component {
       this._updatePosition();
     });
   }
+  _error(errors) {
+    if (!Array.isArray(errors)) errors = [errors];
+
+    this.setState({ loading : false });
+    this.props.onReturnError(errors);
+  }
   async _browseNode() {
     this.setState({ loading : true });
     const params = {};
     if (this.state.activePredicate !== '') params.predicate = this.state.activePredicate;
     let queryString = Object.keys(params).length === 0 ? '' : ('?'+toQueryString(params));
 
-    let fetches = [];
-    this.state.node.type.forEach((type) => {
-      fetches.push(
-        fetch(this.props.robokop_url+`/api/simple/expand/${type}/${this.state.node.id}/${this.state.activeConcept}/${queryString}`)
-      )
-    });
+    const fetches = [];
+    const errors = [];
 
-    await Promise.all(fetches);
-
+    for (let i=0;i<this.state.node.type.length;i++) {
+      try {
+        const type = this.state.node.type[i];
+        this._controller = new window.AbortController();
+        const resp = await fetch(this.props.robokop_url+`/api/simple/expand/${type}/${this.state.node.id}/${this.state.activeConcept}/${queryString}`, {
+          signal: this._controller.signal
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          fetches.push(
+            json
+          );
+        }
+      }
+      catch (e) {
+        errors.push(e);
+      }
+      console.log('Finished request',(i+1).toString());
+    }
+    if (errors.length > 0) {
+      this._error(errors);
+      return;
+    }
     console.log(fetches);
+
+    console.log('Beginning merge request');
+    try {
+      this._controller = new window.AbortController();
+      const resp = await fetch(this.props.tranqlURL+'/tranql/merge_knowledge_graphs',{
+        signal: this._controller.signal,
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          'knowledge_graphs' : [
+            this.props.message.knowledge_graph,
+            ...fetches
+          ],
+          'interpreter_options' : {
+            'name_based_merging' : true,
+            'resolve_names' : false
+          }
+        })
+      });
+      const merged = await resp.json();
+      console.log('Finished browse node');
+      this.hide();
+      this.props.onReturnResult(merged);
+    }
+    catch (e) {
+      this._error(e);
+    }
   }
   _updatePosition() {
     const pos = this._getPos();
