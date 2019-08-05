@@ -597,7 +597,7 @@ class App extends Component {
           },
           {
             title: "Table View",
-            description: "This button brings up a tabular representation of the active graph."
+            description: "This button brings up a tabular representation of the active graph. Regex can be used in the filters by entering a regex literal (e.g. /^.*$/)."
           }
         ]
       },
@@ -3212,6 +3212,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                           defaultPageSize={15}
                                           filterable
                                           defaultFilterMethod={(filter,row) => {
+                                            const isRegexLiteral = filter.value.match(/^\/(.*)\/([g|i|m|u|y]*)$/);
+                                            if (isRegexLiteral !== null) {
+                                              try {
+                                                const expr = isRegexLiteral[1];
+                                                const flags = isRegexLiteral[2];
+                                                const re = new RegExp(expr,flags);
+                                                return row[filter.id].match(re);
+                                              }
+                                              catch {
+                                                // Return false if the regex is invalid
+                                                return false;
+                                              }
+                                            }
                                             return row[filter.id].includes(filter.value);
                                           }}
                                           className="-striped -highlight"/>
