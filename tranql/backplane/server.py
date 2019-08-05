@@ -401,6 +401,15 @@ class RtxQuery(StandardAPIResource):
                 identifierSource = element[prop].split(":")
                 if identifierSource[0] == "CHEMBL.COMPOUND":
                     element[prop] = "CHEMBL:"+identifierSource[1]
+        for element in message["question_graph"]["nodes"]:
+            identifierSource = element["id"].split(":")
+            if identifierSource[0] == "CHEMBL.COMPOUND":
+                element["id"] = "CHEMBL:"+identifierSource[1]
+        for element in message["question_graph"]["edges"]:
+            for prop in ["source_id","target_id"]:
+                identifierSource = element[prop].split(":")
+                if identifierSource[0] == "CHEMBL.COMPOUND":
+                    element[prop] = "CHEMBL:"+identifierSource[1]
         return message
     def post(self):
         """

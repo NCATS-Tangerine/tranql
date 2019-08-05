@@ -1148,7 +1148,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                 if (result.errors) {
                   this._handleMessageDialog (result.status, result.errors);
-                  console.log ("--error: " + result.errors);
+                  console.log ("--error:", result.errors);
                   this.setState ({
                     loading : false,
                     error : result.errors

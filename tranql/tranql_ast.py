@@ -731,7 +731,7 @@ class SelectStatement(Statement):
                         kg['edges'].append (e)
                 #result['answers'] += response['answers']
                 result['knowledge_map'] += response['knowledge_map']
-                result['question_graph'] = response['question_graph']
+                result['question_graph'].update(response.get('question_graph',{}))
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
                     """

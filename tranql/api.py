@@ -56,14 +56,11 @@ class StandardAPIResource(Resource):
     def handle_exception (self, e, warning=False):
         result = {"errors": []}
         if isinstance (e, list):
-            result["errors"].append({
-                "message" : "\n\n".join([str(exception) for exception in e]),
-                "details" : "\n\n".join([(str(exception.details) if hasattr(exception,'details') else '') for exception in e])
-            })
+            [result["errors"].extend(self.handle_exception(exception)["errors"]) for exception in e]
         elif isinstance (e, TranQLException):
             result["errors"].append({
                 "message" : str(e),
-                "details" : e.details if e.details else ''
+                "details" : str(e.details) if e.details else ''
             })
         elif isinstance (e, Exception):
             result["errors"].append({
@@ -272,8 +269,7 @@ class TranQLQuery(StandardAPIResource):
             logger.debug (f" -- backplane: {context.mem.get('backplane', '')}")
             if len(context.mem.get ('requestErrors', [])) > 0:
                 errors = self.handle_exception(context.mem['requestErrors'], warning=True)
-                for key in errors:
-                    result[key] = errors[key]
+                result.update(errors)
         except Exception as e:
             traceback.print_exc()
             errors = [e, *tranql.context.mem.get ('requestErrors', [])]

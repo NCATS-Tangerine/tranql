@@ -456,7 +456,21 @@ def test_ast_merge_results (requests_mock):
                     },
                     'score': 0.09722323258334348
                 }
-            ]
+            ],
+            'question_graph': {
+                'edges': [
+                    {
+                        'id': 'foo',
+                        'type': 'test'
+                    }
+                ],
+                'nodes': [
+                    {
+                        'id': 'bar',
+                        'type': 'bartest'
+                    }
+                ]
+            }
         },
         {
             'knowledge_graph': {
@@ -578,7 +592,21 @@ def test_ast_merge_results (requests_mock):
                 },
                 "score": 0.09722323258334348
             }
-        ]
+        ],
+        'question_graph': {
+            'edges': [
+                {
+                    'id': 'foo',
+                    'type': 'test'
+                }
+            ],
+            'nodes': [
+                {
+                    'id': 'bar',
+                    'type': 'bartest'
+                }
+            ]
+        }
     }
     merged_results = select.merge_results (mock_responses, tranql)
     assert(sorted(merged_results) == sorted(expected_result))
