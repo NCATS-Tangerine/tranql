@@ -56,6 +56,9 @@ body {
 #viewContainer > .SplitPane {
     flex:1 !important;
 }
+#graphContainer[data-vis-mode='VR'], #graphContainer[data-vis-mode='VR'] > div, #graphContainer[data-vis-mode='VR'] > div > div {
+  height:100%;
+}
 #bottomContainer {
   position: absolute;
   z-index: 1;

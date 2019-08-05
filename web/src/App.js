@@ -295,7 +295,7 @@ class App extends Component {
         enableNodeDrag : true
       },
       graphHeight : window.innerHeight,
-      graphWidth : 0,
+      graphWidth : window.innerWidth,
       curvedLinks : false, // Can't change the width of curved links beyond 0 due to it using THREE.Line
       directionalParticles : false, // Huge performance tank - basically unusable when viewing an entire graph
       directionalArrows : false, // Large performance loss when used with highlight types tool. Also looks ugly. Should be made into an option in settings.
@@ -1870,6 +1870,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     } else if (this.state.visMode === '2D') {
       result = this._renderForceGraph2D (data, props);
     } else if (this.state.visMode === 'VR') {
+      props.graphData.links.forEach((l) => {
+        if (typeof l.source !== "string") l.source = l.source.id;
+        if (typeof l.target !== "string") l.target = l.target.id;
+      });
+      // props.graphData = { nodes : props.graphData.nodes, links : props.graphData.links };
       result = this._renderForceGraphVR (data, props);
     } else {
       throw new Error("Unrecognized rendering mode: " + this.state.visMode);
@@ -2055,7 +2060,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       forceGraphOpts.enableNodeDrag = e.currentTarget.checked;
       this.setState({ forceGraphOpts });
       localStorage.setItem('forceGraphOpts', JSON.stringify (forceGraphOpts));
-      window.location.reload();
+      this.fg.refresh();
     } else if (targetName === 'useToolCursor') {
       this.setState ({ useToolCursor : e.currentTarget.checked });
       localStorage.setItem (targetName, JSON.stringify (e.currentTarget.checked));
@@ -2288,8 +2293,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _updateDimensions() {
-    let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - this._graphSplitPane.current.state.prevWinWidth);
-    let height = this._tableSplitPane.current.pane1.offsetHeight + (window.innerHeight - this._tableSplitPane.current.state.prevWinHeight);
+    let prevWinWidth = this._graphSplitPane.current.state.prevWinWidth;
+    let prevWinHeight = this._tableSplitPane.current.state.prevWinHeight;
+    if (prevWinWidth === undefined) prevWinWidth = window.innerWidth;
+    if (prevWinHeight === undefined) prevWinHeight = window.innerHeight;
+    let width = this._graphSplitPane.current.pane1.offsetWidth + (window.innerWidth - prevWinWidth);
+    let height = this._tableSplitPane.current.pane1.offsetHeight + (window.innerHeight - prevWinHeight);
     if (this.state.objectViewerEnabled) {
       // console.log(this._graphSplitPane.current.state.pane1Size);
       this._graphSplitPane.current.setState({ draggedSize : width, pane1Size : width , position : width });
@@ -3080,7 +3089,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            ref={this._graphSplitPane}
                            onDragFinished={(width) => this._updateGraphSplitPaneResize()}
                 >
-                  <div>
+                  <div style={{height:"100%"}}>
                     <div id="bottomContainer">
                       {
                         this.state.toolbarEnabled && (
@@ -3131,7 +3140,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                   ref={this._findTool}/>
                       </div>
                     </div>
-                    <div onContextMenu={this._handleContextMenu}>
+                    <div onContextMenu={this._handleContextMenu} id="graphContainer" data-vis-mode={this.state.visMode}>
                       {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                         (
                           this._renderForceGraph (
