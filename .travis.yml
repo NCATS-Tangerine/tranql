@@ -1,12 +1,24 @@
 dist: xenial
+
 language: python
 python:
   - "3.7"
+
+notifications:
+  email:
+    - scox@renci.org
+
 # command to install dependencies
 install:
   - pip install -r tranql/requirements.txt
+
+env:
+  global:
+    - PATH=$PWD/bin:$PATH
+
 # command to run tests
 script:
-  - bin/test
+  - tranql test
+
 after_success:
   - coveralls
