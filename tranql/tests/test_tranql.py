@@ -451,7 +451,15 @@ def test_ast_merge_results (requests_mock):
                     }
                 ],
                 'edges': [
-                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'HGNC:2597'}
+                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'HGNC:2597'},
+                    {
+                        # Test if edges that are connected to merged nodes will be successfully merged with other duplicate edges
+                        'source_id' : 'CHEBI:28177',
+                        'target_id' : 'egg',
+                        'type': ['merge_this'],
+                        'merge_this_list' : ['edge_1'],
+                        'unique_attr_e_1' : 'e_1'
+                    },
                 ]
             },
             'knowledge_map': [
@@ -497,7 +505,14 @@ def test_ast_merge_results (requests_mock):
                     {'id': 'TEST:00000', 'type': 'test', 'merged_property': ['a','c']},
                 ],
                 'edges': [
-                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'TEST:00000'}
+                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'TEST:00000'},
+                    {
+                        'source_id' : 'CHEBI:28177',
+                        'target_id' : 'also_test_array_type_and_string_type_merge',
+                        'type': ['merge_this'],
+                        'merge_this_list' : ['edge_2'],
+                        'unique_attr_e_2' : 'e_2'
+                    }
                 ]
             },
             'knowledge_map': [
@@ -532,6 +547,14 @@ def test_ast_merge_results (requests_mock):
                     "source_id": "CHEBI:28177",
                     "target_id": "equivalent_identifier_merge",
                     "type": []
+                },
+                {
+                    "source_id" : "CHEBI:28177",
+                    "target_id" : "egg",
+                    "type" : ["merge_this"],
+                    "merge_this_list" : ["edge_1", "edge_2"],
+                    "unique_attr_e_1" : "e_1",
+                    "unique_attr_e_2" : "e_2"
                 }
             ],
             "nodes": [
