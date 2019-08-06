@@ -645,7 +645,6 @@ def test_ast_merge_results (requests_mock):
     }
     merged_results = select.merge_results (mock_responses, tranql)
     assert ordered(merged_results) == ordered(expected_result)
-
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")

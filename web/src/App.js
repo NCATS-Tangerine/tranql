@@ -106,6 +106,7 @@ class App extends Component {
     this._codeAutoComplete = this._codeAutoComplete.bind(this);
     this._updateCode = this._updateCode.bind (this);
     this._executeQuery = this._executeQuery.bind(this);
+    this._abortQuery = this._abortQuery.bind(this);
     this._configureMessage = this._configureMessage.bind (this);
     this._translateGraph = this._translateGraph.bind (this);
 
@@ -783,6 +784,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       new LegendFilter (),
       new CurvatureAdjuster ()
     ]);
+
+    // Fetch controllers
+    this._queryController = new window.AbortController();
   }
   /**
    * Updates the queries contained within the cache viewer modal.
@@ -884,11 +888,53 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // 'disableKeywords' is also sql-hint specific, and undocumented but referenced in sql-hint plugin
     // Other general hint config, like 'completeSingle' and 'completeOnSingleClick'
     // should be specified here and will be honored
+
+    /**
+    let nodes = this.state.schemaMessage ? this.state.schemaMessage.knowledge_graph.nodes : [];
+    let edges = this.state.schemaMessage ? this.state.schemaMessage.knowledge_graph.edges : [];
+
+    const isPredicate = false;
+
+    let activeConcept = ;
+    let activePredicate = ;
+    let prevConcept = ;
+
+    let validValues = [];
+
+    if (isPredicate) {
+      const activeConcept = activeConcept;
+      validValues = edges.filter((edge) => {
+        return (
+          prevConcept === edge.source_id &&
+          (activeConcept === '' || activeConcept === edge.target_id)
+        );
+      }).flatMap((edge) => edge.type);
+    }
+    else {
+      const predicate = activePredicate;
+      validValues = nodes.filter((node) => {
+        return edges.filter((edge) => {
+          return (
+            prevConcept === edge.source_id &&
+            edge.target_id === node.id &&
+            (predicate === '' || edge.type === predicate)
+          );
+        }).length > 0;
+      }).flatMap((node) => node.type);
+    }
+    */
+
     var tables = {};
     for (var c = 0; c < this.state.modelConcepts.length; c++) {
       var concept = this.state.modelConcepts[c];
       tables[concept] = [ /** column names, whatever those are in this context, go here. **/ ];
     }
+    /**
+    for (var c = 0; c < validValues.length; c++) {
+      const value = validValues[c];
+      tables[value] = [];
+    }
+    */
     const hintOptions = {
       tables: tables,
       //disableKeywords: true,
@@ -1088,6 +1134,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       );
   }
   /**
+   * Abort a TranQL query. May be called even if a query isn't active, just in case.
+   *
+   * @private
+   */
+  _abortQuery () {
+    this._queryController.abort();
+    if (this.state.loading) this.setState({ loading : false });
+  }
+  /**
    * Execute a TranQL query.
    * Checks for the requested object in cache.
    * If not present, executes query and receives a KGS message object.
@@ -1097,6 +1152,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _executeQuery () {
+    // If a fetch is currently active, make sure to abort it.
+    // This is a safeguard so that widgets or interfaces can call this method without having to cancel the query first.
+    this._abortQuery();
+
     console.log ("--query: ", this.state.code);
     localStorage.setItem ('code', this.state.code);
     // Clear the visualization so it's obvious that data from the last query is gone
@@ -1115,7 +1174,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       },
       dataSources: [],
       reasonerSources: [],
+      loading : true
     });
+
     this.setState({},()=>console.log(this.state.graph));
     // Automatically switch from schema to graph view when query is run
     this._setSchemaViewerActive (false);
@@ -1129,12 +1190,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           // Translate the knowledge graph given current settings.
           this._configureMessage (result[0].data);
           this._translateGraph (result[0].data);
+          this.setState({ loading : false });
         } else {
           // We didn't find it in the cache. Run the query.
-          this.setState ({
-            loading : true
-          });
+          // Create a new controller so that the query may be aborted if desired.
+          this._queryController = new window.AbortController();
           fetch(this.tranqlURL + '/tranql/query', {
+            signal: this._queryController.signal,
             method: "POST",
             headers: {
               'Accept': 'application/json',
@@ -1177,11 +1239,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               // instead of a catch() block so that we don't swallow
               // exceptions from actual bugs in components.
               (error) => {
-                this._handleMessageDialog ("Response Parsing Error", error.message, error.details);
-                this.setState ({
-                  loading : false,
-                  error : error
-                });
+                // If the error is because the fetch was aborted, we don't want to display a message.
+                if (error.name !== "AbortError") {
+                  this._handleMessageDialog ("Response Parsing Error", error.message, error.details);
+                  this.setState ({
+                    loading : false,
+                    error : error
+                  });
+                }
               }
             );
         }
@@ -1561,7 +1626,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 //        this.state.selectedLink.target !== link.target_id &&
         this.state.selectMode)
     {
-      this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
+      const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+      const links = graph.links.filter((link_2) => {
+        return (
+          (link.origin.source_id === link_2.origin.source_id && link.origin.target_id === link_2.origin.target_id) ||
+          (link.origin.source_id === link_2.origin.target_id && link.origin.target_id === link_2.origin.source_id)
+        );
+      }).map((link_2) => link_2.origin);
+      this._openObjectViewer(JSON.parse(JSON.stringify(links)));
     }
   }
   _handleLinkRightClick (link) {
@@ -3026,11 +3098,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   { this.state.navigateMode && (this.state.visMode === '3D' || this.state.visMode === '2D') ? "Navigate" : "Select" }
                 </Button>
             }
-            <Button id="runButton"
-                    outline
-                    color="success" onClick={this._executeQuery}>
-              Run
-            </Button>
+            {
+              !this.state.loading ? (
+                <Button id="runButton"
+                        outline
+                        color="success" onClick={this._executeQuery}>
+                  Run
+                </Button>
+              ) : (
+                <Button id="abortButton"
+                        outline
+                        color="danger" onClick={this._abortQuery}>
+                  Cancel
+                </Button>
+              )
+            }
             <div id="appControlContainer" style={{display:(this.state.toolbarEnabled ? "none" : "")}}>
               <FaCog data-tip="Configure application settings" id="settings" className="App-control" onClick={this._handleShowModal} />
               <FaPlayCircle data-tip="Answer Navigator - see each answer, its graph structure, links, knowledge source and literature provenance" id="answerViewer" className="App-control" onClick={this._handleShowAnswerViewer} />

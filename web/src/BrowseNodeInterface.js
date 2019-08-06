@@ -16,7 +16,8 @@ export default class BrowseNodeInterface extends Component {
       node : null,
       activeConcept : '',
       activePredicate : '',
-      loading : false
+      loading : false,
+      conceptError : true
     };
 
     this.hide = this.hide.bind(this);
@@ -36,7 +37,7 @@ export default class BrowseNodeInterface extends Component {
     if (this.state.loading) {
       this._controller.abort();
     }
-    this.setState({ node : null, activeConcept : '', activePredicate : '', loading : false });
+    this.setState({ node : null, activeConcept : '', activePredicate : '', loading : false, conceptError : false });
 
   }
   selectNode(node,e) {
@@ -63,6 +64,7 @@ export default class BrowseNodeInterface extends Component {
     this.props.onReturnError(errors);
   }
   async _browseNode() {
+    const currentNode = this.state.node;
     this.setState({ loading : true });
     const params = {};
     if (this.state.activePredicate !== '') params.predicate = this.state.activePredicate;
@@ -71,45 +73,59 @@ export default class BrowseNodeInterface extends Component {
     const fetches = [];
     const errors = [];
 
-    for (let i=0;i<this.state.node.type.length;i++) {
+    const catchError = function(error) {
+      errors.push(error);
+    }
+    const handleError = function(errors) {
+      if (!Array.isArray(errors)) errors = [errors];
+
+      if (errors.every((error) => error.name !== "AbortError")) {
+        // As long as no errors were because the fetch was aborted, display an error message.
+        this._error(errors);
+      }
+    }
+
+    for (let i=0;i<currentNode.type.length;i++) {
       try {
-        const type = this.state.node.type[i];
+        const type = currentNode.type[i];
         this._controller = new window.AbortController();
-        const resp = await fetch(this.props.robokop_url+`/api/simple/expand/${type}/${this.state.node.id}/${this.state.activeConcept}/${queryString}`, {
+        const resp = await fetch(this.props.robokop_url+`/api/simple/expand/${type}/${currentNode.id}/${this.state.activeConcept}/${queryString}`, {
           signal: this._controller.signal
         });
         if (resp.ok) {
-          const json = await resp.json();
-          this._controller = new window.AbortController();
-          const url = new URL(this.props.tranqlURL+'/tranql/decorate_kg');
-          url.search = new URLSearchParams({ reasoner : this._REASONER });
-          const decorated_resp = await fetch(url,{
-            signal: this._controller.signal,
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(json.knowledge_graph)
-          });
-          json.knowledge_graph = await decorated_resp.json();
-          fetches.push(
-            json
-          );
+          try {
+            const json = await resp.json();
+            this._controller = new window.AbortController();
+            const url = new URL(this.props.tranqlURL+'/tranql/decorate_kg');
+            url.search = new URLSearchParams({ reasoner : this._REASONER });
+            const decorated_resp = await fetch(url,{
+              signal: this._controller.signal,
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(json.knowledge_graph)
+            });
+            json.knowledge_graph = await decorated_resp.json();
+            fetches.push(
+              json
+            );
+          }
+          catch (e) {
+            catchError(e)
+          }
         }
       }
       catch (e) {
-        errors.push(e);
+        catchError(e);
       }
-      console.log('Finished request',(i+1).toString());
     }
     if (errors.length > 0) {
-      this._error(errors);
+      handleError(errors);
       return;
     }
-    console.log(fetches);
 
-    console.log('Beginning merge request');
     try {
       this._controller = new window.AbortController();
       const url = new URL(this.props.tranqlURL+'/tranql/merge_messages');
@@ -135,7 +151,7 @@ export default class BrowseNodeInterface extends Component {
       this.props.onReturnResult(merged);
     }
     catch (e) {
-      this._error(e);
+      handleError(e);
     }
   }
   _updatePosition() {
@@ -198,9 +214,11 @@ export default class BrowseNodeInterface extends Component {
           </div>
           <div>
             <span>Target type:</span>
+            // Some mysterious things are going on in the typeahead component, so is-invalid has to have a leading space to actually be used by the input
             <Typeahead multiple={false}
                        id='browseNodeConcept'
                        placeholder={'Enter a biolink modal concept type...'}
+                       inputProps={{...(this.state.conceptError ? { className : ' is-invalid' } : {})}}
                        onChange={(concept)=>{
                          if (concept.length === 0) concept.push('');
                          this.setState({ activeConcept : concept[0] }, () => {
@@ -231,7 +249,13 @@ export default class BrowseNodeInterface extends Component {
           <div className="button-container">
             <Button color="primary"
                     disabled={this.state.loading}
-                    onClick={(e)=>this._browseNode()}>
+                    onClick={(e)=>{
+                      // Validate the form
+                      const conceptError = this.state.activeConcept === '';
+                      this.setState({ conceptError });
+
+                      if (!conceptError) this._browseNode();
+                    }}>
               Execute
             </Button>
 
