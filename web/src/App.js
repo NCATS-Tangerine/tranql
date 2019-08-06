@@ -3123,8 +3123,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       <div id="graphOverlayContainer">
                         <BrowseNodeInterface ref={this._browseNodeInterface}
                                              fg={this.fg}
-                                             concepts={this.state.modelConcepts}
-                                             relations={this.state.modelRelations}
+                                             concepts={this.state.schemaMessage?this.state.schemaMessage.knowledge_graph.nodes:[]}
+                                             relations={this.state.schemaMessage?this.state.schemaMessage.knowledge_graph.edges:[]}
                                              onReturnResult={this._browseNodeResult}
                                              onReturnError={(errors) => {
                                                errors = errors.map((e) => {

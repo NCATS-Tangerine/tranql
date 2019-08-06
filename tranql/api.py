@@ -44,9 +44,31 @@ filename = 'translator_interchange.yaml'
 filename = os.path.join ('backplane',filename)
 with open(filename, 'r') as file_obj:
     template = {
-        "definitions" : yaml.load(file_obj)["definitions"]
+        "definitions" : yaml.load(file_obj)["definitions"],
+        "tags": [
+            {"name" : "validation"},
+            {"name" : "util"}
+        ]
     }
-swagger = Swagger(app, template=template)
+swagger = Swagger(app, template=template, config={
+    "headers": [
+    ],
+    "specs": [
+        {
+            "endpoint": 'apispec_1',
+            "route": '/apispec_1.json',
+            "rule_filter": lambda rule: True,  # ?
+            "model_filter": lambda tag: True,  # ?
+        }
+    ],
+    "swagger_ui": True,
+    "specs_route": "/apidocs/",
+    "openapi": "3.0.1",
+    'swagger_ui_bundle_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-bundle.js',
+    'swagger_ui_standalone_preset_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-standalone-preset.js',
+    'swagger_ui_css': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui.css',
+    'swagger_ui_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui.js'
+})
 
 class StandardAPIResource(Resource):
     def validate (self, request):
@@ -152,7 +174,7 @@ class Configuration(StandardAPIResource):
         """
         configuration
         ---
-        tag: validation
+        tags: [validation]
         description: TranQL Query
         responses:
             '200':
@@ -183,7 +205,7 @@ class DecorateKG(StandardAPIResource):
         """
         util
         ---
-        tag: util
+        tags: [util]
         description: Decorate knowledge graphs
         parameters:
             - in: query
@@ -203,12 +225,14 @@ class DecorateKG(StandardAPIResource):
                     type: "targets"
                     source_id: "n0"
                     target_id: "n1"
+              required: true
               description: A KGS 0.1.0 compliant KGraph
             - in: query
               name: reasoner
               schema:
                 type: string
               example: robokop
+              required: false
               description: The reasoner that the knowledge graph originates from.
         responses:
             '200':
@@ -239,11 +263,12 @@ class MergeMessages(StandardAPIResource):
         """
         util
         ---
-        tag: util
+        tags: [util]
         description: Merge Messages
         parameters:
             - in: query
               name: messages
+              required: true
               schema:
                 type: array
                 items:
@@ -274,6 +299,7 @@ class MergeMessages(StandardAPIResource):
               description: An array of KGS 0.1.0 compliant message objects
             - in: query
               name: interpreter_options
+              required: true
               schema:
                 type: object
                 properties:
@@ -320,7 +346,7 @@ class TranQLQuery(StandardAPIResource):
         """
         query
         ---
-        tag: validation
+        tags: [validation]
         description: TranQL Query
         parameters:
             - in: query
@@ -387,7 +413,7 @@ class AnnotateGraph(StandardAPIResource):
         """
         query
         ---
-        tag: validation
+        tags: [validation]
         description: Graph annotator.
         parameters:
             - in: query
@@ -443,7 +469,7 @@ class SchemaGraph(StandardAPIResource):
         """
         query
         ---
-        tag: validation
+        tags: [validation]
         description: Get the TranQL schema
         responses:
             '200':
@@ -487,7 +513,7 @@ class ModelConceptsQuery(StandardAPIResource):
         """
         query
         ---
-        tag: validation
+        tags: [validation]
         description: Get biolink model concepts
         responses:
             '200':
@@ -526,7 +552,7 @@ class ModelRelationsQuery(StandardAPIResource):
         """
         query
         ---
-        tag: validation
+        tags: [validation]
         description: Get biolink model relations
         responses:
             '200':

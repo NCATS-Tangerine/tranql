@@ -29,6 +29,8 @@ export default class BrowseNodeInterface extends Component {
     this._root = React.createRef ();
 
     this._controller = new window.AbortController();
+
+    this._REASONER = 'robokop';
   }
   hide() {
     if (this.state.loading) {
@@ -88,7 +90,7 @@ export default class BrowseNodeInterface extends Component {
             },
             body: JSON.stringify({
               'knowledge_graph' : json.knowledge_graph,
-              'reasoner' : 'robokop'
+              'reasoner' : this._REASONER
             })
           });
           json.knowledge_graph = await decorated_resp.json();
@@ -155,6 +157,32 @@ export default class BrowseNodeInterface extends Component {
       y:vector.y
     }
   }
+  _getValidProps(nodes,edges,isPredicate) {
+    nodes = nodes.filter((item) => item.reasoner.includes(this._REASONER));
+    edges = edges.filter((item) => item.reasoner.includes(this._REASONER));
+    if (isPredicate) {
+      const activeConcept = this.state.activeConcept;
+      return edges.filter((edge) => {
+        return (
+          this.state.node.type.includes(edge.source_id) &&
+          (activeConcept === '' || activeConcept === edge.target_id)
+        );
+      }).flatMap((edge) => edge.type);
+    }
+    else {
+      const predicate = this.state.activePredicate;
+      const validPredicates = nodes.filter((node) => {
+        return edges.filter((edge) => {
+          return (
+            this.state.node.type.includes(edge.source_id) &&
+            edge.target_id === node.id &&
+            (predicate === '' || edge.type === predicate)
+          );
+        }).length > 0;
+      }).flatMap((node) => node.type);
+      return validPredicates;
+    }
+  }
   render() {
     if (this.state.node === null) return null;
     return (
@@ -176,9 +204,15 @@ export default class BrowseNodeInterface extends Component {
                        id='browseNodeConcept'
                        placeholder={'Enter a biolink modal concept type...'}
                        onChange={(concept)=>{
-                        this.setState({ activeConcept : concept[0] });
+                         if (concept.length === 0) concept.push('');
+                         this.setState({ activeConcept : concept[0] }, () => {
+                           const validPredicates = this._getValidProps(this.props.concepts,this.props.relations,true);
+                           if (validPredicates.length === 0) {
+                             this.setState({ activePredicate : '' });
+                           }
+                         });
                        }}
-                       options={this.props.concepts}/>
+                       options={this._getValidProps(this.props.concepts,this.props.relations,false)}/>
           </div>
           <div>
             <span>Predicate (optional):</span>
@@ -186,9 +220,15 @@ export default class BrowseNodeInterface extends Component {
                        id='browseNodePredicate'
                        placeholder={'Enter a biolink modal edge type...'}
                        onChange={(relation)=>{
-                        this.setState({ activePredicate : relation[0] });
+                         if (relation.length === 0) relation.push('');
+                         this.setState({ activePredicate : relation[0] }, () => {
+                           const validNodes = this._getValidProps(this.props.concepts,this.props.relations,false);
+                           if (validNodes.length === 0) {
+                             this.setState({ activeConcept : '' });
+                           }
+                         });
                        }}
-                       options={this.props.relations}/>
+                       options={this._getValidProps(this.props.concepts,this.props.relations,true)}/>
           </div>
           <div className="button-container">
             <Button color="primary"
