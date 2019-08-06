@@ -442,22 +442,54 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
+    """
+    Decorates a result message
+
+    Args:
+        response (object) - KGS 0.1.0 Message object.
+        options (dict) - Refer to SelectStatement::decorate `options` arg.
+    Returns:
+        None
+    """
     @staticmethod
-    def decorate_result(response, schema):
+    def decorate_result(response, options={}):
         if 'knowledge_graph' in response:
             for node in response['knowledge_graph'].get('nodes',[]):
-                SelectStatement.decorate(node, True, schema)
+                SelectStatement.decorate(node, True, options)
 
             for edge in response['knowledge_graph'].get('edges',[]):
-                SelectStatement.decorate(edge, False, schema)
+                SelectStatement.decorate(edge, False, options)
+    """
+    Decorates a list of result messages
+
+    Args:
+        responses (list<dict>) - List of KGS 0.1.0 Message objects.
+        options (dict) - Refer to SelectStatement::decorate `options` arg.
+    Returns:
+        None
+    """
     @staticmethod
-    def decorate_results(responses, schema):
+    def decorate_results(responses, options={}):
         for response in responses:
-            SelectStatement.decorate_result(response, schema)
+            SelectStatement.decorate_result(response, options)
+    """
+    Decorates a KGraph element
+
+    Args:
+        element (dict) - KGS 0.1.0 KNode|KEdge object.
+        is_node (bool) - Specifies if the element is a KNode. If False, `element` is treated as a KEdge.
+        options (dict) - Information used to decorate the object with. Some may be omitted to avoid decoration.
+            {
+            schema (str, optional) - The reasoner that the element originates from.
+                When omitted, the element will still be given the reasoner attribute, but it will be empty.
+            }
+    Returns:
+        None
+    """
     @staticmethod
-    def decorate(element, is_node, schema):
-        # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
-        element["reasoner"] = [schema]
+    def decorate(element, is_node, options):
+        element["reasoner"] = []
+        if "schema" in options: element["reasoner"].append(options["schema"])
         # Only edges have the source_database property
         if not is_node:
             element["source_database"] = element.get("source_database",["unknown"])
@@ -549,7 +581,9 @@ class SelectStatement(Statement):
                 raise ServiceInvocationError (
                     f"No valid results from service {self.service} executing " +
                     f"query {self.query}. Unable to continue query. Exiting.")
-            self.decorate_results(responses, self.get_schema_name(interpreter))
+            self.decorate_results(responses, {
+                "schema" : self.get_schema_name(interpreter)
+            })
             result = self.merge_results (responses, interpreter)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """

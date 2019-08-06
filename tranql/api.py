@@ -206,27 +206,27 @@ class DecorateKG(StandardAPIResource):
         util
         ---
         tags: [util]
-        description: Decorate knowledge graphs
+        description: Decorate a knowledge graph using TranQL's decorate method.
+        requestBody:
+          name: knowledge_graph
+          description: A KGS 0.1.0 compliant KGraph
+          required: true
+          content:
+            application/json:
+             schema:
+               $ref: '#/definitions/KGraph'
+             example:
+               nodes:
+                 - id: n0
+                   type: chemical_substance
+                 - id: n1
+                   type: gene
+               edges:
+                 - id: e0
+                   type: targets
+                   source_id: n0
+                   target_id: n1
         parameters:
-            - in: query
-              name: knowledge_graph
-              schema:
-                $ref: '#/definitions/KGraph'
-              explode: true
-              style: form
-              example:
-                nodes:
-                  - id: "n0"
-                    type: "chemical_substance"
-                  - id: "n1"
-                    type: "gene"
-                edges:
-                  - id: "e0"
-                    type: "targets"
-                    source_id: "n0"
-                    target_id: "n1"
-              required: true
-              description: A KGS 0.1.0 compliant KGraph
             - in: query
               name: reasoner
               schema:
@@ -249,9 +249,14 @@ class DecorateKG(StandardAPIResource):
                         schema:
                             type: string
         """
-        message = { "knowledge_graph" : request.json.get('knowledge_graph',{}) }
-        reasoner = request.json.get('reasoner',None)
-        SelectStatement.decorate_result(message, reasoner)
+        message = { "knowledge_graph" : request.json }
+        reasoner = request.args.get('reasoner',None)
+
+        options = {}
+
+        if reasoner != None:
+            options["schema"] = reasoner
+        SelectStatement.decorate_result(message, options)
         return message["knowledge_graph"]
 class MergeMessages(StandardAPIResource):
     """ Exposes an endpoint that allows for the merging of an arbitrary amount of messages """
@@ -265,41 +270,42 @@ class MergeMessages(StandardAPIResource):
         ---
         tags: [util]
         description: Merge Messages
+        requestBody:
+          name: messages
+          description: An array of KGS 0.1.0 compliant message objects
+          required: true
+          content:
+            application/json:
+             schema:
+               type: array
+               items:
+                  $ref: '#/definitions/Message'
+             example:
+               - knowledge_graph:
+                   nodes:
+                     - id: n0
+                       type: chemical_substance
+                     - id: n1
+                       type: gene
+                   edges:
+                     - id: e0
+                       type: targets
+                       source_id: n0
+                       target_id: n1
+               - knowledge_graph:
+                   nodes:
+                     - id: n0
+                       type: chemical_substance
+                     - id: n1
+                       type: gene
+                   edges:
+                     - id: e0
+                       type: interacts_with
+                       source_id: n0
+                       target_id: n1
         parameters:
             - in: query
-              name: messages
-              required: true
-              schema:
-                type: array
-                items:
-                  $ref: '#/definitions/Message'
-                example:
-                  - knowledge_graph:
-                      nodes:
-                        - id: n0
-                          type: chemical_substance
-                        - id: n1
-                          type: gene
-                      edges:
-                        - id: e0
-                          type: targets
-                          source_id: n0
-                          target_id: n1
-                  - knowledge_graph:
-                      nodes:
-                        - id: n0
-                          type: chemical_substance
-                        - id: n1
-                          type: gene
-                      edges:
-                        - id: e0
-                          type: interacts_with
-                          source_id: n0
-                          target_id: n1
-              description: An array of KGS 0.1.0 compliant message objects
-            - in: query
               name: interpreter_options
-              required: true
               schema:
                 type: object
                 properties:
@@ -316,6 +322,8 @@ class MergeMessages(StandardAPIResource):
                 resolve_names: false
               description: Any options to pass to the TranQL interpreter (such as 'name_based_merging' or 'resolve_names')
               required: false
+              style: form
+              explode: true
         responses:
             '200':
                 description: Success
@@ -332,9 +340,11 @@ class MergeMessages(StandardAPIResource):
                             type: string
 
         """
-        options = request.json.get('interpreter_options',{})
-        messages = request.json.get('messages',[])
-        tranql = TranQL (options=options)
+        messages = request.json
+
+        interpreter_options = request.args
+
+        tranql = TranQL (options=interpreter_options)
         return SelectStatement.merge_results(messages,tranql)
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """

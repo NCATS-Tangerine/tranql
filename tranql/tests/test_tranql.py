@@ -332,8 +332,12 @@ def test_ast_decorate_element (requests_mock):
         "type": "directly_interacts_with",
         "weight": 0.4071474314830641
     }
-    select.decorate(node,True,select.get_schema_name(tranql))
-    select.decorate(edge,False,select.get_schema_name(tranql))
+    select.decorate(node,True,{
+        "schema" : select.get_schema_name(tranql)
+    })
+    select.decorate(edge,False,{
+        "schema" : select.get_schema_name(tranql)
+    })
 
     assert_lists_equal(node["reasoner"],["robokop"])
 
