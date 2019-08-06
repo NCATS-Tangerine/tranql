@@ -283,47 +283,48 @@ class MergeMessages(StandardAPIResource):
              example:
                - knowledge_graph:
                    nodes:
-                     - id: n0
+                     - id: TEST:CS1
                        type: chemical_substance
-                     - id: n1
+                     - id: TEST:G1
                        type: gene
                    edges:
-                     - id: e0
-                       type: targets
-                       source_id: n0
-                       target_id: n1
+                     - type: targets
+                       source_id: TEST:CS1
+                       target_id: TEST:G1
                - knowledge_graph:
                    nodes:
-                     - id: n0
+                     - id: TEST:merged
+                       type:
+                         - chemical_substance
+                         - Drug
+                       equivalent_identifiers:
+                         - TEST:CS1
+                     - id: TEST:CS2
                        type: chemical_substance
-                     - id: n1
+                     - id: TEST:G2
                        type: gene
                    edges:
-                     - id: e0
-                       type: interacts_with
-                       source_id: n0
-                       target_id: n1
+                     - type: interacts_with
+                       source_id: TEST:CS2
+                       target_id: TEST:G2
         parameters:
             - in: query
-              name: interpreter_options
+              name: name_based_merging
               schema:
-                type: object
-                properties:
-                  asynchronous:
-                    type: boolean
-                  name_based_merging:
-                    type: boolean
-                  resolve_names:
-                    type: boolean
-                  dynamic_id_resolution:
-                    type: boolean
-              example:
-                name_based_merging: true
-                resolve_names: false
-              description: Any options to pass to the TranQL interpreter (such as 'name_based_merging' or 'resolve_names')
+                type: boolean
+                default: true
               required: false
-              style: form
-              explode: true
+              description: Tells the merger whether or not to merge elements with identical `name` properties.
+            - in: query
+              name: resolve_names
+              schema:
+                type: boolean
+                default: false
+              required: false
+              description: >
+                (Experimental) Tells the merger to invoke the Bionames API on nodes in order to get more equivalent identifiers.
+                Ideally, this should result in a more thoroughly merged graph, as fewer equivalent nodes will fail to be detected.
+                This currently should not be used on large queries (1000+ nodes), or it will end up flooding the Bionames API.
         responses:
             '200':
                 description: Success
@@ -341,8 +342,10 @@ class MergeMessages(StandardAPIResource):
 
         """
         messages = request.json
-
-        interpreter_options = request.args
+        interpreter_options = {
+            "name_based_merging" : request.args.get('name_based_merging','true') in ['true', '1'],
+            "resolve_names" : request.args.get('resolve-names','false') in ['true', '1']
+        }
 
         tranql = TranQL (options=interpreter_options)
         return SelectStatement.merge_results(messages,tranql)

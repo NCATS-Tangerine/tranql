@@ -26,6 +26,14 @@ def assert_lists_equal (a, b):
         else:
             assert actual == expected
 
+def ordered(obj):
+    if isinstance(obj, dict):
+        return sorted((k, ordered(v)) for k, v in obj.items())
+    if isinstance(obj, list):
+        return sorted(ordered(x) for x in obj)
+    else:
+        return obj
+
 def assert_parse_tree (code, expected):
     """ Parse a block of code into a parse tree. Then assert the equality
     of that parse tree to a list of expected tokens. """
@@ -613,8 +621,7 @@ def test_ast_merge_results (requests_mock):
         }
     }
     merged_results = select.merge_results (mock_responses, tranql)
-    assert(sorted(merged_results) == sorted(expected_result))
-    print(json.dumps(merged_results),'\n',json.dumps(expected_result))
+    assert ordered(merged_results) == ordered(expected_result)
 
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")

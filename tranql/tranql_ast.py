@@ -755,6 +755,7 @@ class SelectStatement(Statement):
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
                 #result['answers'] += response['answers']
+                [kg['edges'].append(e) for e in rkg.get('edges',[])]
                 result['knowledge_map'] += response.get('knowledge_map',[])
                 result['question_graph'].update(response.get('question_graph',{}))
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
@@ -789,13 +790,14 @@ class SelectStatement(Statement):
                 if old_id == edge['target_id']:
                     edge['target_id'] = new_id
 
+        merged_edges = []
         for response in responses:
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
                 other_edges = rkg['edges'] if 'edges' in rkg else []
                 for e in other_edges:
                     exists = False
-                    for edge in kg['edges']:
+                    for edge in merged_edges:
                         edge_type = edge.get('type',None)
                         e_type = e.get('type',None)
                         if sorted(edge_type) == sorted(e_type) and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
@@ -805,7 +807,10 @@ class SelectStatement(Statement):
                         deep_merge(edge,e)
                         deep_merge(e,edge)
                     else:
-                        kg['edges'].append (e)
+                        merged_edges.append (e)
+
+        kg['edges'] = merged_edges
+
         return result
 
 class TranQL_AST:

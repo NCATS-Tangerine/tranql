@@ -81,17 +81,16 @@ export default class BrowseNodeInterface extends Component {
         if (resp.ok) {
           const json = await resp.json();
           this._controller = new window.AbortController();
-          const decorated_resp = await fetch(this.props.tranqlURL+'/tranql/decorate_kg',{
+          const url = new URL(this.props.tranqlURL+'/tranql/decorate_kg');
+          url.search = new URLSearchParams({ reasoner : this._REASONER });
+          const decorated_resp = await fetch(url,{
             signal: this._controller.signal,
             method: 'POST',
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              'knowledge_graph' : json.knowledge_graph,
-              'reasoner' : this._REASONER
-            })
+            body: JSON.stringify(json.knowledge_graph)
           });
           json.knowledge_graph = await decorated_resp.json();
           fetches.push(
@@ -113,23 +112,22 @@ export default class BrowseNodeInterface extends Component {
     console.log('Beginning merge request');
     try {
       this._controller = new window.AbortController();
-      const resp = await fetch(this.props.tranqlURL+'/tranql/merge_messages',{
+      const url = new URL(this.props.tranqlURL+'/tranql/merge_messages');
+      url.search = new URLSearchParams({
+        'name_based_merging' : true,
+        'resolve_names' : false
+      });
+      const resp = await fetch(url,{
         signal: this._controller.signal,
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          'messages' : [
+        body: JSON.stringify([
             this.props.message,
             ...fetches
-          ],
-          'interpreter_options' : {
-            'name_based_merging' : true,
-            'resolve_names' : false
-          }
-        })
+        ])
       });
       const merged = await resp.json();
       console.log('Finished browse node');
