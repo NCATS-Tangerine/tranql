@@ -38,7 +38,7 @@ app.config['SWAGGER'] = {
     'title': 'TranQL API',
     'description': 'Translator Query Language (TranQL) API',
     'uiversion': 3,
-    'openapi': '3.2.0'
+    'openapi': '3.0.1'
 }
 filename = 'translator_interchange.yaml'
 filename = os.path.join ('backplane',filename)
@@ -174,6 +174,61 @@ class Configuration(StandardAPIResource):
             "api_url" : config['API_URL'],
             "robokop_url" : config['ROBOKOP_URL']
         }
+class DecorateKG(StandardAPIResource):
+    """ Exposes an endpoint that allows for the decoration of a KGS 0.1.0 knowledge graph with TranQL's decorate method. """
+    def __init__(self):
+        super().__init__()
+
+    def post(self):
+        """
+        util
+        ---
+        tag: util
+        description: Decorate knowledge graphs
+        parameters:
+            - in: query
+              name: knowledge_graph
+              schema:
+                $ref: '#/definitions/KGraph'
+              explode: true
+              style: form
+              example:
+                nodes:
+                  - id: "n0"
+                    type: "chemical_substance"
+                  - id: "n1"
+                    type: "gene"
+                edges:
+                  - id: "e0"
+                    type: "targets"
+                    source_id: "n0"
+                    target_id: "n1"
+              description: A KGS 0.1.0 compliant KGraph
+            - in: query
+              name: reasoner
+              schema:
+                type: string
+              example: robokop
+              description: The reasoner that the knowledge graph originates from.
+        responses:
+            '200':
+                description: Success
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+                            example: "Successfully validated"
+            '400':
+                description: Malformed message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        message = { "knowledge_graph" : request.json.get('knowledge_graph',{}) }
+        reasoner = request.json.get('reasoner',None)
+        SelectStatement.decorate_result(message, reasoner)
+        return message["knowledge_graph"]
 class MergeMessages(StandardAPIResource):
     """ Exposes an endpoint that allows for the merging of an arbitrary amount of messages """
 
@@ -182,9 +237,9 @@ class MergeMessages(StandardAPIResource):
 
     def post(self):
         """
-        query
+        util
         ---
-        tag: validation
+        tag: util
         description: Merge Messages
         parameters:
             - in: query
@@ -509,6 +564,7 @@ api.add_resource(TranQLQuery, '/tranql/query')
 api.add_resource(SchemaGraph, '/tranql/schema')
 api.add_resource(AnnotateGraph, '/tranql/annotate')
 api.add_resource(MergeMessages,'/tranql/merge_messages')
+api.add_resource(DecorateKG,'/tranql/decorate_kg')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 

@@ -442,17 +442,20 @@ class SelectStatement(Statement):
                 questions = new_questions
         return questions
 
-    def decorate_result(self, response, schema):
+    @staticmethod
+    def decorate_result(response, schema):
         if 'knowledge_graph' in response:
             for node in response['knowledge_graph'].get('nodes',[]):
-                self.decorate(node, True, schema)
+                SelectStatement.decorate(node, True, schema)
 
             for edge in response['knowledge_graph'].get('edges',[]):
-                self.decorate(edge, False, schema)
-    def decorate_results(self, responses, schema):
+                SelectStatement.decorate(edge, False, schema)
+    @staticmethod
+    def decorate_results(responses, schema):
         for response in responses:
-            self.decorate_result(response, schema)
-    def decorate(self, element, is_node, schema):
+            SelectStatement.decorate_result(response, schema)
+    @staticmethod
+    def decorate(element, is_node, schema):
         # Primarily for debugging purposes, it is helpful to know which reasoner a node or edge originated from.
         element["reasoner"] = [schema]
         # Only edges have the source_database property
