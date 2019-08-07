@@ -75,7 +75,7 @@ app () {
 ## Run tests.
 ##
 test () {
-    pytest $TRANQL/tests $*
+    pytest --cov=tranql $TRANQL/tests $*
 }
 
 $*
