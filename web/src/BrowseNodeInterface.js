@@ -77,7 +77,7 @@ export default class BrowseNodeInterface extends Component {
     const catchError = function(error) {
       errors.push(error);
     }
-    const handleError = function(errors) {
+    const handleError = (errors) => {
       if (!Array.isArray(errors)) errors = [errors];
 
       if (errors.every((error) => error.name !== "AbortError")) {

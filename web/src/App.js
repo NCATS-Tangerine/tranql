@@ -1422,7 +1422,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              const prevRecord = this.state.record;
              this._configureMessage(msg,false,true);
              this._translateGraph(msg,false,true);
-             this.setState({ schemaLoaded : true });
+             this.setState(() => ({ schemaLoaded : true }));
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -1450,7 +1450,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                    delete link.linkOpacity;
                  });
                  // Reset the state to have this updated opacity
-                 this.setState({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema });
+                 this.setState(() => ({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema }));
                  this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
                  let { graph, hiddenTypes, ...schemaCachedMessage } = result.schema;
@@ -2080,10 +2080,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       var message = this.state.message;
 
       const answers = message.hasOwnProperty('answers') ? message.answers : message.knowledge_map;
+      const kg = JSON.parse(JSON.stringify(message.knowledge_graph));
+      kg.nodes = kg.nodes.filter((node) => !node.reasoner.includes('browse_nodes'));
 
       this._analyzeAnswer({
         "question_graph"  : message.question_graph,
-        "knowledge_graph" : message.knowledge_graph,
+        "knowledge_graph" : kg,
         "answers"         : answers
       });
     }
@@ -2266,8 +2268,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _browseNodeResult (result) {
-    this._configureMessage (result);
-    this._translateGraph (result);
+    const message = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schemaMessage : this.state.message;
+
+    message.knowledge_graph = result.knowledge_graph;
+
+    this._configureMessage (message);
+    this._translateGraph (message);
   }
   /**
    * Send graph message to backplane which annotates it and relays it back
