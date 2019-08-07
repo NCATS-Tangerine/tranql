@@ -121,7 +121,8 @@ swagger = Swagger(app, template=template, config={
 })
 
 class StandardAPIResource(Resource):
-    def validate (self, request):
+    @staticmethod
+    def validate (request):
         with open(filename, 'r') as file_obj:
             specs = yaml.load(file_obj)
         to_validate = specs["components"]["schemas"]["Message"]
@@ -132,10 +133,11 @@ class StandardAPIResource(Resource):
         except jsonschema.exceptions.ValidationError as error:
             logging.error (f"ERROR: {str(error)}")
             abort(Response(str(error), 400))
-    def handle_exception (self, e, warning=False):
+    @staticmethod
+    def handle_exception (e, warning=False):
         result = {"errors": []}
         if isinstance (e, list):
-            [result["errors"].extend(self.handle_exception(exception)["errors"]) for exception in e]
+            [result["errors"].extend(StandardAPIResource.handle_exception(exception)["errors"]) for exception in e]
         elif isinstance (e, TranQLException):
             result["errors"].append({
                 "message" : str(e),
@@ -147,7 +149,7 @@ class StandardAPIResource(Resource):
                 "details" : ''
             })
         elif isinstance (e, str):
-            result["errors"].extend(self.handle_exception(Exception(e))["errors"])
+            result["errors"].extend(StandardAPIResource.handle_exception(Exception(e))["errors"])
 
         traceback.print_exc ()
 
@@ -159,7 +161,8 @@ class StandardAPIResource(Resource):
 
         return result
 
-    def response(self, data):
+    @staticmethod
+    def response(data):
         status_code = 200
         if isinstance(data, dict):
             status = data.get('status',None)
@@ -253,10 +256,14 @@ class DecorateKG(StandardAPIResource):
                    target_id: n1
         parameters:
             - in: query
-              name: reasoner
+              name: reasoners
               schema:
-                type: string
-              example: robokop
+                type: array
+                items:
+                  type: string
+              example:
+                - rtx
+                - robokop
               required: false
               description: The reasoner that the knowledge graph originates from.
         responses:
@@ -274,13 +281,15 @@ class DecorateKG(StandardAPIResource):
                           $ref: '#/definitions/Error'
         """
         message = { "knowledge_graph" : request.json }
-        reasoner = request.args.get('reasoner',None)
+        reasoners = request.args.getlist('reasoners',None)
 
         options = {}
 
-        if reasoner != None:
-            options["schema"] = reasoner
+        if reasoners != None:
+            options["schema"] = reasoners
+
         SelectStatement.decorate_result(message, options)
+
         return self.response(message["knowledge_graph"])
 class MergeMessages(StandardAPIResource):
     """ Exposes an endpoint that allows for the merging of an arbitrary amount of messages """

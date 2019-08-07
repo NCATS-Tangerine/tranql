@@ -488,8 +488,10 @@ class SelectStatement(Statement):
     """
     @staticmethod
     def decorate(element, is_node, options):
-        element["reasoner"] = []
-        if "schema" in options: element["reasoner"].append(options["schema"])
+        if "reasoner" not in element: element["reasoner"] = []
+        if "schema" in options:
+            if isinstance(options["schema"],str): options["schema"] = [options["schema"]]
+            element["reasoner"].extend(options["schema"])
         # Only edges have the source_database property
         if not is_node:
             element["source_database"] = element.get("source_database",["unknown"])
@@ -652,7 +654,10 @@ class SelectStatement(Statement):
                     "edges": []
                 },
                 "knowledge_map": [],
-                "question_graph": {}
+                "question_graph": {
+                    "nodes": [],
+                    "edges": []
+                }
         }
         # if not 'knowledge_graph' in result:
         #     message = "Malformed response does not contain knowledge_graph element."
@@ -757,7 +762,9 @@ class SelectStatement(Statement):
                 #result['answers'] += response['answers']
                 [kg['edges'].append(e) for e in rkg.get('edges',[])]
                 result['knowledge_map'] += response.get('knowledge_map',[])
-                result['question_graph'].update(response.get('question_graph',{}))
+                qg = response.get('question_graph',{})
+                result['question_graph']['nodes'].extend(qg.get('nodes',[]))
+                result['question_graph']['edges'].extend(qg.get('edges',[]))
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
                     """

@@ -7,6 +7,7 @@ python:
 notifications:
   email:
     - scox@renci.org
+    - groupe@cfsnc.org
 
 # command to install dependencies
 install:

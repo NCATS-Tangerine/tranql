@@ -97,8 +97,8 @@ export default class BrowseNodeInterface extends Component {
           try {
             const json = await resp.json();
             this._controller = new window.AbortController();
-            const args = { reasoner : this._REASONER };
-            const decorated_resp = await fetch(this.props.tranqlURL+'/tranql/decorate_kg?'+qs.stringify(args),{
+            const args = { reasoners : [this._REASONER, 'browse_nodes'] };
+            const decorated_resp = await fetch(this.props.tranqlURL+'/tranql/decorate_kg?'+qs.stringify(args, { arrayFormat : 'repeat' }),{
               signal: this._controller.signal,
               method: 'POST',
               headers: {
@@ -108,6 +108,8 @@ export default class BrowseNodeInterface extends Component {
               body: JSON.stringify(json.knowledge_graph)
             });
             json.knowledge_graph = await decorated_resp.json();
+            json.knowledge_map = json.answers;
+            delete json.answers;
             fetches.push(
               json
             );
@@ -213,7 +215,7 @@ export default class BrowseNodeInterface extends Component {
           </div>
           <div>
             <span>Target type:</span>
-            // Some mysterious things are going on in the typeahead component, so is-invalid has to have a leading space to actually be used by the input
+            {/* Some mysterious things are going on in the typeahead component, so is-invalid has to have a leading space to actually be used by the input */}
             <Typeahead multiple={false}
                        id='browseNodeConcept'
                        placeholder={'Enter a biolink modal concept type...'}

@@ -1,7 +1,8 @@
 import pytest
 import json
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
-from tranql.api import api, app
+from tranql.exception import TranQLException
+from tranql.api import api, app, StandardAPIResource
 
 @pytest.fixture
 def client():
@@ -65,7 +66,7 @@ def test_decorate_kg (client):
       ]
     }
     args = {
-        'reasoner' : 'robokop'
+        'reasoners' : ['robokop']
     }
     response = client.post(
         f'/tranql/decorate_kg',
@@ -272,5 +273,69 @@ def test_query(client, requests_mock):
     assert response.json['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
     assert response.json['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
 
+    response = client.post(
+        '/tranql/query',
+        query_string=args,
+        data="""
+            SELECT chemical_substance->foobar
+              FROM '/schema'
+        """,
+        content_type='application/json'
+    )
+
+    assert response.status_code == 500
+    assert response.json['status'] == 'Error'
+
 # def test_root (client):
     # assert client.get('/').status_code == 200
+
+def test_standard_api_resource(client, requests_mock):
+    assert ordered(StandardAPIResource.handle_exception(
+        [
+            Exception('foo'),
+            TranQLException('bar',details='baz')
+        ],
+        warning=True
+    )) ==  ordered({
+        "errors" : [
+            {
+                "message" : "foo",
+                "details" : ""
+            },
+            {
+                "message" : "bar",
+                "details" : "baz"
+            }
+        ],
+        "status" : "Warning"
+    })
+
+    assert StandardAPIResource.response({
+        'status' : 'Warning',
+        'errors' : [],
+        'knowledge_graph' : {
+            'nodes' : [],
+            'edges' : []
+        }
+    }) == (
+        {
+        'status' : 'Warning',
+        'errors' : [],
+        'knowledge_graph' : {
+            'nodes' : [],
+            'edges' : []
+        }
+        },
+        200
+    )
+
+    assert StandardAPIResource.response({
+        'status' : 'Error',
+        'errors' : []
+    }) == (
+        {
+        'status' : 'Error',
+        'errors' : []
+        },
+        500
+    )

@@ -1265,12 +1265,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _cacheFormat (message) {
     let {graph, hiddenTypes, ...cacheMessage} = message;
 
-    if (cacheMessage.hasOwnProperty('knowledge_map')) {
-      // Rename knowledge_map to answers
-      cacheMessage.answers = cacheMessage.knowledge_map;
-      delete cacheMessage.knowledge_map;
-    }
-
     var obj = {
       'key' : this.state.code,
       'data' : cacheMessage
@@ -1283,7 +1277,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _cacheWrite (message) {
     //this._cache.write (this.state.code, result);
     // Clone message without bloat for storing inside the cache
-    let obj = this._cacheFormat(message);
+    let obj = JSON.parse(JSON.stringify(this._cacheFormat(message)));
+
+    // We don't want to cache any nodes from the browse node tool.
+    obj.data.knowledge_graph.nodes = obj.data.knowledge_graph.nodes.filter((node) => {
+      return !node.reasoner.includes('browse_nodes');
+    });
+
     this._cache
       .write ('cache', obj)
       .then ((result) => {
@@ -2078,10 +2078,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     console.log (this._answerViewer);
     if (this.state.message) {
       var message = this.state.message;
+
+      const answers = message.hasOwnProperty('answers') ? message.answers : message.knowledge_map;
+
       this._analyzeAnswer({
         "question_graph"  : message.question_graph,
         "knowledge_graph" : message.knowledge_graph,
-        "answers"         : message.answers
+        "answers"         : answers
       });
     }
   }
