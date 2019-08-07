@@ -792,6 +792,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     // Fetch controllers
     this._queryController = new window.AbortController();
+
+    this._OVERLAY_X = 0;
+    this._OVERLAY_Y = 0;
   }
   /**
    * Updates the queries contained within the cache viewer modal.
@@ -1858,7 +1861,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _handleNodeClick (node) {
     console.log (node);
     if (this.state.browseNodeActive) {
-      this._browseNodeInterface.current.selectNode(node);
+      this._browseNodeInterface.current.selectNode(node,this._OVERLAY_X,this._OVERLAY_Y);
     }
     else if (this.state.highlightTypes) {
       node !== null && this._updateGraphElementVisibility("nodes", node.type, true);
@@ -3204,7 +3207,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            ref={this._graphSplitPane}
                            onDragFinished={(width) => this._updateGraphSplitPaneResize()}
                 >
-                  <div style={{height:"100%"}}>
+                  <div style={{height:"100%"}} onMouseEnter={(e) => {
+                                                    const bounds = e.target.getBoundingClientRect();
+                                                    this._OVERLAY_X = e.clientX - bounds.left;
+                                                    this._OVERLAY_Y = e.clientY - bounds.top;
+                                                  }}
+                                                  onMouseMove={(e) => {
+                                                    const bounds = e.target.getBoundingClientRect();
+                                                    this._OVERLAY_X = e.clientX - bounds.left;
+                                                    this._OVERLAY_Y = e.clientY - bounds.top;
+                                                  }}>
                     <div id="bottomContainer">
                       {
                         this.state.toolbarEnabled && (

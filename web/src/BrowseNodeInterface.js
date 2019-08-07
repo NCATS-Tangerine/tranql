@@ -33,6 +33,7 @@ export default class BrowseNodeInterface extends Component {
     this._controller = new window.AbortController();
 
     this._REASONER = 'robokop';
+
   }
   hide() {
     if (this.state.loading) {
@@ -41,7 +42,7 @@ export default class BrowseNodeInterface extends Component {
     this.setState({ node : null, activeConcept : '', activePredicate : '', loading : false, conceptError : false });
 
   }
-  selectNode(node,e) {
+  selectNode(node,x,y) {
     // Object.keys(node.__threeObj.position).forEach((key) => {
     //   (() => {
     //     let value = node.__threeObj.position[key];
@@ -55,7 +56,7 @@ export default class BrowseNodeInterface extends Component {
     //   })();
     // });
     this.setState({ node : node }, () => {
-      this._updatePosition();
+      this._updatePosition(x,y);
     });
   }
   _error(errors) {
@@ -155,21 +156,25 @@ export default class BrowseNodeInterface extends Component {
       handleError(e);
     }
   }
-  _updatePosition() {
-    const pos = this._getPos();
+  _updatePosition(x,y) {
+    // const pos = this._getPos();
     const node = ReactDOM.findDOMNode(this._root.current);
-    node.style.left = pos.x + "px";
-    node.style.top = pos.y + "px";
+    node.style.left = x + "px";
+    node.style.top = y + "px";
   }
   _getPos() {
-    const node = this.state.node;
-    const position = new THREE.Vector3(node.x,node.y,node.z);
-    const vector = position.project(this.props.fg.camera())
-    vector.x = (vector.x + 1) / 2 * this.props.fg.rootElem.offsetWidth;
-    vector.y = -(vector.y - 1) / 2 * this.props.fg.rootElem.offsetHeight;
+    // const node = this.state.node;
+    // const position = new THREE.Vector3(node.x,node.y,node.z);
+    // const vector = position.project(this.props.fg.camera())
+    // vector.x = (vector.x + 1) / 2 * this.props.fg.rootElem.offsetWidth;
+    // vector.y = -(vector.y - 1) / 2 * this.props.fg.rootElem.offsetHeight;
+    // return {
+    //   x:vector.x,
+    //   y:vector.y
+    // }
     return {
-      x:vector.x,
-      y:vector.y
+      x : 0,
+      y : 0
     }
   }
   _getValidProps(nodes,edges,isPredicate) {
