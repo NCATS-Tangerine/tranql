@@ -272,5 +272,5 @@ def test_query(client, requests_mock):
     assert response.json['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
     assert response.json['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
 
-def test_root (client):
-    assert client.get('/').status_code == 200
+# def test_root (client):
+    # assert client.get('/').status_code == 200
