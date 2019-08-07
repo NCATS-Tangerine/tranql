@@ -1018,7 +1018,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           let types = element[property];
 
           if (highlight !== false) {
-            if (this.state.vMode !== "2D") {
+            if (this.state.visMode !== "2D") {
               let obj = (element.__lineObj || element.__threeObj); //THREE.Mesh;
               if (obj === undefined) continue;
               let material = obj.material;
