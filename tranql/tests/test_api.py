@@ -191,7 +191,10 @@ def test_merge_messages (client):
         ]
       },
       "knowledge_map": [],
-      "question_graph": {}
+      "question_graph": {
+        "nodes": [],
+        "edges": []
+      }
     }
     args = {
         'name_based_merging': True,
