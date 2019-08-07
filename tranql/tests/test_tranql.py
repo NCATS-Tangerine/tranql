@@ -3,36 +3,15 @@ import pytest
 import os
 import itertools
 import requests
-import requests_mock as r_mock
 from pprint import pprint
 from deepdiff import DeepDiff
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
 from tranql.tranql_ast import SetStatement, SelectStatement
+from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
 #set_verbose ()
-
-def assert_lists_equal (a, b):
-    """ Assert the equality of two lists. """
-    assert len(a) == len(b)
-    for index, expected in enumerate(a):
-        actual = b[index]
-        if isinstance(actual,str) and isinstance(expected, str) and \
-           actual.isspace() and expected.isspace ():
-            continue
-        elif isinstance(actual, list) and isinstance(expected, list):
-            assert_lists_equal (actual, expected)
-        else:
-            assert actual == expected
-
-def ordered(obj):
-    if isinstance(obj, dict):
-        return sorted((k, ordered(v)) for k, v in obj.items())
-    if isinstance(obj, list):
-        return sorted(ordered(x) for x in obj)
-    else:
-        return obj
 
 def assert_parse_tree (code, expected):
     """ Parse a block of code into a parse tree. Then assert the equality
@@ -53,7 +32,7 @@ def assert_parse_tree (code, expected):
 #####################################################
 
 def test_parse_predicate (requests_mock):
-    set_mock(requests_mock, "workflow-5")
+    set_mock(requests_mock, "predicates")
 
     """ Test parsing a predicate. """
     print (f"test_parse_predicate()")
@@ -82,12 +61,6 @@ def test_parse_predicate (requests_mock):
              ]
             ], [ "" ]
             ]])
-
-def set_mock (requests_mock, name):
-    mock_map = MockMap (requests_mock, name)
-    session = requests.Session()
-    adapter = r_mock.Adapter()
-    session.mount('requests_mock', adapter)
 
 def test_parse_set (requests_mock):
     set_mock(requests_mock, "workflow-5")

@@ -46,8 +46,11 @@ with open(filename, 'r') as file_obj:
     template = {
         "definitions" : yaml.load(file_obj)["definitions"],
         "tags": [
-            {"name" : "validation"},
-            {"name" : "util"}
+            {"name" : "query"},
+            {"name" : "schema"},
+            {"name" : "util"},
+            {"name" : "configuration"},
+            {"name" : "webapp"}
         ]
     }
 swagger = Swagger(app, template=template, config={
@@ -114,6 +117,7 @@ class WebAppRoot(Resource):
         """
         webapp root
         ---
+        tags: [webapp]
         consumes': [ 'text/plain' ]
         responses:
             '200':
@@ -138,10 +142,12 @@ class WebAppPath(Resource):
         """
         webapp
         ---
+        tags: [webapp]
         parameters:
             - in: path
               name: path
-              type: string
+              schema:
+                type: string
               required: true
               description: Resource path.
         responses:
@@ -174,7 +180,7 @@ class Configuration(StandardAPIResource):
         """
         configuration
         ---
-        tags: [validation]
+        tags: [configuration]
         description: TranQL Query
         responses:
             '200':
@@ -359,7 +365,7 @@ class TranQLQuery(StandardAPIResource):
         """
         query
         ---
-        tags: [validation]
+        tags: [query]
         description: TranQL Query
         parameters:
             - in: query
@@ -368,12 +374,19 @@ class TranQLQuery(StandardAPIResource):
                 type: string
               description: A TranQL query
             - in: query
-              name: dynamicIdResolution
+              name: dynamic_id_resolution
               schema:
                 type: boolean
               required: false
               default: false
               description: Specifies if dynamic id lookup of curies will be performed
+            - in: query
+              name: asynchronous
+              schema:
+                type: boolean
+              required: false
+              default: true
+              description: Specifies if requests made by TranQL will be asynchronous.
         responses:
             '200':
                 description: Success
@@ -395,10 +408,13 @@ class TranQLQuery(StandardAPIResource):
 
         logging.debug (request.json)
         query = request.json.get('query','')
-        dynamicIdResolution = request.json.get('dynamicIdResolution',False)
+        dynamic_id_resolution = request.json.get('dynamic_id_resolution',False)
+        asynchronous = request.json.get('asynchronous', True)
+
         logging.debug (f"--> query: {query}")
         tranql = TranQL (options = {
-        "dynamic_id_resolution" : dynamicIdResolution
+            "dynamic_id_resolution" : dynamic_id_resolution,
+            "asynchronous" : asynchronous
         })
 
         try:
@@ -426,7 +442,7 @@ class AnnotateGraph(StandardAPIResource):
         """
         query
         ---
-        tags: [validation]
+        tags: [query]
         description: Graph annotator.
         parameters:
             - in: query
@@ -482,7 +498,7 @@ class SchemaGraph(StandardAPIResource):
         """
         query
         ---
-        tags: [validation]
+        tags: [schema]
         description: Get the TranQL schema
         responses:
             '200':
@@ -526,7 +542,7 @@ class ModelConceptsQuery(StandardAPIResource):
         """
         query
         ---
-        tags: [validation]
+        tags: [schema]
         description: Get biolink model concepts
         responses:
             '200':
@@ -565,7 +581,7 @@ class ModelRelationsQuery(StandardAPIResource):
         """
         query
         ---
-        tags: [validation]
+        tags: [schema]
         description: Get biolink model relations
         responses:
             '200':
