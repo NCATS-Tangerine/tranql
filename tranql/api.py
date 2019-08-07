@@ -41,7 +41,7 @@ app.config['SWAGGER'] = {
     'openapi': '3.0.1'
 }
 filename = 'translator_interchange.yaml'
-filename = os.path.join ('backplane',filename)
+filename = os.path.join (os.path.dirname(__file__), 'backplane', filename)
 with open(filename, 'r') as file_obj:
     template = {
         "definitions" : yaml.load(file_obj)["definitions"],
@@ -52,6 +52,53 @@ with open(filename, 'r') as file_obj:
             {"name" : "configuration"},
             {"name" : "webapp"}
         ]
+    }
+    template["definitions"]["Error"] = {
+        "type" : "object",
+        "description" : "Errors encountered during the request. If status is Warning, the request still was able to complete.",
+        "required" : [
+            "status",
+            "errors"
+        ],
+        "properties" : {
+            "status" : {
+                "type" : "string",
+                "enum" : [
+                    "Error",
+                    "Warning"
+                ],
+                "description" : "Severity of the errors."
+            },
+            "errors" : {
+                "type" : "array",
+                "items": {
+                    "$ref": "#/definitions/ErrorMessage"
+                }
+            }
+        },
+        "example" : {
+            "status" : "Error",
+            "errors" : [
+                {
+                    "message" : "Something went wrong."
+                }
+            ]
+        }
+    }
+    template["definitions"]["ErrorMessage"] = {
+        "type" : "object",
+        "description" : "An individual error message.",
+        "required" : [
+            "message"
+        ],
+        "properties" : {
+            "message" : {
+                "type" : "string"
+            },
+            "status" : {
+                "type" : "string"
+            }
+        }
     }
 swagger = Swagger(app, template=template, config={
     "headers": [
@@ -112,6 +159,13 @@ class StandardAPIResource(Resource):
 
         return result
 
+    def response(self, data):
+        status_code = 200
+        if isinstance(data, dict):
+            status = data.get('status',None)
+            if status == "Error":
+                status_code = 500
+        return (data, status_code)
 class WebAppRoot(Resource):
     def get(self):
         """
@@ -119,20 +173,6 @@ class WebAppRoot(Resource):
         ---
         tags: [webapp]
         consumes': [ 'text/plain' ]
-        responses:
-            '200':
-                description: Success
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
         """
         return send_from_directory(web_app_root, 'index.html')
 api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
@@ -150,20 +190,6 @@ class WebAppPath(Resource):
                 type: string
               required: true
               description: Resource path.
-        responses:
-            '200':
-                description: Success
-                content:
-                    text/plain:
-                        schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
         """
         resource_path = os.path.join (os.path.dirname (__file__), os.path.sep, path)
         logger.debug (f"--path: {resource_path}")
@@ -181,27 +207,20 @@ class Configuration(StandardAPIResource):
         configuration
         ---
         tags: [configuration]
-        description: TranQL Query
+        description: TranQL Configuration
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
+                          type: object
 
         """
-        return {
+        return self.response({
             "api_url" : config['API_URL'],
             "robokop_url" : config['ROBOKOP_URL']
-        }
+        })
 class DecorateKG(StandardAPIResource):
     """ Exposes an endpoint that allows for the decoration of a KGS 0.1.0 knowledge graph with TranQL's decorate method. """
     def __init__(self):
@@ -242,18 +261,17 @@ class DecorateKG(StandardAPIResource):
               description: The reasoner that the knowledge graph originates from.
         responses:
             '200':
-                description: Success
+                description: Knowledge Graph
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                          $ref: '#/definitions/KGraph'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                          $ref: '#/definitions/Error'
         """
         message = { "knowledge_graph" : request.json }
         reasoner = request.args.get('reasoner',None)
@@ -263,7 +281,7 @@ class DecorateKG(StandardAPIResource):
         if reasoner != None:
             options["schema"] = reasoner
         SelectStatement.decorate_result(message, options)
-        return message["knowledge_graph"]
+        return self.response(message["knowledge_graph"])
 class MergeMessages(StandardAPIResource):
     """ Exposes an endpoint that allows for the merging of an arbitrary amount of messages """
 
@@ -333,28 +351,27 @@ class MergeMessages(StandardAPIResource):
                 This currently should not be used on large queries (1000+ nodes), or it will end up flooding the Bionames API.
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                          $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                          $ref: '#/definitions/Error'
 
         """
         messages = request.json
         interpreter_options = {
-            "name_based_merging" : request.args.get('name_based_merging','true') in ['true', '1'],
-            "resolve_names" : request.args.get('resolve-names','false') in ['true', '1']
+            "name_based_merging" : request.args.get('name_based_merging','true').upper() == 'TRUE',
+            "resolve_names" : request.args.get('resolve-names','false').upper() == 'TRUE'
         }
 
         tranql = TranQL (options=interpreter_options)
-        return SelectStatement.merge_results(messages,tranql)
+        return self.response(SelectStatement.merge_results(messages,tranql))
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """
 
@@ -367,12 +384,19 @@ class TranQLQuery(StandardAPIResource):
         ---
         tags: [query]
         description: TranQL Query
+        requestBody:
+          name: query
+          description: A valid TranQL program
+          required: true
+          content:
+            text/plain:
+             schema:
+               type: string
+             example: >
+               select chemical_substance->gene->disease
+                 from \"/graph/gamma/quick\"
+                where disease=\"asthma\"
         parameters:
-            - in: query
-              name: query
-              schema:
-                type: string
-              description: A TranQL query
             - in: query
               name: dynamic_id_resolution
               schema:
@@ -389,34 +413,31 @@ class TranQLQuery(StandardAPIResource):
               description: Specifies if requests made by TranQL will be asynchronous.
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                          $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                          $ref: '#/definitions/Error'
 
         """
         #self.validate (request)
         result = {}
 
-        logging.debug (request.json)
-        query = request.json.get('query','')
-        dynamic_id_resolution = request.json.get('dynamic_id_resolution',False)
-        asynchronous = request.json.get('asynchronous', True)
-
+        logging.debug (request.data)
+        query = request.data.decode('utf-8')
+        dynamic_id_resolution = request.args.get('dynamic_id_resolution','False').upper() == 'TRUE'
+        asynchronous = request.args.get('asynchronous', 'True').upper() == 'TRUE'
         logging.debug (f"--> query: {query}")
         tranql = TranQL (options = {
             "dynamic_id_resolution" : dynamic_id_resolution,
             "asynchronous" : asynchronous
         })
-
         try:
             context = tranql.execute (query) #, cache=True)
             result = context.mem.get ('result', {})
@@ -430,7 +451,8 @@ class TranQLQuery(StandardAPIResource):
             result = self.handle_exception (errors)
         with open ('query.out', 'w') as stream:
             json.dump (result, stream, indent=2)
-        return result
+
+        return self.response(result)
 
 class AnnotateGraph(StandardAPIResource):
     """ Request the message object to be annotated by the backplane and return the annotated message """
@@ -444,29 +466,30 @@ class AnnotateGraph(StandardAPIResource):
         ---
         tags: [query]
         description: Graph annotator.
-        parameters:
-            - in: query
-              name: message
-              schema:
-                type: object
-              description: KGS 0.1.0 compliant message object
+        requestBody:
+          name: message
+          description: A KGS 0.1.0 compliant Message
+          required: true
+          content:
+            application/json:
+             schema:
+               $ref: '#/definitions/Message'
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                          $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                          $ref: '#/definitions/Error'
         """
         tranql = TranQL ()
-        messageObject = request.json['message']
+        messageObject = request.json
         url = tranql.context.mem.get('backplane') + '/graph/gnbr/decorate'
 
         logger.info(url)
@@ -486,7 +509,7 @@ class AnnotateGraph(StandardAPIResource):
             if type in messageObject:
                 messageObject[type] = result['result_graph']
 
-        return messageObject
+        return self.response(messageObject)
 
 class SchemaGraph(StandardAPIResource):
     """ Graph of schema to display to the client """
@@ -502,18 +525,17 @@ class SchemaGraph(StandardAPIResource):
         description: Get the TranQL schema
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                          $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                          $ref: '#/definitions/Error'
         """
         tranql = TranQL ()
         schema = Schema (backplane=tranql.context.mem.get('backplane'))
@@ -530,7 +552,7 @@ class SchemaGraph(StandardAPIResource):
             errors = self.handle_exception(schema.loadErrors, warning=True)
             for key in errors:
                 obj[key] = errors[key]
-        return obj
+        return self.response(obj)
 
 class ModelConceptsQuery(StandardAPIResource):
     """ Query model concepts. """
@@ -546,17 +568,12 @@ class ModelConceptsQuery(StandardAPIResource):
         description: Get biolink model concepts
         responses:
             '200':
-                description: Success
+                description: Array of concepts
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
+                          type: array
+                          items:
                             type: string
 
         """
@@ -568,7 +585,7 @@ class ModelConceptsQuery(StandardAPIResource):
         except Exception as e:
             #traceback.print_exc (e)
             result = self.handle_exception (e)
-        return result
+        return self.response(result)
 
 
 class ModelRelationsQuery(StandardAPIResource):
@@ -585,17 +602,12 @@ class ModelRelationsQuery(StandardAPIResource):
         description: Get biolink model relations
         responses:
             '200':
-                description: Success
+                description: Array of relations
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
+                          type: array
+                          items:
                             type: string
 
         """
@@ -607,7 +619,7 @@ class ModelRelationsQuery(StandardAPIResource):
         except Exception as e:
             #traceback.print_exc (e)
             result = self.handle_exception (e)
-        return result
+        return self.response(result)
 
 ###############################################################################################
 #

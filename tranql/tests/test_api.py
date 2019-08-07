@@ -229,40 +229,42 @@ def test_model_relations(client, requests_mock):
 """
 def test_query(client, requests_mock):
     set_mock(requests_mock, "workflow-5")
+    program = """
+        --
+        -- Workflow 5
+        --
+        --   Modules 1-4: Chemical Exposures by Clinical Clusters
+        --      For sub-clusters within the overall ICEES asthma cohort defined by
+        --      differential population density, which chemicals are related to these
+        --      clusters with a p_value less than some threshold?
+        --
+        --   Modules 5-*: Knowledge Graph Phenotypic Associations
+        --      For chemicals produced by the first steps, what phenotypes are
+        --      associated with exposure to these chemicals?
+        --
+        SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
+
+        SELECT population_of_individual_organisms->drug_exposure
+          FROM "/clinical/cohort/disease_to_chemical_exposure"
+         WHERE EstResidentialDensity < '2'
+           AND population_of_individual_organizms = 'x'
+           AND cohort = 'all_patients'
+           AND max_p_value = '0.1'
+           SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
+
+        SELECT chemical_substance->gene->biological_process->phenotypic_feature
+          FROM "/graph/gamma/quick"
+         WHERE chemical_substance = $chemical_exposures
+           SET knowledge_graph
+    """
+    args = {
+        "dynamic_id_resolution" : True,
+        "asynchronous" : False
+    }
     response = client.post(
         '/tranql/query',
-        data = json.dumps({
-            "query" : """
-                --
-                -- Workflow 5
-                --
-                --   Modules 1-4: Chemical Exposures by Clinical Clusters
-                --      For sub-clusters within the overall ICEES asthma cohort defined by
-                --      differential population density, which chemicals are related to these
-                --      clusters with a p_value less than some threshold?
-                --
-                --   Modules 5-*: Knowledge Graph Phenotypic Associations
-                --      For chemicals produced by the first steps, what phenotypes are
-                --      associated with exposure to these chemicals?
-                --
-                SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
-
-                SELECT population_of_individual_organisms->drug_exposure
-                  FROM "/clinical/cohort/disease_to_chemical_exposure"
-                 WHERE EstResidentialDensity < '2'
-                   AND population_of_individual_organizms = 'x'
-                   AND cohort = 'all_patients'
-                   AND max_p_value = '0.1'
-                   SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
-
-                SELECT chemical_substance->gene->biological_process->phenotypic_feature
-                  FROM "/graph/gamma/quick"
-                 WHERE chemical_substance = $chemical_exposures
-                   SET knowledge_graph
-            """,
-            "dynamic_id_resolution" : True,
-            "asynchronous" : False
-        }),
+        query_string=args,
+        data=program,
         content_type='application/json'
     )
     assert 'message' not in response.json

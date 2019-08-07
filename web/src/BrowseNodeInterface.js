@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { FaTimes, FaSpinner } from 'react-icons/fa';
 import { Button } from 'reactstrap';
 import { Typeahead } from 'react-bootstrap-typeahead';
+import * as qs from 'qs';
 import { toQueryString } from './Util.js';
 import * as THREE from 'three';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
@@ -96,9 +97,8 @@ export default class BrowseNodeInterface extends Component {
           try {
             const json = await resp.json();
             this._controller = new window.AbortController();
-            const url = new URL(this.props.tranqlURL+'/tranql/decorate_kg');
-            url.search = new URLSearchParams({ reasoner : this._REASONER });
-            const decorated_resp = await fetch(url,{
+            const args = { reasoner : this._REASONER };
+            const decorated_resp = await fetch(this.props.tranqlURL+'/tranql/decorate_kg?'+qs.stringify(args),{
               signal: this._controller.signal,
               method: 'POST',
               headers: {
@@ -128,12 +128,11 @@ export default class BrowseNodeInterface extends Component {
 
     try {
       this._controller = new window.AbortController();
-      const url = new URL(this.props.tranqlURL+'/tranql/merge_messages');
-      url.search = new URLSearchParams({
+      const args = {
         'name_based_merging' : true,
         'resolve_names' : false
-      });
-      const resp = await fetch(url,{
+      };
+      const resp = await fetch(this.props.tranqlURL+'/tranql/merge_messages?'+qs.stringify(args),{
         signal: this._controller.signal,
         method: 'POST',
         headers: {

@@ -8,6 +8,7 @@ import * as sizeof from 'object-sizeof';
 import JSONTree from 'react-json-tree';
 import * as JSON5 from 'json5';
 import * as YAML from 'js-yaml';
+import * as qs from 'qs';
 import FileSaver from 'file-saver';
 // import logo from './static/images/tranql.png'; // Tell Webpack this JS file uses this image
 import { contextMenu } from 'react-contexify';
@@ -228,7 +229,11 @@ class App extends Component {
 
     // Configure initial state.
     this.state = {
-      code : "select chemical_substance->gene->disease\n  from \"/graph/gamma/quick\"\n where disease=\"asthma\"",
+      code : `
+      select chemical_substance->gene->disease
+        from \"/graph/gamma/quick\"
+       where disease=\"asthma\"
+      `,
       dynamicIdResolution: true,
 
       // Concept model concepts and relations.
@@ -1195,17 +1200,18 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           // We didn't find it in the cache. Run the query.
           // Create a new controller so that the query may be aborted if desired.
           this._queryController = new window.AbortController();
-          fetch(this.tranqlURL + '/tranql/query', {
+          const args = {
+            'dynamicIdResolution' : this.state.dynamicIdResolution,
+            'asynchronous' : true
+          };
+          fetch(this.tranqlURL + '/tranql/query?'+qs.stringify(args), {
             signal: this._queryController.signal,
             method: "POST",
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify ({
-              'query' : this.state.code,
-              'dynamicIdResolution' : this.state.dynamicIdResolution
-            })
+            body: this.state.code
           }).then(res => res.text())
             .then(
               (result) => {
@@ -2289,7 +2295,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify ({ message : message })
+      body: JSON.stringify (message)
     }).then(res => res.json())
       .then(
         (result) => {
