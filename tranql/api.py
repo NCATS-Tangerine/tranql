@@ -44,7 +44,7 @@ filename = 'translator_interchange.yaml'
 filename = os.path.join (os.path.dirname(__file__), 'backplane', filename)
 
 definitions_filename = 'definitions.yaml'
-definition_filename = os.path.join (os.path.dirname(__file__), definitions_filename)
+definitions_filename = os.path.join (os.path.dirname(__file__), definitions_filename)
 with open(filename, 'r') as file_obj:
     template = {
         "definitions" : yaml.load(file_obj)["definitions"],
@@ -588,6 +588,57 @@ class ModelRelationsQuery(StandardAPIResource):
             result = self.handle_exception (e)
         return self.response(result)
 
+
+class ParseIncomplete(StandardAPIResource):
+    """ Tokenizes an incomplete query and returns the result """
+    def __init__(self):
+        super().__init__()
+
+    def post(self):
+        """
+        Parse Incomplete Query
+        ---
+        tags: [util]
+        description: Tokenizes an incomplete query and returns the result
+        requestBody:
+          name: query
+          description: A TranQL program
+          content:
+            text/plain:
+             schema:
+               type: string
+             examples:
+               Concept:
+                 value: select chemical_substance->
+                 summary: No concept provided
+               Partial_concept:
+                 value: select chemical_substance->dis
+                 summary: Concept partially completed
+               Predicate:
+                 value: select chemical_substance-[
+                 summary: No predicate provided
+               Partial_predicate:
+                 value: select chemical_substance-[direc
+                 summary: Predicate partially completed
+               Nothing:
+                 value: select
+                 summary: Nothing provided
+        responses:
+            '200':
+                description: Message
+                content:
+                    application/json:
+                        schema:
+                          type: array
+            '500':
+                description: An error was encountered
+                content:
+                    application/json:
+                        schema:
+                          $ref: '#/definitions/Error'
+        """
+        # parser = TranQLIncompleteParser ()
+
 ###############################################################################################
 #
 # Define routes.
@@ -601,6 +652,7 @@ api.add_resource(MergeMessages,'/tranql/merge_messages')
 api.add_resource(DecorateKG,'/tranql/decorate_kg')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
+api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')
