@@ -15,7 +15,7 @@ from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
 from tranql.concept import ConceptModel
-from tranql.main import TranQL
+from tranql.main import TranQL, TranQLIncompleteParser
 from tranql.tranql_ast import SelectStatement
 import networkx as nx
 from tranql.util import JSONKit
@@ -630,6 +630,16 @@ class ParseIncomplete(StandardAPIResource):
                     application/json:
                         schema:
                           type: array
+                        example:
+                          -  -  - "select"
+                                - "chemical_substance"
+                                -  - "-["
+                                   - "predicate"
+                                   - "]->"
+                                - "incomplete_con"
+                             - []
+                             -  - ""
+                             -  - ""
             '500':
                 description: An error was encountered
                 content:
@@ -637,7 +647,14 @@ class ParseIncomplete(StandardAPIResource):
                         schema:
                           $ref: '#/definitions/Error'
         """
-        # parser = TranQLIncompleteParser ()
+        query = request.data.decode('utf-8')
+
+        tranql = TranQL ()
+        parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
+
+        parsed = parser.tokenize (query)
+
+        return parsed.asList ()
 
 ###############################################################################################
 #

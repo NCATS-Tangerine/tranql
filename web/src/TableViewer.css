@@ -33,6 +33,6 @@
   flex-wrap:wrap;
   margin:5px;
 }
-.table-filter-container > *:not(:last-child) {
-  margin-right:25px;
+.table-filter-container > * {
+  margin:7.5px 20px;
 }

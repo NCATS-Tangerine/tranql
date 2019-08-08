@@ -43,114 +43,32 @@ from tranql.util import JSONKit
 from tranql.util import Concept
 from tranql.util import LoggingUtil
 from tranql.tranql_ast import TranQL_AST
-from pyparsing import (
-    Combine, Word, White, Literal, delimitedList, Optional,
-    Group, alphas, alphanums, printables, Forward, oneOf, quotedString,
-    ZeroOrMore, restOfLine, CaselessKeyword, ParserElement, LineEnd,
-    removeQuotes, pyparsing_common as ppc)
+from tranql.grammar import program_grammar, incomplete_program_grammar
 
 LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
 
-"""
-A program is a list of statements.
-Statements can be 'set' or 'select' statements.
-
-"""
-statement = Forward()
-SELECT, FROM, WHERE, SET, AS, CREATE, GRAPH, AT = map(
-    CaselessKeyword,
-    "select from where set as create graph at".split())
-
-concept_name    = Word( alphas, alphanums + ":_")
-ident          = Word( "$" + alphas, alphanums + "_$" ).setName("identifier")
-columnName     = delimitedList(ident, ".", combine=True).setName("column name")
-columnNameList = Group( delimitedList(columnName))
-tableName      = delimitedList(ident, ".", combine=True).setName("column name")
-tableName      = quotedString.setName ("service name")
-tableNameList  = Group(delimitedList(tableName))
-
-SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
-arrow = \
-        Group(Literal("-[") + concept_name + Literal("]->")) | \
-        Group(Literal("<-[") + concept_name + Literal("]-")) | \
-        Literal ("->") | \
-        Literal ("<-")
-question_graph_element = (
-    concept_name + ZeroOrMore ( LineEnd () )
-) | \
-Group (
-    concept_name + COLON + concept_name + ZeroOrMore ( LineEnd () )
-)
-question_graph_expression = question_graph_element + ZeroOrMore(arrow + question_graph_element)
-
-whereExpression = Forward()
-and_, or_, in_ = map(CaselessKeyword, "and or in".split())
-
-binop = oneOf("= != =~ !=~ < > >= <= eq ne lt le gt ge", caseless=True)
-realNum = ppc.real()
-intNum = ppc.signed_integer()
-
-# need to add support for alg expressions
-columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName
-whereCondition = Group(
-    ( columnName + binop + (columnRval | Word(printables) ) ) |
-    ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
-    ( columnName + in_ + "(" + statement + ")" ) |
-    ( "(" + whereExpression + ")" )
-)
-whereExpression << whereCondition + ZeroOrMore( ( and_ | or_ ) + whereExpression )
-
-''' Assignment for handoff. '''
-setExpression = Forward ()
-setStatement = Group(
-    ( ident ) |
-    ( quotedString("json_path") + AS + ident("name") ) |
-    ( "(" + setExpression + ")" )
-)
-setExpression << setStatement + ZeroOrMore( ( and_ | or_ ) + setExpression )
-
-optWhite = ZeroOrMore(LineEnd() | White())
-
-""" Define the statement grammar. """
-statement <<= (
-    Group(
-        Group(SELECT + question_graph_expression)("concepts") + optWhite +
-        Group(FROM + tableNameList) + optWhite +
-        Group(Optional(WHERE + whereExpression("where"), "")) + optWhite +
-        Group(Optional(SET + setExpression("set"), ""))("select")
-    )
-    |
-    Group(
-        SET + (columnName + EQ + ( quotedString |
-                                   ident |
-                                   intNum |
-                                   realNum ))
-    )("set")
-    |
-    Group(
-        Group(CREATE + GRAPH + ident) + optWhite +
-        Group(AT + ( ident | quotedString )) + optWhite +
-        Group(AS + ( ident | quotedString ))
-    )
-)("statement")
-
-""" Make a program a series of statements. """
-program_grammar = statement + ZeroOrMore(statement)
-
-""" Make rest-of-line comments. """
-comment = "--" + restOfLine
-program_grammar.ignore (comment)
-
-class TranQLParser:
-    """ Defines the language's grammar. """
-    def __init__(self, backplane):
-        self.program = program_grammar
+class Parser:
+    def __init__(self, grammar, backplane):
+        self.program = grammar
         self.backplane = backplane
+
+    def tokenize (self, line):
+        return self.program.parseString (line)
+
     def parse (self, line):
         """ Parse a program, returning an abstract syntax tree. """
-        result = self.program.parseString (line)
+        result = self.tokenize (line)
         return TranQL_AST (result.asList (), self.backplane)
+
+class TranQLParser(Parser):
+    """ Defines the language's grammar. """
+    def __init__(self, backplane):
+        super().__init__ (program_grammar, backplane)
+
+class TranQLIncompleteParser(Parser):
+    def __init__(self, backplane):
+        super().__init__ (incomplete_program_grammar, backplane)
 
 class TranQL:
     """

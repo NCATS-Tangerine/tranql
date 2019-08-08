@@ -899,40 +899,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Other general hint config, like 'completeSingle' and 'completeOnSingleClick'
     // should be specified here and will be honored
 
-    /**
-    let nodes = this.state.schemaMessage ? this.state.schemaMessage.knowledge_graph.nodes : [];
-    let edges = this.state.schemaMessage ? this.state.schemaMessage.knowledge_graph.edges : [];
+    const pos = codeMirror.getCursor();
+    const textToCursorPosition = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
 
-    const isPredicate = false;
-
-    let activeConcept = ;
-    let activePredicate = ;
-    let prevConcept = ;
-
-    let validValues = [];
-
-    if (isPredicate) {
-      const activeConcept = activeConcept;
-      validValues = edges.filter((edge) => {
-        return (
-          prevConcept === edge.source_id &&
-          (activeConcept === '' || activeConcept === edge.target_id)
-        );
-      }).flatMap((edge) => edge.type);
-    }
-    else {
-      const predicate = activePredicate;
-      validValues = nodes.filter((node) => {
-        return edges.filter((edge) => {
-          return (
-            prevConcept === edge.source_id &&
-            edge.target_id === node.id &&
-            (predicate === '' || edge.type === predicate)
-          );
-        }).length > 0;
-      }).flatMap((node) => node.type);
-    }
-    */
+    fetch(this.tranqlURL + '/tranql/parse_tree_incomplete', {
+      signal: this._queryController.signal,
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'text/plain',
+      },
+      body: textToCursorPosition
+    }).then(res => res.json())
+      .then((parsedTree) => {
+        console.log(parsedTree);
+      });
 
     var tables = {};
     for (var c = 0; c < this.state.modelConcepts.length; c++) {
@@ -1214,7 +1195,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             method: "POST",
             headers: {
               'Accept': 'application/json',
-              'Content-Type': 'application/json',
+              'Content-Type': 'text/plain',
             },
             body: this.state.code
           }).then(res => res.text())
