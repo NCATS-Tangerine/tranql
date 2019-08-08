@@ -9,9 +9,10 @@ import os
 import yaml
 import jsonschema
 import requests
-from flask import Flask, request, abort, Response
-from flask_restful import Api, Resource
+from flask import Flask, request, Response, jsonify
+from flask_restful import Api, Resource, abort
 from flasgger import Swagger
+from flasgger.utils import validate as Validate
 from flask_cors import CORS
 from tranql.main import TranQL
 import networkx as nx
@@ -28,15 +29,42 @@ CORS(app)
 
 """ https://github.com/NCATS-Gamma/NCATS-ReasonerStdAPI """
 filename = 'translator_interchange.yaml'
-filename = os.path.join (os.path.dirname (__file__), 'translator_interchange_0.9.0.yaml')
+filename = os.path.join (os.path.dirname (__file__), 'translator_interchange.yaml')
+definitions_filename = os.path.join (os.path.dirname (__file__), 'definitions.yaml')
 with open(filename, 'r') as file_obj:
     template = yaml.load(file_obj)
+    with open(definitions_filename, 'r') as definitions_file:
+        template["definitions"].update(yaml.load(definitions_file))
+    template["tags"] = [
+        {"name" : "schema"},
+        {"name" : "query"},
+        {"name" : "publish"}
+    ]
 app.config['SWAGGER'] = {
     'title': 'TranQL Backplane',
     'description': 'hi',
-    'uiversion': 3
+    'uiversion': 3,
+    'openapi': '3.0.1'
 }
-swagger = Swagger(app, template=template)
+swagger = Swagger(app, template=template, config={
+    "headers": [
+    ],
+    "specs": [
+        {
+            "endpoint": 'apispec_1',
+            "route": '/apispec_1.json',
+            "rule_filter": lambda rule: True,  # ?
+            "model_filter": lambda tag: True,  # ?
+        }
+    ],
+    "swagger_ui": True,
+    "specs_route": "/apidocs/",
+    "openapi": "3.0.1",
+    'swagger_ui_bundle_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-bundle.js',
+    'swagger_ui_standalone_preset_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-standalone-preset.js',
+    'swagger_ui_css': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui.css',
+    'swagger_ui_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui.js'
+})
 
 #######################################################
 ##
@@ -58,17 +86,30 @@ class ICEESClusterArgs:
         self.max_p_val = max_p_val
 
 class StandardAPIResource(Resource):
-    def validate (self, request):
-        with open(filename, 'r') as file_obj:
-            specs = yaml.load(file_obj)
-        to_validate = specs["components"]["schemas"]["Message"]
-        to_validate["components"] = specs["components"]
-        to_validate["components"].pop("Message", None)
+    @staticmethod
+    def validate (request, definition, no_abort=False):
+        if not isinstance(request,dict):
+            request = request.json
+
+        valid = True
         try:
-            jsonschema.validate(request.json, to_validate)
-        except jsonschema.exceptions.ValidationError as error:
-            print (f"ERROR: {str(error)}")
-            abort(Response(str(error), 400))
+            pass
+            # For some reason this method doesn't work...
+            # Validate(request, definition, specs=template)
+        except Exception as e:
+            valid = False
+
+        if no_abort:
+            return valid
+
+        if not valid:
+            abort(
+                500,
+                message="Invalid "+definition,
+                status="error",
+                code="invalid_arguments"
+            )
+
     def get_opt (self, request, opt):
         return request.get('option', {}).get (opt)
     def rename_key (self, obj, old, new, default=None):
@@ -154,57 +195,74 @@ class StandardAPIResource(Resource):
                               new='id')
         #print (f"---- message ------------> {json.dumps(message, indent=2)}")
         return message
+    @staticmethod
+    def response(data):
+        status_code = 200
+
+        # is_error = StandardAPIResource.validate(data, 'Error', no_abort=True)
+        is_error = isinstance(data,dict) and 'status' in data and 'code' in data and 'message' in data
+
+        if is_error:
+            status_code = 500
+
+        return (data, status_code)
 class ICEESSchema(StandardAPIResource):
     def __init__(self):
         self.schema_url = "https://icees.renci.org/2.0.0/knowledge_graph/schema"
     def get(self):
         """
-        schema
+        ICEES schema
         ---
-        tag: validation
+        tags: [schema]
         description: Query the ICEES clinical reasoner for associations between population clusters and chemicals.
         responses:
             '200':
-                description: Success
+                description: Schema
                 content:
                     application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                            type: object
+                            example:
+                                population_of_individual_organisms:
+                                    phenotypic_feature:
+                                        - association
+                                    named_thing:
+                                        - association
+                                    activity_and_behavior:
+                                        - association
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-
+                            $ref: '#/definitions/Error'
         """
         response = requests.get (
             self.schema_url,
             verify=False)
         if not response.ok:
-            return {
+            return self.response({
                 "status" : "error",
                 "code"   : "service_invocation_failure",
                 "message" : f"Bad ICEES schema response. url: {self.schema_url} request: {request.json} response: {response.text}."
-            }
+            })
         elif 'return value' in response.json():
-            return response.json()['return value']
+            return self.response(response.json()['return value'])
         else:
-            return {
+            return self.response({
                 'status' : 'error',
                 'message' : 'Unrecognized response from ICEES schema',
                 'code' : 'service_invocation_failure'
-            }
+            })
 
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
 
     def post(self):
         """
-        query
+        ICEES query
         ---
-        tag: validation
+        tags: [query]
         description: Query the ICEES clinical reasoner for associations between population clusters and chemicals.
         requestBody:
             description: Input message
@@ -213,23 +271,51 @@ class ICEESClusterQuery(StandardAPIResource):
                 application/json:
                     schema:
                         $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "cohort_diagnosis"
+                                  type: "disease"
+                                  curie: "MONDO:0004979"
+                                - id: "diagnoses"
+                                  type: "disease"
+                            edges:
+                                - id: "e1"
+                                  source_id: "cohort_diagnosis"
+                                  target_id: "diagnoses"
+                        options:
+                            Sex:
+                                - "="
+                                - "0"
+                            cohort:
+                                - "="
+                                - "all_patients"
+                            max_p_value:
+                                - "="
+                                - "1"
+
+
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                            ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                            $ref: '#/definitions/Error'
 
         """
-        self.validate (request)
+        self.validate (request, 'Message')
         #print (f"{json.dumps(request.json, indent=2)}")
         request.json['options'] = self.compile_options (request.json['options'])
 
@@ -279,7 +365,7 @@ class ICEESClusterQuery(StandardAPIResource):
         with open ('icees.out.norm', 'w') as stream:
             json.dump (result, stream, indent=2)
 
-        return result
+        return self.response(result)
 
     def compile_options (self, options):
         """ Compile input options into icees appropriate format. """
@@ -321,9 +407,9 @@ class PublishToNDEx(StandardAPIResource):
 
     def post(self):
         """
-        query
+        Publish a graph to NDEx
         ---
-        tag: validation
+        tags: [publish]
         description: Publish a graph to NDEx.
         requestBody:
             description: Input message
@@ -347,7 +433,7 @@ class PublishToNDEx(StandardAPIResource):
                         schema:
                             type: string
         """
-        self.validate (request)
+        self.validate (request, 'Message')
         name = request.json.get('options', {}).get ('name', None)
         if name is not None:
             ndex = NDEx ()
@@ -402,21 +488,17 @@ class RtxQuery(StandardAPIResource):
                 if identifierSource[0] == "CHEMBL.COMPOUND":
                     element[prop] = "CHEMBL:"+identifierSource[1]
         for element in message["question_graph"]["nodes"]:
-            identifierSource = element["id"].split(":")
+            if "curie" not in element: continue
+            identifierSource = element["curie"].split(":")
             if identifierSource[0] == "CHEMBL.COMPOUND":
-                element["id"] = "CHEMBL:"+identifierSource[1]
-        for element in message["question_graph"]["edges"]:
-            for prop in ["source_id","target_id"]:
-                identifierSource = element[prop].split(":")
-                if identifierSource[0] == "CHEMBL.COMPOUND":
-                    element[prop] = "CHEMBL:"+identifierSource[1]
+                element["curie"] = "CHEMBL:"+identifierSource[1]
         return message
     def post(self):
         """
-        Query RTX
+        RTX query
         ---
-        tag: validation
-        description: Query Rtx, given a question graph.
+        tags: [query]
+        description: Query the RTX reasoner.
         requestBody:
             description: Input message
             required: true
@@ -424,22 +506,38 @@ class RtxQuery(StandardAPIResource):
                 application/json:
                     schema:
                         $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "chemical_substance"
+                                  type: "chemical_substance"
+                                  curie: "CHEMBL:CHEMBL3"
+                                - id: "protein"
+                                  type: "protein"
+                            edges:
+                                - id: "e1"
+                                  source_id: "chemical_substance"
+                                  target_id: "protein"
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                            $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                            $ref: '#/definitions/Error'
         """
-        self.validate(request)
+        self.validate(request, 'Message')
 
         data = self.format_as_query(self.convert_curies_to_rtx(request.json))
         # print(json.dumps(data,indent=2))
@@ -459,7 +557,7 @@ class RtxQuery(StandardAPIResource):
                 }
         else:
             result = self.convert_curies_to_standard(self.normalize_message(response.json()))
-        return result
+        return self.response(result)
 
 class IndigoQuery(StandardAPIResource):
     def __init__(self):
@@ -468,10 +566,10 @@ class IndigoQuery(StandardAPIResource):
         self.query_url = f'{self.base_url}/reasoner/api/v1/query'
     def post(self):
         """
-        Indigo Query
+        Indigo query
         ---
-        tag: validation
-        description: Query Indigo, given a question graph.
+        tags: [query]
+        description: Query the Indigo reasoner.
         requestBody:
             description: Input message
             required: true
@@ -479,22 +577,38 @@ class IndigoQuery(StandardAPIResource):
                 application/json:
                     schema:
                         $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "n0"
+                                  type: "chemical_substance"
+                                  curie: "CHEMBL:CHEMBL521"
+                                - id: "n1"
+                                  type: "protein"
+                            edges:
+                                - id: "e1"
+                                  source_id: "n0"
+                                  target_id: "n1"
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Sucessfully validated"
-            '400':
-                description: Malformed message
+                            $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                            $ref: '#/definitions/Error'
         """
-        self.validate(request)
+        self.validate(request, 'Message')
 
         data = self.format_as_query(request.json)
 
@@ -514,8 +628,11 @@ class IndigoQuery(StandardAPIResource):
                     "message" : f"Bad Indigo query response. url: {self.query_url} \n request: {json.dumps(data, indent=2)} \nresponse: \n{response.text}\n (code={response.status_code})."
                 }
         else:
-            result = self.normalize_message(response.json())
-        return result
+            json = response.json()
+            if "question_graph" not in json:
+                json["question_graph"] = request.json.get('question_graph')
+            result = self.normalize_message(json)
+        return self.response(result)
 
 #######################################################
 ##
@@ -537,10 +654,10 @@ class GammaQuery(GammaResource):
         super().__init__()
     def post(self):
         """
-        Visualize
+        Robokop query
         ---
-        tag: validation
-        description: Query Gamma, given a question graph.
+        tags: [query]
+        description: Query the Robokop reasoner.
         requestBody:
             description: Input message
             required: true
@@ -548,22 +665,39 @@ class GammaQuery(GammaResource):
                 application/json:
                     schema:
                         $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "chemical_substance"
+                                  type: "chemical_substance"
+                                  curie: "CHEMBL:CHEMBL3"
+                                - id: "disease"
+                                  type: "disease"
+                            edges:
+                                - id: "e1"
+                                  source_id: "chemical_substance"
+                                  target_id: "disease"
+                        options: {}
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
+                            $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
+                            $ref: '#/definitions/Error'
         """
-        self.validate (request)
+        self.validate (request, 'Message')
         result = {}
         del request.json['knowledge_graph']
         del request.json['knowledge_maps']
@@ -578,7 +712,7 @@ class GammaQuery(GammaResource):
             }
         else:
             result = self.normalize_message (response.json ())
-        return result
+        return self.response(result)
 
 class PublishToGamma(GammaResource):
     """ Publish a graph to Gamma. """
@@ -586,9 +720,9 @@ class PublishToGamma(GammaResource):
         super().__init__()
     def post(self):
         """
-        Visualize
+        Publish a graph to Robokop
         ---
-        tag: validation
+        tags: [publish]
         description: Publish a graph to the Gamma viewer.
         requestBody:
             description: Input message
@@ -614,7 +748,7 @@ class PublishToGamma(GammaResource):
         """
 
         """ This is just a pass-through to simplify workflows. """
-        self.validate (request)
+        self.validate (request, 'Message')
         '''
         with open ("gamma_vis.json", "w") as stream:
             json.dump (request.json, stream, indent=2)
@@ -650,7 +784,7 @@ class GNBRDecorator(StandardAPIResource):
         """
         Decorate a knowledge graph via GNBR.
         ---
-        tag: validation
+        tags: [query]
         description: GNBR decorator.
         requestBody:
             description: Input message
@@ -661,18 +795,11 @@ class GNBRDecorator(StandardAPIResource):
                         $ref: '#/definitions/Message'
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
+                            $ref: '#/definitions/Message'
 
         """
         # self.validate (request)
@@ -734,7 +861,7 @@ class BiolinkModelWalkerService(StandardAPIResource):
         """
         biolink-model conversions.
         ---
-        tag: validation
+        tags: [query]
         description: Convert biolink model types.
         requestBody:
             description: Input message
@@ -745,21 +872,14 @@ class BiolinkModelWalkerService(StandardAPIResource):
                         $ref: '#/definitions/Message'
         responses:
             '200':
-                description: Success
+                description: Message
                 content:
-                    text/plain:
+                    application/json:
                         schema:
-                            type: string
-                            example: "Successfully validated"
-            '400':
-                description: Malformed message
-                content:
-                    text/plain:
-                        schema:
-                            type: string
+                            $ref: '#/definitions/Message'
 
         """
-        self.validate (request)
+        self.validate (request, 'Message')
         question = request.json['question_graph']
         question_nodes = question['nodes']
         source_node = question_nodes[0]

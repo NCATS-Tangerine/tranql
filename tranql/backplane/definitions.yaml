@@ -1,0 +1,17 @@
+Error:
+  type: object
+  required:
+    - status
+    - message
+    - code
+  properties:
+    status:
+      type: string
+      example: error
+    message:
+      type: string
+      example: Bad ICEES response.
+    code:
+      type: string
+      example: service_invocation_failure
+  additionalProperties: true
