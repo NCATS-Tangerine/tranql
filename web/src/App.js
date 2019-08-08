@@ -20,7 +20,6 @@ import {
 } from 'react-icons/fa';
 // import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
-import ReactTable from 'react-table';
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip } from 'recharts';
 import InlineEdit from 'react-edit-inline2';
 import DefaultTooltipContent from 'recharts/lib/component/DefaultTooltipContent';
@@ -36,8 +35,9 @@ import FileLoader from './FileLoader.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
 import BrowseNodeInterface from './BrowseNodeInterface.js';
-import confirmAlert from './confirmAlert.js';
 import Legend from './Legend.js';
+import TableViewer from './TableViewer.js';
+import confirmAlert from './confirmAlert.js';
 import highlightTypes from './highlightTypes.js';
 import { shadeColor, adjustTitle, scrollIntoView, hydrateState, formatBytes } from './Util.js';
 import { Toolbar, Tool, /*ToolGroup*/ } from './Toolbar.js';
@@ -216,6 +216,7 @@ class App extends Component {
     // Create the graph's GUI-related references
     this._graphSplitPane = React.createRef ();
     this._tableSplitPane = React.createRef ();
+    this._tableViewer = React.createRef ();
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
     this._browseNodeInterface = React.createRef ();
@@ -314,6 +315,7 @@ class App extends Component {
       objectViewerSize : 1 - (1/3),
       objectViewerSelection : null,
 
+      // Keep track of the tableView in the main state as well
       tableView : false,
       tableViewerSize : 1 - (2/7),
 
@@ -2016,7 +2018,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />
       <FaTable data-active={this.state.tableView} data-tip="View a tabular representation of the active graph" id="tableViewButton" className="App-control-toolbar fa" onClick={() => {
         // We want to close the table viewer if they press the button and it is already active
-        this.state.tableView ? this._closeTableViewer () : this._openTableViewer ();
+        this._tableViewer.current.toggleVisibility();
       }}/>
       {
       // Perfectly functional but does not provide enough functionality as of now to warrant its presence
@@ -3142,7 +3144,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             this.state.showCodeMirror ?
               (
                 <>
-                  <IoIosArrowDropupCircle onClick={(e) => this.setState({ showCodeMirror : false })} className="editor-vis-control legend-vis-control"/>
+                  <IoIosArrowDropupCircle onClick={(e) => {
+                    this.setState({ showCodeMirror : false });
+                    localStorage.setItem('showCodeMirror', false);
+                  }} className="editor-vis-control legend-vis-control"/>
                   <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;window.editor=editor;}}
                   className="query-code"
                   value={this.state.code}
@@ -3154,7 +3159,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               (
                 <div className="editor Legend" data-closed={true}>
                 <IoIosArrowDropdownCircle className="editor-vis-control legend-vis-control-open"
-                onClick={(e) => this.setState({ showCodeMirror : true })}
+                onClick={(e) => {
+                  this.setState({ showCodeMirror : true });
+                  localStorage.setItem('showCodeMirror', true);
+                }}
                 color="rgba(40,40,40,1)"
                 />
                 </div>
@@ -3320,71 +3328,30 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 </SplitPane>
               }
             </div>
-            <div id="tableView">
-              <Tabs defaultActiveKey="0">
-                {
-                  (() => {
-                    const elementTypes = ["nodes", "links"];
-                    return elementTypes.map((elementType,index) => (
-                      <Tab eventKey={index.toString()} title={elementType} key={index.toString()}>
-                        <Button id="tableViewerCloseButton" size="sm" color="danger" onClick={() => this._closeTableViewer()}>Close</Button>
-                        {
-                          (() => {
-                            const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-                            const elements = graph[elementType].map((el) => el.origin);
-                            const keys = elements.flatMap((el) => Object.keys(el)).unique();
-
-                            // const serialize = (object) => {
-                            //   if (Array.isArray(object)) {
-                            //     return <div>{object.map((obj) => <>{serialize(obj)}<br/></>)}</div>;
-                            //   }
-                            //   else if (typeof object === "object") {
-                            //     return (<div>{Object.entries(object).map((object) => {
-                            //       return <>{serialize(object[0])} = {serialize(object[1])}}<br/></>;
-                            //     })}</div>);
-                            //   }
-                            //   else {
-                            //     return <div>{object}</div>;
-                            //   }
-                            // }
-                            const columns = keys.map((key,i) => {
-                              return ({
-                                Header: key,
-                                accessor: (el) => typeof el[key] === "object" ? YAML.safeDump(el[key]) : el[key],
-                                id:key
-                              });
-                            });
-                            return (
-                              <ReactTable data={elements}
-                                          columns={columns}
-                                          defaultPageSize={15}
-                                          filterable
-                                          defaultFilterMethod={(filter,row) => {
-                                            const isRegexLiteral = filter.value.match(/^\/(.*)\/([g|i|m|u|y]*)$/);
-                                            if (isRegexLiteral !== null) {
-                                              try {
-                                                const expr = isRegexLiteral[1];
-                                                const flags = isRegexLiteral[2];
-                                                const re = new RegExp(expr,flags);
-                                                return row[filter.id].match(re);
-                                              }
-                                              catch {
-                                                // Return false if the regex is invalid
-                                                return false;
-                                              }
-                                            }
-                                            return row[filter.id].includes(filter.value);
-                                          }}
-                                          className="-striped -highlight"/>
-                            );
-                          })()
-                        }
-                      </Tab>
-                    ));
-                  })()
-                }
-              </Tabs>
-            </div>
+            <TableViewer onOpen={this._openTableViewer}
+                         onClose={this._closeTableViewer}
+                         ref={this._tableViewer}
+                         data={(() => {
+                           const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+                           // Table viewer generates a tab for every property in the object provided, but we only want nodes and links as our tabs.
+                           return {
+                             nodes : graph.nodes,
+                             links : graph.links
+                           };
+                         })()}
+                         defaultTableAttributes={{
+                           "nodes" : [
+                             "name",
+                             "id",
+                             "type"
+                           ],
+                           "links" : [
+                             "source_id",
+                             "target_id",
+                             "type",
+                             "source_database"
+                           ]
+                         }}/>
           </SplitPane>
         </div>
         <div id='next'/>

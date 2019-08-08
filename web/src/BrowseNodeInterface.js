@@ -225,6 +225,7 @@ export default class BrowseNodeInterface extends Component {
                        id='browseNodeConcept'
                        placeholder={'Enter a biolink modal concept type...'}
                        inputProps={{...(this.state.conceptError ? { className : ' is-invalid' } : {})}}
+                       emptyLabel="No valid targets"
                        onChange={(concept)=>{
                          if (concept.length === 0) concept.push('');
                          this.setState({ activeConcept : concept[0] }, () => {
@@ -241,6 +242,7 @@ export default class BrowseNodeInterface extends Component {
             <Typeahead multiple={false}
                        id='browseNodePredicate'
                        placeholder={'Enter a biolink modal edge type...'}
+                       emptyLabel="No valid predicates"
                        onChange={(relation)=>{
                          if (relation.length === 0) relation.push('');
                          this.setState({ activePredicate : relation[0] }, () => {

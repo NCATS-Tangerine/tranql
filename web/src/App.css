@@ -157,32 +157,6 @@ body {
   overflow-y:auto;
   padding:15px;
 }
-#tableView {
-  position:relative;
-  width:100%;
-  height:100%;
-  max-height:100%;
-  display:flex;
-  flex-direction:column;
-}
-#tableView > .tab-content {
-  flex:1;
-  overflow-y:auto;
-}
-#tableView .rt-td {
-  white-space:pre;
-}
-#tableView > .nav-tabs {
-  position:relative;
-}
-#tableView > .nav-tabs, #tableView > .nav-tabs > .nav-item {
-  border-bottom:0;
-}
-#tableViewerCloseButton {
-  position:absolute;
-  top:0;
-  right:0;
-}
 #info {
     position: relative;
     background-color: rgb(39, 40, 34);
@@ -244,7 +218,10 @@ body {
   margin-left:12.5px;
   font-size:24px;
 }
-
+.Resizer {
+  border-width:0;
+  background: transparent;
+}
 .Resizer.disabled {
   cursor:auto !important;
 }

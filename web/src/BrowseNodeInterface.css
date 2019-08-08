@@ -1,5 +1,6 @@
 .BrowseNodeInterface {
-  position:absolute;
+  position:fixed;
+  border:1px solid rgb(200,200,200);
   pointer-events:initial;
   min-width:325px;
   background-color:white;
@@ -11,7 +12,7 @@
   text-align:center;
   display:flex;
   align-items:center;
-  border:1px solid rgb(200,200,200);
+  border-bottom:1px solid rgb(200,200,200);
   background-color:rgb(245,245,245);
 }
 .browse-node-header > h6 {
@@ -37,7 +38,7 @@
   display:flex;
   justify-content:space-between;
   align-items:center;
-  border:1px solid rgb(220,220,220);
+  border-top:1px solid rgb(220,220,220);
   background-color:rgb(240,240,240);
 }
 .browse-node-body > .button-container > * {

@@ -1,0 +1,38 @@
+.TableViewer {
+  position:relative;
+  width:100%;
+  height:100%;
+  max-height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.TableViewer > .tab-content {
+  flex:1;
+  overflow-y:auto;
+}
+.TableViewer .rt-td {
+  white-space:pre;
+}
+.TableViewer > .nav-tabs {
+  position:relative;
+}
+.TableViewer > .nav-tabs, .TableViewer > .nav-tabs > .nav-item {
+  border-bottom:0;
+}
+.table-viewer-button-container {
+  position:absolute;
+  top:0;
+  right:0;
+  z-index:1;
+}
+.table-viewer-button-container > *:not(:last-child) {
+  margin-right:5px;
+}
+.table-filter-container {
+  display:flex;
+  flex-wrap:wrap;
+  margin:5px;
+}
+.table-filter-container > *:not(:last-child) {
+  margin-right:25px;
+}
