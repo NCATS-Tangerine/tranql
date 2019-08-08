@@ -42,6 +42,9 @@ app.config['SWAGGER'] = {
 }
 filename = 'translator_interchange.yaml'
 filename = os.path.join (os.path.dirname(__file__), 'backplane', filename)
+
+definitions_filename = 'definitions.yaml'
+definition_filename = os.path.join (os.path.dirname(__file__), definitions_filename)
 with open(filename, 'r') as file_obj:
     template = {
         "definitions" : yaml.load(file_obj)["definitions"],
@@ -53,53 +56,8 @@ with open(filename, 'r') as file_obj:
             {"name" : "webapp"}
         ]
     }
-    template["definitions"]["Error"] = {
-        "type" : "object",
-        "description" : "Errors encountered during the request. If status is Warning, the request still was able to complete.",
-        "required" : [
-            "status",
-            "errors"
-        ],
-        "properties" : {
-            "status" : {
-                "type" : "string",
-                "enum" : [
-                    "Error",
-                    "Warning"
-                ],
-                "description" : "Severity of the errors."
-            },
-            "errors" : {
-                "type" : "array",
-                "items": {
-                    "$ref": "#/definitions/ErrorMessage"
-                }
-            }
-        },
-        "example" : {
-            "status" : "Error",
-            "errors" : [
-                {
-                    "message" : "Something went wrong."
-                }
-            ]
-        }
-    }
-    template["definitions"]["ErrorMessage"] = {
-        "type" : "object",
-        "description" : "An individual error message.",
-        "required" : [
-            "message"
-        ],
-        "properties" : {
-            "message" : {
-                "type" : "string"
-            },
-            "status" : {
-                "type" : "string"
-            }
-        }
-    }
+    with open(definitions_filename, 'r') as definitions_file:
+        template['definitions'].update(yaml.load(definitions_file))
 swagger = Swagger(app, template=template, config={
     "headers": [
     ],
@@ -172,7 +130,7 @@ class StandardAPIResource(Resource):
 class WebAppRoot(Resource):
     def get(self):
         """
-        webapp root
+        Web app root
         ---
         tags: [webapp]
         consumes': [ 'text/plain' ]
@@ -183,7 +141,7 @@ api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
 class WebAppPath(Resource):
     def get(self, path):
         """
-        webapp
+        Web app path
         ---
         tags: [webapp]
         parameters:
@@ -207,7 +165,7 @@ class Configuration(StandardAPIResource):
     """ Configuration """
     def get(self):
         """
-        configuration
+        TranQL Configuration
         ---
         tags: [configuration]
         description: TranQL Configuration
@@ -231,10 +189,10 @@ class DecorateKG(StandardAPIResource):
 
     def post(self):
         """
-        util
+        Decorate a Knowledge Graph
         ---
         tags: [util]
-        description: Decorate a knowledge graph using TranQL's decorate method.
+        description: Decorates a knowledge graph's elements with given data using TranQL's decorate method.
         requestBody:
           name: knowledge_graph
           description: A KGS 0.1.0 compliant KGraph
@@ -299,10 +257,10 @@ class MergeMessages(StandardAPIResource):
 
     def post(self):
         """
-        util
+        Merge Messages
         ---
         tags: [util]
-        description: Merge Messages
+        description: Merge Message objects together using TranQL's merge_results method.
         requestBody:
           name: messages
           description: An array of KGS 0.1.0 compliant message objects
@@ -389,10 +347,10 @@ class TranQLQuery(StandardAPIResource):
 
     def post(self):
         """
-        query
+        Query TranQL
         ---
         tags: [query]
-        description: TranQL Query
+        description: Execute a TranQL query.
         requestBody:
           name: query
           description: A valid TranQL program
@@ -471,10 +429,10 @@ class AnnotateGraph(StandardAPIResource):
 
     def post(self):
         """
-        query
+        Annotate Graph
         ---
         tags: [query]
-        description: Graph annotator.
+        description: Annotate a message's knowledge graph via the GNBR decorator.
         requestBody:
           name: message
           description: A KGS 0.1.0 compliant Message
@@ -528,10 +486,10 @@ class SchemaGraph(StandardAPIResource):
 
     def get(self):
         """
-        query
+        TranQL Schema
         ---
         tags: [schema]
-        description: Get the TranQL schema
+        description: Get TranQL's schema.
         responses:
             '200':
                 description: Message
@@ -571,10 +529,10 @@ class ModelConceptsQuery(StandardAPIResource):
 
     def post(self):
         """
-        query
+        Biolink Model Concepts
         ---
         tags: [schema]
-        description: Get biolink model concepts
+        description: Get valid concepts in the biolink model.
         responses:
             '200':
                 description: Array of concepts
@@ -605,10 +563,10 @@ class ModelRelationsQuery(StandardAPIResource):
 
     def post(self):
         """
-        query
+        Biolink Model Relations
         ---
         tags: [schema]
-        description: Get biolink model relations
+        description: Get valid relations in the biolink model.
         responses:
             '200':
                 description: Array of relations
