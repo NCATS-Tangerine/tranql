@@ -114,7 +114,7 @@ openTable = Group(delimitedList(tableNameList | Group((Literal('"') | Literal("'
 statement <<= (
     Group(
         Group(SELECT + incomplete_question_graph_expression)("concepts") + Suppress(optWhite) +
-        Optional(Group(FROM + openTable)) + Suppress(optWhite) +
+        Optional(Group(FROM + (openTable | Empty()))) + Suppress(optWhite) +
         Optional(Group(WHERE + whereExpression("where"))) + Suppress(optWhite) +
         Optional(Group(SET + setExpression("set")))("select")
     )

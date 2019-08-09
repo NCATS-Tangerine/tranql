@@ -1162,7 +1162,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               if (predicate === null) {
                 // Predicate will only be null if there are no arrows, and therefore the previousConcept is also null.
                 // Single concept - just "select" or "select foo" where the concept is either "" or "foo"
-                validConcepts = graph.nodes.filter((node) => node.type.startsWith(currentConcept)).map(node => node.type).unique();
+                validConcepts = graph.nodes.filter((node) => node.type.startsWith(currentConcept)).map(node => node.type);
               }
               else {
                 // If there is a predicate, we have to factor in the previous concept, the predicate, and the current concept.
@@ -1197,21 +1197,25 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   else {
                     return edge.target_id
                   }
-                }).unique().map((concept) => {
-                  return {
-                    displayText: concept,
-                    text: concept,
-                    replaceText: currentConcept
-                  };
-                });
+                })
               }
+              validConcepts = validConcepts.unique().map((concept) => {
+                return {
+                  displayText: concept,
+                  text: concept,
+                  replaceText: currentConcept
+                };
+              });
             }
             showHint(validConcepts);
 
           }
           else if (statementType === 'from') {
             let currentReasonerArray = lastStatement[1];
-            if (currentReasonerArray === statementType) {
+            let startingQuote = "";
+            if (currentReasonerArray === undefined) {
+              // Adds an apostrophe to the start of the string if it doesn't have one ("from")
+              startingQuote = "'";
               currentReasonerArray = [[
                 "'",
                 ""
@@ -1231,42 +1235,50 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
             Object.keys(fromOptions).forEach((reasoner) => {
               let valid = true;
-
-              for (let i=0;i<tokens.length-2;i+=2) {
-                const previousConcept = tokens[i];
-                let predicate = tokens[i+1];
-                const currentConcept = tokens[i+2];
-
-                if (!Array.isArray(predicate)) {
-                  predicate = arrowToEmptyPredicate (predicate);
-                }
-                const backwards = isBackwardsPredicate (predicate);
-
-                const isTransitionValid = graph.edges.filter((edge) => {
-                  if (backwards) {
-                    return (
-                      edge.source_id.startsWith(currentConcept) &&
-                      edge.target_id === previousConcept &&
-                      (predicate[1] === "" || edge.type === predicate[1]) &&
-                      (reasoner === "/schema" || edge.reasoner.includes(reasoner))
-                    );
-                  }
-                  else {
-                    return (
-                      edge.source_id === previousConcept &&
-                      edge.target_id.startsWith(currentConcept) &&
-                      (predicate[1] === "" || edge.type === predicate[1]) &&
-                      (reasoner === "/schema" || edge.reasoner.includes(reasoner))
-                    );
-                  }
-                }).length > 0;
-                if (!isTransitionValid) {
-                  valid = false;
-                  break;
-                }
+              if (tokens.length === 1) {
+                // Handles if there's only one concept ("select foo")
+                const currentConcept = tokens[0];
+                graph.nodes.filter((node) => node.type.startsWith(currentConcept)).forEach(node => node.reasoner.forEach((reasoner) => {
+                  !validReasoners.includes(reasoner) && validReasoners.push(reasoner);
+                }));
               }
-              if (valid) {
-                validReasoners.push(reasoner);
+              else {
+                for (let i=0;i<tokens.length-2;i+=2) {
+                  const previousConcept = tokens[i];
+                  let predicate = tokens[i+1];
+                  const currentConcept = tokens[i+2];
+
+                  if (!Array.isArray(predicate)) {
+                    predicate = arrowToEmptyPredicate (predicate);
+                  }
+                  const backwards = isBackwardsPredicate (predicate);
+
+                  const isTransitionValid = graph.edges.filter((edge) => {
+                    if (backwards) {
+                      return (
+                        edge.source_id.startsWith(currentConcept) &&
+                        edge.target_id === previousConcept &&
+                        (predicate[1] === "" || edge.type === predicate[1]) &&
+                        (reasoner === "/schema" || edge.reasoner.includes(reasoner))
+                      );
+                    }
+                    else {
+                      return (
+                        edge.source_id === previousConcept &&
+                        edge.target_id.startsWith(currentConcept) &&
+                        (predicate[1] === "" || edge.type === predicate[1]) &&
+                        (reasoner === "/schema" || edge.reasoner.includes(reasoner))
+                      );
+                    }
+                  }).length > 0;
+                  if (!isTransitionValid) {
+                    valid = false;
+                    break;
+                  }
+                }
+                if (valid) {
+                  validReasoners.push(reasoner);
+                }
               }
             });
 
@@ -1277,7 +1289,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             }).map((reasonerValue) => {
               return {
                 displayText: reasonerValue,
-                text: reasonerValue + endingQuote,
+                text: startingQuote + reasonerValue + endingQuote,
                 replaceText: currentReasoner
               };
             });
