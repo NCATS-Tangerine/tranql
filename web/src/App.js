@@ -980,7 +980,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           }
 
           const isBackwardsPredicate = (predicate) => {
-            return predicate[0] === '<-[' && predicate[2] === ']-';
+            return predicate[0] === '<-[';
           }
 
           const toForwardPredicate = (predicate) => {
@@ -998,8 +998,34 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           // TODO: needs to correctly handle backwards arrows.
 
           if (statementType === 'select') {
+            let validConcepts;
             if (Array.isArray(lastToken) && lastToken.length < 3) {
               // If the last token is an array and not length 3 then it is an incomplete predicate.
+              // "select foo-[" or "select foo-[bar"
+              let currentPredicate = [
+                lastToken[0],
+                lastToken[1] !== undefined ? lastToken[1] : ""
+              ];
+              let previousConcept = secondLastToken;
+
+              const backwards = isBackwardsPredicate (currentPredicate);
+
+              console.log ([previousConcept, currentPredicate]);
+
+              // Should replace this method with reduce
+
+              validConcepts = graph.edges.filter((edge) => {
+                if (backwards) {
+                  return edge.target_id === previousConcept &&
+                  edge.type.startsWith(currentPredicate[1]);
+                }
+                else {
+                  return (
+                    edge.source_id === previousConcept &&
+                    edge.type.startsWith(currentPredicate[1])
+                  );
+                }
+              }).map((edge) => edge.type).unique();
             }
             else {
               // Otherwise, we are handling autocompletion of a concept.
@@ -1026,7 +1052,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
 
 
-              let validConcepts;
               if (predicate === null) {
                 // Predicate will only be null if there are no arrows, and therefore the previousConcept is also null.
                 // Single concept - just "select" or "select foo" where the concept is either "" or "foo"
@@ -1067,8 +1092,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   }
                 }).unique();
               }
-              showHint(validConcepts);
             }
+            showHint(validConcepts);
 
           }
           else if (statementType === 'from') {
