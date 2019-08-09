@@ -109,12 +109,12 @@ incomplete_question_graph_expression = ZeroOrMore(question_graph_element + incom
 
 # Match something like "from '/complete_this_" where there is a non completed string literal.
 # In a group just so that it is consistent with an actual table which is stored in a list.
-openTable = Group(Suppress((Literal('"') | Literal("'"))) + Regex('.*'))
+openTable = Group(delimitedList(tableNameList | Group((Literal('"') | Literal("'")) + Regex('.*'))))
 
 statement <<= (
     Group(
         Group(SELECT + incomplete_question_graph_expression)("concepts") + Suppress(optWhite) +
-        Optional(Group(FROM + (tableNameList | openTable))) + Suppress(optWhite) +
+        Optional(Group(FROM + openTable)) + Suppress(optWhite) +
         Optional(Group(WHERE + whereExpression("where"))) + Suppress(optWhite) +
         Optional(Group(SET + setExpression("set")))("select")
     )

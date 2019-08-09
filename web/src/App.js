@@ -922,7 +922,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           return {
             from: pos,
             to: pos,
-            list: options
+            list: options.map((option) => {
+              // Process custom options - `replaceText`
+              if (option.hasOwnProperty('replaceText')) {
+                let replaceText = option.replaceText;
+                let from = option.hasOwnProperty('from') ? option.from : pos;
+                let to = option.hasOwnProperty('to') ? option.to : pos;
+
+                option.from = { line : from.line, ch : from.ch - replaceText.length };
+                option.to = { line : to.line, ch : to.ch + option.text.length - replaceText.length};
+
+                delete option.replaceText;
+              }
+
+              return option;
+            })
           };
         },
         disableKeywords: true,
@@ -1110,11 +1124,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   );
                 }
               }).map((edge) => edge.type).unique().map((type) => {
+                const replaceText = currentPredicate[1];
                 const actualText = type + currentPredicate[2];
                 const displayText = type;
                 return {
                   displayText: displayText,
-                  text: actualText
+                  text: actualText,
+                  replaceText : replaceText
                 };
               });
             }
@@ -1181,21 +1197,28 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   else {
                     return edge.target_id
                   }
-                }).unique();
+                }).unique().map((concept) => {
+                  return {
+                    displayText: concept,
+                    text: concept,
+                    replaceText: currentConcept
+                  };
+                });
               }
             }
             showHint(validConcepts);
 
           }
           else if (statementType === 'from') {
-            let currentReasoner = lastStatement[1];
-            if (Array.isArray(currentReasoner)) {
-              currentReasoner = currentReasoner[currentReasoner.length - 1];
+            let currentReasonerArray = lastStatement[1];
+            if (currentReasonerArray === statementType) {
+              currentReasonerArray = [[
+                "'",
+                ""
+              ]];
             }
-            else {
-              currentReasoner = "";
-            }
-
+            const endingQuote = currentReasonerArray[currentReasonerArray.length - 1][0];
+            const currentReasoner = currentReasonerArray[currentReasonerArray.length - 1][1];
             // The select statement must be the first statement in the block, but thorough just in case.
             // We also want to filter out whitespace that would be detected as a token.
             const selectStatement = block.filter((statement) => statement[0] === "select")[0].filter((token) => {
@@ -1254,7 +1277,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             }).map((reasonerValue) => {
               return {
                 displayText: reasonerValue,
-                text: reasonerValue
+                text: reasonerValue + endingQuote,
+                replaceText: currentReasoner
               };
             });
 
