@@ -242,9 +242,6 @@ class App extends Component {
       modelConcepts : [],
       modelRelations : [],
 
-      // Get valid options in the `from` clause and their respective `reasoner` values.
-      reasonerURLs : {},
-
       // The graph; populated when a query's executed.
       loading: false,
       record : null,
@@ -802,6 +799,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     this._OVERLAY_X = 0;
     this._OVERLAY_Y = 0;
+
+    // Get valid options in the `from` clause and their respective `reasoner` values.
+    // Doesn't belong in state.
+    this.reasonerURLs = this._getReasonerURLs ();
   }
   /**
    * Updates the queries contained within the cache viewer modal.
@@ -907,15 +908,23 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const pos = codeMirror.getCursor();
     const textToCursorPosition = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
 
-    const showHint = function(options) {
-      var tables = {};
-      for (var c = 0; c < options.length; c++) {
-        var concept = options[c];
-        tables[concept] = [ /** column names, whatever those are in this context, go here. **/ ];
+    const showHint = function(options, noResultsTip) {
+      if (typeof noResultsTip === 'undefined') noResultsTip = true;
+      if (noResultsTip && options.length === 0) {
+        options.push({
+          text: String(''),
+          displayText:'No valid results'
+        });
       }
-
       const hintOptions = {
-        tables: tables,
+        // tables: tables,
+        hint: function() {
+          return {
+            from: pos,
+            to: pos,
+            list: options
+          };
+        },
         disableKeywords: true,
         completeSingle: false,
         completeOnSingleClick: false
@@ -924,9 +933,32 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       codeMirror.showHint(hintOptions);
     }
 
+    const setLoading = function(loading) {
+      if (loading) {
+        // text property has to be String('') because when it is '' (falsey) it refuses to display it.
+        codeMirror.showHint({
+          hint: function() {
+            return {
+              from: pos,
+              to: pos,
+              list: [{
+                text: String(''),
+                displayText: 'Loading',
+                className: 'loading-animation'
+              }]
+            };
+          },
+          disableKeywords: true,
+          completeSingle: false,
+        });
+      }
+      else {
+        codeMirror.closeHint();
+      }
+    }
+
     /**
      * TODO:
-     * set loading tip
      * set no results tip
      * set error tip instead of showing entire dialog
      * wrap in try catch for errors in the query syntax
@@ -949,6 +981,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._autoCompleteController.abort();
     this._autoCompleteController = new window.AbortController();
 
+    setLoading(true);
+
     fetch(this.tranqlURL + '/tranql/parse_incomplete', {
       signal: this._autoCompleteController.signal,
       method: "POST",
@@ -958,7 +992,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       },
       body: textToCursorPosition
     }).then(res => res.json())
-      .then((parsedTree) => {
+      .then(async (parsedTree) => {
+        setLoading(false)
+
         if (parsedTree.errors) {
           this._handleMessageDialog (parsedTree.status, parsedTree.errors);
         }
@@ -971,7 +1007,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
           const statementType = lastStatement[0];
 
-          const fromOptions = this.state.reasonerURLs;
+          setLoading(true);
+          const fromOptions = await this.reasonerURLs;
+          setLoading(false);
+
           fromOptions["/schema"] = "/schema";
 
           const whereOptions = [
@@ -984,21 +1023,30 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             '<-'
           ];
 
-          const arrow_to_pred_arrow = {
-            '->' : [
-              '-[',
-              '',
-              ']->'
-            ],
-            '<-' : [
-              '<-[',
-              '',
-              ']-'
-            ]
+          const all_arrows = [
+            '->',
+            '<-',
+            '-[',
+            '<-['
+          ];
+
+          const arrow_to_pred_arrow = (arrow) => {
+            return {
+              '->' : [
+                '-[',
+                '',
+                ']->'
+              ],
+              '<-' : [
+                '<-[',
+                '',
+                ']-'
+              ]
+            }[arrow];
           }
 
           const arrowToEmptyPredicate = (arrow) => {
-            return arrow_to_pred_arrow[arrow];
+            return arrow_to_pred_arrow(arrow);
           }
 
           const isBackwardsPredicate = (predicate) => {
@@ -1011,6 +1059,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             return predicate;
           }
 
+          const completePredicate = (predicate) => {
+            if (isBackwardsPredicate (predicate)) {
+              predicate[2] = arrow_to_pred_arrow("<-")[2];
+            }
+            else {
+              predicate[2] = arrow_to_pred_arrow("->")[2];
+            }
+            return predicate;
+          }
+
           const lastToken = lastStatement[lastStatement.length-1];
           const secondLastToken = lastStatement[lastStatement.length-2];
           const thirdLastToken = lastStatement[lastStatement.length-3];
@@ -1019,14 +1077,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
           if (statementType === 'select') {
             let validConcepts;
-            if (Array.isArray(lastToken) && lastToken.length < 3) {
+            if (lastToken === "-") {
+              // Arrow suggestion
+              // "select foo-"
+              validConcepts = all_arrows;
+            }
+            else if (Array.isArray(lastToken) && lastToken.length < 3) {
               // If the last token is an array and not length 3 then it is an incomplete predicate.
               // "select foo-[" or "select foo-[bar"
-              let currentPredicate = [
+              let currentPredicate = completePredicate([
                 lastToken[0],
                 lastToken[1] !== undefined ? lastToken[1] : ""
-              ];
+              ]);
               let previousConcept = secondLastToken;
+
 
               const backwards = isBackwardsPredicate (currentPredicate);
 
@@ -1045,7 +1109,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     edge.type.startsWith(currentPredicate[1])
                   );
                 }
-              }).map((edge) => edge.type).unique();
+              }).map((edge) => edge.type).unique().map((type) => {
+                const actualText = type + currentPredicate[2];
+                const displayText = type;
+                return {
+                  displayText: displayText,
+                  text: actualText
+                };
+              });
             }
             else {
               // Otherwise, we are handling autocompletion of a concept.
@@ -1180,6 +1251,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               return fromOptions[reasoner];
             }).filter((reasonerValue) => {
               return reasonerValue.startsWith(currentReasoner);
+            }).map((reasonerValue) => {
+              return {
+                displayText: reasonerValue,
+                text: reasonerValue
+              };
             });
 
             showHint(validReasonerValues);
@@ -1746,15 +1822,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    *
    * @private
    */
-  _getReasonerURLs () {
-    fetch(this.tranqlURL + '/tranql/reasonerURLs', {
+  async _getReasonerURLs () {
+    const res = await fetch(this.tranqlURL + '/tranql/reasonerURLs', {
       method: "GET",
-    }).then(res => res.json())
-      .then((reasonerURLs) => {
-        this.setState({
-          reasonerURLs
-        });
-      });
+    })
+    const reasonerURLs = await res.json();
+
+    return reasonerURLs;
   }
   /**
    * Get the concept model and stores as state.
@@ -3293,8 +3367,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
-
-    this._getReasonerURLs ();
 
     // Fetch schema
     this._getSchema ();

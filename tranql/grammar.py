@@ -102,7 +102,8 @@ incomplete_arrow = \
         Group(Literal("-[") + (concept_name | Empty()) + Optional(Literal("]->"))) | \
         Group(Literal("<-[") + (concept_name | Empty()) + Optional(Literal("]-"))) | \
         Literal ("->") | \
-        Literal ("<-")
+        Literal ("<-") | \
+        Literal ("-")
 
 incomplete_question_graph_expression = ZeroOrMore(question_graph_element + incomplete_arrow) + Optional(question_graph_element)
 

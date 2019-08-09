@@ -655,6 +655,14 @@ body {
 .Resizer.disabled:hover {
   border-color: transparent;
 }
+.loading-animation::after {
+  content: '';
+  -ms-animation:loading-text 2.5s linear infinite;
+  -o-animation:loading-text 2.5s linear infinite;
+  -webkit-animation:loading-text 2.5s linear infinite;
+  -moz-animation:loading-text 2.5s linear infinite;
+  animation:loading-text 2.5s linear infinite;
+}
 .no-select {
   user-select:none;
   -webkit-user-select:none;
@@ -691,3 +699,18 @@ body {
 @-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
 @keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+
+@keyframes loading-text {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+}
