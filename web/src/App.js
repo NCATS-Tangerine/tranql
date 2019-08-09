@@ -104,6 +104,7 @@ class App extends Component {
     this._getConfiguration = this._getConfiguration.bind (this);
     this._getModelConcepts = this._getModelConcepts.bind (this);
     this._getModelRelations = this._getModelRelations.bind (this);
+    this._getReasonerURLs = this._getReasonerURLs.bind (this);
     this._codeAutoComplete = this._codeAutoComplete.bind(this);
     this._updateCode = this._updateCode.bind (this);
     this._executeQuery = this._executeQuery.bind(this);
@@ -240,6 +241,9 @@ class App extends Component {
       // Concept model concepts and relations.
       modelConcepts : [],
       modelRelations : [],
+
+      // Get valid options in the `from` clause and their respective `reasoner` values.
+      reasonerURLs : {},
 
       // The graph; populated when a query's executed.
       loading: false,
@@ -920,7 +924,27 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       codeMirror.showHint(hintOptions);
     }
 
-    /* TODO: set loading tip */
+    /**
+     * TODO:
+     * set loading tip
+     * set no results tip
+     * set error tip instead of showing entire dialog
+     * wrap in try catch for errors in the query syntax
+     * complete the ending of an predicate when selected
+     *    Instead of it resulting in:
+     *      'select foo-[completed'
+     *    You should end up with:
+     *      'select foo-[completed]->'
+     * could try to see if its possible to have two select menus for predicates that also show concepts from the predicates
+     *    would look something like this image, when, for example, you pressed the right arrow or left clicked or something on a predicate:
+     *        https://i.imgur.com/LBsdrcq.png
+     * could somehow see if there's a way to have predicate suggestion work properly when there's a concept already following the predicate
+     *    Ex: 'select foo-[what_can_I_put_here?]->baz'
+     *    Would involve sending more of the query instead of cutting it off at cursor.
+     *    Then would somehow have to backtrack and locate which token the cursor's position translates to.
+     * arrow suggestions?
+     *    Ex: 'select foo-{what_can_I_put_here?}' => suggestions: ['foo->', 'foo<-', 'foo-[', 'foo<-[']
+     */
 
     this._autoCompleteController.abort();
     this._autoCompleteController = new window.AbortController();
@@ -936,21 +960,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }).then(res => res.json())
       .then((parsedTree) => {
         if (parsedTree.errors) {
-          /* TODO: set error tip instead of showing entire dialog */
           this._handleMessageDialog (parsedTree.status, parsedTree.errors);
         }
         else {
           const graph = this.state.schemaMessage.knowledge_graph;
 
-          const block = parsedTree[0];
+          // Filter whitespace from the statements
+          const block = parsedTree[parsedTree.length-1];
           const lastStatement = block[block.length-1];
 
           const statementType = lastStatement[0];
 
-          const fromOptions = [
-            '/tranql/foo',
-            '/tranql/bar'
-          ];
+          const fromOptions = this.state.reasonerURLs;
+          fromOptions["/schema"] = "/schema";
 
           const whereOptions = [
             'testing',
@@ -994,8 +1016,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           const thirdLastToken = lastStatement[lastStatement.length-3];
 
           console.log(statementType, lastStatement, lastToken);
-
-          // TODO: needs to correctly handle backwards arrows.
 
           if (statementType === 'select') {
             let validConcepts;
@@ -1097,7 +1117,72 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
           }
           else if (statementType === 'from') {
+            let currentReasoner = lastStatement[1];
+            if (Array.isArray(currentReasoner)) {
+              currentReasoner = currentReasoner[currentReasoner.length - 1];
+            }
+            else {
+              currentReasoner = "";
+            }
 
+            // The select statement must be the first statement in the block, but thorough just in case.
+            // We also want to filter out whitespace that would be detected as a token.
+            const selectStatement = block.filter((statement) => statement[0] === "select")[0].filter((token) => {
+              return typeof token !== "string" || token.match(/\s/) === null;
+            });
+            // Don't want the first token ("select")
+            const tokens = selectStatement.slice(1);
+
+            let validReasoners = [];
+
+            Object.keys(fromOptions).forEach((reasoner) => {
+              let valid = true;
+
+              for (let i=0;i<tokens.length-2;i+=2) {
+                const previousConcept = tokens[i];
+                let predicate = tokens[i+1];
+                const currentConcept = tokens[i+2];
+
+                if (!Array.isArray(predicate)) {
+                  predicate = arrowToEmptyPredicate (predicate);
+                }
+                const backwards = isBackwardsPredicate (predicate);
+
+                const isTransitionValid = graph.edges.filter((edge) => {
+                  if (backwards) {
+                    return (
+                      edge.source_id.startsWith(currentConcept) &&
+                      edge.target_id === previousConcept &&
+                      (predicate[1] === "" || edge.type === predicate[1]) &&
+                      (reasoner === "/schema" || edge.reasoner.includes(reasoner))
+                    );
+                  }
+                  else {
+                    return (
+                      edge.source_id === previousConcept &&
+                      edge.target_id.startsWith(currentConcept) &&
+                      (predicate[1] === "" || edge.type === predicate[1]) &&
+                      (reasoner === "/schema" || edge.reasoner.includes(reasoner))
+                    );
+                  }
+                }).length > 0;
+                if (!isTransitionValid) {
+                  valid = false;
+                  break;
+                }
+              }
+              if (valid) {
+                validReasoners.push(reasoner);
+              }
+            });
+
+            const validReasonerValues = validReasoners.map((reasoner) => {
+              return fromOptions[reasoner];
+            }).filter((reasonerValue) => {
+              return reasonerValue.startsWith(currentReasoner);
+            });
+
+            showHint(validReasonerValues);
           }
           else if (statementType === 'where') {
 
@@ -1655,6 +1740,21 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           });
         }
       )
+  }
+  /**
+   * Get the valid options in the `from` clause and their respective `reasoner` values
+   *
+   * @private
+   */
+  _getReasonerURLs () {
+    fetch(this.tranqlURL + '/tranql/reasonerURLs', {
+      method: "GET",
+    }).then(res => res.json())
+      .then((reasonerURLs) => {
+        this.setState({
+          reasonerURLs
+        });
+      });
   }
   /**
    * Get the concept model and stores as state.
@@ -3193,6 +3293,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Populate concepts and relations metadata.
     this._getModelConcepts ();
     this._getModelRelations ();
+
+    this._getReasonerURLs ();
 
     // Fetch schema
     this._getSchema ();

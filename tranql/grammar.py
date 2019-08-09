@@ -1,8 +1,8 @@
 from pyparsing import (
-    Combine, Word, White, Literal, delimitedList, Optional,
+    Combine, Word, White, Literal, delimitedList, Optional, Empty, Suppress,
     Group, alphas, alphanums, printables, Forward, oneOf, quotedString,
     ZeroOrMore, restOfLine, CaselessKeyword, ParserElement, LineEnd,
-    removeQuotes, pyparsing_common as ppc)
+    removeQuotes, Regex, pyparsing_common as ppc)
 
 """
 A program is a list of statements.
@@ -99,17 +99,22 @@ program_grammar.ignore (comment)
 statement = Forward()
 
 incomplete_arrow = \
-        Group(Literal("-[") + (concept_name | Literal("")) + Optional(Literal("]->"))) | \
-        Group(Literal("<-[") + (concept_name | Literal("")) + Optional(Literal("]-"))) | \
+        Group(Literal("-[") + (concept_name | Empty()) + Optional(Literal("]->"))) | \
+        Group(Literal("<-[") + (concept_name | Empty()) + Optional(Literal("]-"))) | \
         Literal ("->") | \
         Literal ("<-")
 
 incomplete_question_graph_expression = ZeroOrMore(question_graph_element + incomplete_arrow) + Optional(question_graph_element)
+
+# Match something like "from '/complete_this_" where there is a non completed string literal.
+# In a group just so that it is consistent with an actual table which is stored in a list.
+openTable = Group(Suppress((Literal('"') | Literal("'"))) + Regex('.*'))
+
 statement <<= (
     Group(
-        Group(SELECT + incomplete_question_graph_expression)("concepts") + optWhite +
-        Optional(Group(FROM + tableNameList)) + optWhite +
-        Optional(Group(WHERE + whereExpression("where"))) + optWhite +
+        Group(SELECT + incomplete_question_graph_expression)("concepts") + Suppress(optWhite) +
+        Optional(Group(FROM + (tableNameList | openTable))) + Suppress(optWhite) +
+        Optional(Group(WHERE + whereExpression("where"))) + Suppress(optWhite) +
         Optional(Group(SET + setExpression("set")))("select")
     )
 )("statement")

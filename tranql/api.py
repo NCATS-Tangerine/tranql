@@ -588,12 +588,42 @@ class ModelRelationsQuery(StandardAPIResource):
             result = self.handle_exception (e)
         return self.response(result)
 
+class ReasonerURLs(StandardAPIResource):
+    """ Returns the URLs corresponding to `reasoner` properties. """
+    def __init__(self):
+        super().__init__()
+
+    def get(self):
+        """
+        Retrieve Reasoner URLs
+        ---
+        tags: [util]
+        description: Returns the corresponding schema URLs of each `reasoner` value.
+        responses:
+            '200':
+                description: Message
+                content:
+                    application/json:
+                        schema:
+                          type: object
+        """
+        tranql = TranQL ()
+        schema = Schema (backplane=tranql.context.mem.get('backplane'))
+
+        return { schema[0] : schema[1]['url'] for schema in schema.schema.items() }
 
 class ParseIncomplete(StandardAPIResource):
     """ Tokenizes an incomplete query and returns the result """
     def __init__(self):
         super().__init__()
 
+    def parse(self, parser, query):
+        if isinstance(query, str):
+            parsed = parser.tokenize (query)
+            result = parsed.asList ()
+        else:
+            result = [self.parse(parser, q) for q in query]
+        return result
     def post(self):
         """
         Parse Incomplete Query
@@ -605,24 +635,35 @@ class ParseIncomplete(StandardAPIResource):
           description: A TranQL program
           content:
             text/plain:
-             schema:
-               type: string
-             examples:
-               Concept:
-                 value: select chemical_substance->
-                 summary: No concept provided
-               Partial_concept:
-                 value: select chemical_substance->dis
-                 summary: Concept partially completed
-               Predicate:
-                 value: select chemical_substance-[
-                 summary: No predicate provided
-               Partial_predicate:
-                 value: select chemical_substance-[direc
-                 summary: Predicate partially completed
-               Nothing:
-                 value: select
-                 summary: Nothing provided
+              schema:
+                type: string
+              examples:
+                Concept:
+                  value: select chemical_substance->
+                  summary: No concept provided
+                Partial_concept:
+                  value: select chemical_substance->dis
+                  summary: Concept partially completed
+                Predicate:
+                  value: select chemical_substance-[
+                  summary: No predicate provided
+                Partial_predicate:
+                  value: select chemical_substance-[direc
+                  summary: Predicate partially completed
+                Nothing:
+                  value: select
+                  summary: Nothing provided
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              examples:
+                Partial query:
+                  value:
+                    - select chemical_substance-[
+                    - select chemical_substance-[]->gene
+                  summary: Partial query
         responses:
             '200':
                 description: Message
@@ -647,7 +688,10 @@ class ParseIncomplete(StandardAPIResource):
                         schema:
                           $ref: '#/definitions/Error'
         """
-        query = request.data.decode('utf-8')
+        if request.content_type == "text/plain":
+            query = request.data.decode('utf-8')
+        else:
+            query = request.json
 
         tranql = TranQL ()
         parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
@@ -655,8 +699,8 @@ class ParseIncomplete(StandardAPIResource):
         result = None
 
         try:
-            parsed = parser.tokenize (query)
-            result = parsed.asList ()
+            result = self.parse(parser, query)
+
         except Exception as e:
             result = self.handle_exception(e)
         return self.response(result)
@@ -675,6 +719,7 @@ api.add_resource(DecorateKG,'/tranql/decorate_kg')
 api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
+api.add_resource(ReasonerURLs, '/tranql/reasonerURLs')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')
