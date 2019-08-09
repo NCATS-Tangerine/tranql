@@ -33,7 +33,6 @@ export default class FindTool extends Component {
 
     this._hydrateState = hydrateState.bind(this);
 
-    this._findResults = this._findResults.bind(this);
     this._results = this._results.bind(this);
     this.updateResults = this.updateResults.bind(this);
     this.showSettings = this.showSettings.bind(this);
@@ -508,7 +507,7 @@ export default class FindTool extends Component {
     });
     return results;
   }
-  _findResults() {
+  static findResults(graph, val, useJSONPath) {
     // Results stores the results of each transition
     const results = {
       nodes:[],
@@ -524,11 +523,8 @@ export default class FindTool extends Component {
     //   nodes:replaceNodes,
     //   links:replaceLinks
     // }));
-    let graph = this.props.graph;
 
-    const val = this._input.current === null ? "" : this._input.current.textContent;
-
-    if (this.state.useJSONPath) {
+    if (useJSONPath) {
       let results = [];
       let graphElement = false;
       try {
@@ -604,7 +600,8 @@ export default class FindTool extends Component {
 
   }
   _results() {
-    const results = this._findResults();
+    const input = this._input.current === null ? "" : this._input.current.textContent;
+    const results = FindTool.findResults(this.props.graph, input, this.state.useJSONPath);
     let elements;
     if (typeof results === "string") {
       // Error

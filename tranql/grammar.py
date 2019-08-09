@@ -99,8 +99,8 @@ program_grammar.ignore (comment)
 statement = Forward()
 
 incomplete_arrow = \
-        Group(Literal("-[") + concept_name + Optional(Literal("]->"))) | \
-        Group(Literal("<-[") + concept_name + Optional(Literal("]-"))) | \
+        Group(Literal("-[") + (concept_name | Literal("")) + Optional(Literal("]->"))) | \
+        Group(Literal("<-[") + (concept_name | Literal("")) + Optional(Literal("]-"))) | \
         Literal ("->") | \
         Literal ("<-")
 

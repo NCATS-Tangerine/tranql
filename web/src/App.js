@@ -794,6 +794,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     // Fetch controllers
     this._queryController = new window.AbortController();
+    this._autoCompleteController = new window.AbortController();
 
     this._OVERLAY_X = 0;
     this._OVERLAY_Y = 0;
@@ -902,8 +903,30 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const pos = codeMirror.getCursor();
     const textToCursorPosition = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
 
-    fetch(this.tranqlURL + '/tranql/parse_tree_incomplete', {
-      signal: this._queryController.signal,
+    const showHint = function(options) {
+      var tables = {};
+      for (var c = 0; c < options.length; c++) {
+        var concept = options[c];
+        tables[concept] = [ /** column names, whatever those are in this context, go here. **/ ];
+      }
+
+      const hintOptions = {
+        tables: tables,
+        disableKeywords: true,
+        completeSingle: false,
+        completeOnSingleClick: false
+      };
+
+      codeMirror.showHint(hintOptions);
+    }
+
+    /* TODO: set loading tip */
+
+    this._autoCompleteController.abort();
+    this._autoCompleteController = new window.AbortController();
+
+    fetch(this.tranqlURL + '/tranql/parse_incomplete', {
+      signal: this._autoCompleteController.signal,
       method: "POST",
       headers: {
         'Accept': 'application/json',
@@ -912,28 +935,150 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       body: textToCursorPosition
     }).then(res => res.json())
       .then((parsedTree) => {
-        console.log(parsedTree);
+        if (parsedTree.errors) {
+          /* TODO: set error tip instead of showing entire dialog */
+          this._handleMessageDialog (parsedTree.status, parsedTree.errors);
+        }
+        else {
+          const graph = this.state.schemaMessage.knowledge_graph;
+
+          const block = parsedTree[0];
+          const lastStatement = block[block.length-1];
+
+          const statementType = lastStatement[0];
+
+          const fromOptions = [
+            '/tranql/foo',
+            '/tranql/bar'
+          ];
+
+          const whereOptions = [
+            'testing',
+            'foobar'
+          ];
+
+          const concept_arrows = [
+            '->',
+            '<-'
+          ];
+
+          const arrow_to_pred_arrow = {
+            '->' : [
+              '-[',
+              '',
+              ']->'
+            ],
+            '<-' : [
+              '<-[',
+              '',
+              ']-'
+            ]
+          }
+
+          const arrowToEmptyPredicate = (arrow) => {
+            return arrow_to_pred_arrow[arrow];
+          }
+
+          const isBackwardsPredicate = (predicate) => {
+            return predicate[0] === '<-[' && predicate[2] === ']-';
+          }
+
+          const toForwardPredicate = (predicate) => {
+            predicate[0] = '-[';
+            predicate[2] = ']->';
+            return predicate;
+          }
+
+          const lastToken = lastStatement[lastStatement.length-1];
+          const secondLastToken = lastStatement[lastStatement.length-2];
+          const thirdLastToken = lastStatement[lastStatement.length-3];
+
+          console.log(statementType, lastStatement, lastToken);
+
+          // TODO: needs to correctly handle backwards arrows.
+
+          if (statementType === 'select') {
+            if (Array.isArray(lastToken) && lastToken.length < 3) {
+              // If the last token is an array and not length 3 then it is an incomplete predicate.
+            }
+            else {
+              // Otherwise, we are handling autocompletion of a concept.
+              let currentConcept = "";
+              let predicate = null;
+              let previousConcept = null;
+
+              if (lastToken === statementType) {
+                // "select"
+              }
+              else if (secondLastToken === statementType) {
+                // "select foo"
+                currentConcept = lastToken;
+              }
+              else if (concept_arrows.includes(lastToken) || Array.isArray(lastToken)) {
+                // "select foo->" or "select foo-[bar]->"
+                predicate = lastToken;
+                previousConcept = secondLastToken;
+              }
+              else {
+                previousConcept = thirdLastToken;
+                predicate = secondLastToken;
+                currentConcept = lastToken;
+              }
+
+
+              let validConcepts;
+              if (predicate === null) {
+                // Predicate will only be null if there are no arrows, and therefore the previousConcept is also null.
+                // Single concept - just "select" or "select foo" where the concept is either "" or "foo"
+                validConcepts = graph.nodes.filter((node) => node.type.startsWith(currentConcept)).map(node => node.type).unique();
+              }
+              else {
+                // If there is a predicate, we have to factor in the previous concept, the predicate, and the current concept.
+                if (!Array.isArray(predicate)) {
+                  // We want to assign an empty predicate
+                  predicate = arrowToEmptyPredicate (predicate);
+                }
+
+                const backwards = isBackwardsPredicate (predicate);
+
+                console.log ([previousConcept, predicate, currentConcept]);
+
+                validConcepts = graph.edges.filter((edge) => {
+                  if (backwards) {
+                    return (
+                      edge.source_id.startsWith(currentConcept) &&
+                      edge.target_id === previousConcept &&
+                      (predicate[1] === "" || edge.type === predicate[1])
+                    );
+                  }
+                  else {
+                    return (
+                      edge.source_id === previousConcept &&
+                      edge.target_id.startsWith(currentConcept) &&
+                      (predicate[1] === "" || edge.type === predicate[1])
+                    );
+                  }
+                }).map((edge) => {
+                  if (backwards) {
+                    return edge.source_id;
+                  }
+                  else {
+                    return edge.target_id
+                  }
+                }).unique();
+              }
+              showHint(validConcepts);
+            }
+
+          }
+          else if (statementType === 'from') {
+
+          }
+          else if (statementType === 'where') {
+
+          }
+        }
       });
-
-    var tables = {};
-    for (var c = 0; c < this.state.modelConcepts.length; c++) {
-      var concept = this.state.modelConcepts[c];
-      tables[concept] = [ /** column names, whatever those are in this context, go here. **/ ];
-    }
-    /**
-    for (var c = 0; c < validValues.length; c++) {
-      const value = validValues[c];
-      tables[value] = [];
-    }
-    */
-    const hintOptions = {
-      tables: tables,
-      //disableKeywords: true,
-      completeSingle: false,
-      completeOnSingleClick: false
-    };
-
-    codeMirror.showHint(hintOptions);
   }
   /**
    * Sets the active force graph
@@ -1184,7 +1329,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           this.setState({ loading : false });
         } else {
           // We didn't find it in the cache. Run the query.
-          // Create a new controller so that the query may be aborted if desired.
+          // Create a new controller so that the query may be aborted if desired. Abort the old one just in case.
+          this._queryController.abort();
           this._queryController = new window.AbortController();
           const args = {
             'dynamicIdResolution' : this.state.dynamicIdResolution,

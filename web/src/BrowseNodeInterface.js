@@ -191,6 +191,7 @@ export default class BrowseNodeInterface extends Component {
     }
     else {
       const predicate = this.state.activePredicate;
+      // This really shouldn't be filtering through the nodes... it should just filter the edges and find their respective nodes
       const validPredicates = nodes.filter((node) => {
         return edges.filter((edge) => {
           return (

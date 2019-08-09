@@ -652,9 +652,14 @@ class ParseIncomplete(StandardAPIResource):
         tranql = TranQL ()
         parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
 
-        parsed = parser.tokenize (query)
+        result = None
 
-        return parsed.asList ()
+        try:
+            parsed = parser.tokenize (query)
+            result = parsed.asList ()
+        except Exception as e:
+            result = self.handle_exception(e)
+        return self.response(result)
 
 ###############################################################################################
 #
