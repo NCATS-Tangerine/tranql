@@ -1,9 +1,12 @@
 .BrowseNodeInterface {
   position:absolute;
+  /* Appear above the find tool */
+  z-index:1;
   top:10px;
   right:10px;
-  max-height:calc(100% - 20px);
-  overflow-y:auto;
+  /* Sadly, this results in the typeahead overflowing and it's virtually unusable. */
+  /* max-height:calc(100% - 20px); */
+  /* overflow-y:auto; */
   border:1px solid rgb(200,200,200);
   pointer-events:initial;
   min-width:325px;

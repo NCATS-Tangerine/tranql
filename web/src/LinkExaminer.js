@@ -7,17 +7,18 @@ export default class LinkExaminer extends Component {
     super(props);
 
     this.state = {
-      link: null
+      link: null,
+      single: false
     };
 
     this.show = this.show.bind(this);
     this.hide = this.hide.bind(this);
   }
-  show(link) {
-    this.setState({ link : link });
+  show(link, single) {
+    this.setState({ link, single });
   }
   hide() {
-    this.setState({ link : null });
+    this.setState({ link : null, single : false });
   }
   render() {
     if (this.state.link === null) return null;
@@ -49,12 +50,18 @@ export default class LinkExaminer extends Component {
            * <span title={link.target.name} style={{color:link.target.color}}>{link.target.name.slice(0,10)+(link.target.name.length > 10 ? "..." : "")}</span>
            */
           const link_1 = this.state.link;
-          const allConnections = this.props.graph.links.filter((link_2) => {
-            return (
-              (link_1.origin.source_id === link_2.origin.source_id && link_1.origin.target_id === link_2.origin.target_id) ||
-              (link_1.origin.source_id === link_2.origin.target_id && link_1.origin.target_id === link_2.origin.source_id)
-            );
-          });
+          let allConnections;
+          if (this.state.single) {
+            allConnections = [link_1];
+          }
+          else {
+            allConnections = this.props.graph.links.filter((link_2) => {
+              return (
+                (link_1.origin.source_id === link_2.origin.source_id && link_1.origin.target_id === link_2.origin.target_id) ||
+                (link_1.origin.source_id === link_2.origin.target_id && link_1.origin.target_id === link_2.origin.source_id)
+              );
+            });
+          }
           return allConnections.map((link, i) => {
             const source_node = this.props.graph.nodes.filter((n)=>n.id===link.origin.source_id)[0];
             const target_node = this.props.graph.nodes.filter((n)=>n.id===link.origin.target_id)[0];

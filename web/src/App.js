@@ -1988,12 +1988,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   /**
    * Handle a click on a graph link.
    *
-   * @param {object} - A link in the force directed graph visualization.
+   * @param {object} link - A link in the force directed graph visualization.
+   * @param {boolean} [single=false] - If true, the method will only use the clicked link, rather than all links between the clicked link's source and target nodes.
+   *    Only provided in non-force graph calls, such as when a link result in the table viewer is clicked.
    * @private
    */
-  _handleLinkClick (link) {
+  _handleLinkClick (link, single) {
+    if (typeof single === "undefined") single = false;
     if (this.state.connectionExaminer) {
-      this._linkExaminer.current.show(JSON.parse(JSON.stringify(link)));
+      this._linkExaminer.current.show(JSON.parse(JSON.stringify(link)), single);
     }
     else if (this.state.highlightTypes) {
       link !== null && this._updateGraphElementVisibility("links", link.type, true);
@@ -2006,12 +2009,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         this.state.selectMode)
     {
       const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
-      const links = graph.links.filter((link_2) => {
+      const links = (single ? [link] : graph.links.filter((link_2) => {
         return (
           (link.origin.source_id === link_2.origin.source_id && link.origin.target_id === link_2.origin.target_id) ||
           (link.origin.source_id === link_2.origin.target_id && link.origin.target_id === link_2.origin.source_id)
         );
-      }).map((link_2) => link_2.origin);
+      })).map((link_2) => link_2.origin);
       this._openObjectViewer(JSON.parse(JSON.stringify(links)));
     }
   }
@@ -3641,17 +3644,33 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         ref={this._linkExaminer}
                                         onClose={() => {}}
                                         onLinkClick={(link) => {
-                                          this._openObjectViewer(JSON.parse(JSON.stringify(link.origin)));
+                                          this._handleLinkClick(link, true);
                                         }}/>
                         </div>
                         <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                  resultMouseClick={(values)=>{
+                                    const isNode = function(element) {
+                                      return !element.origin.hasOwnProperty('source_id') && !element.origin.hasOwnProperty('target_id');
+                                    }
+                                    if (values.length > 1) {
+                                      // Grouped syntax which isn't really compatible - just use the link.
+                                      values = values.filter((element) => !isNode(element));
+                                    }
+                                    values.forEach((element) => {
+                                      if (isNode(element)) {
+                                        this._handleNodeClick(element);
+                                      }
+                                      else {
+                                        this._handleLinkClick(element, true);
+                                      }
+                                    });
+                                  }}
                                   resultMouseEnter={(values)=>{
                                     values.forEach((element) => this._highlightType(element.id,0xff0000,false,undefined,'id'))}
                                   }
                                   resultMouseLeave={(values)=>{
                                     values.forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
                                   }
-                                  resultMouseClick={(values)=>{}}
                                   ref={this._findTool}/>
                       </div>
                     </div>
@@ -3730,10 +3749,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                                const element = elements.filter((element) => element.origin.id === origin.id)[0];
 
-                               const click_method = is_node ? this._handleNodeClick : this._handleLinkClick;
+                               const click_method = (is_node ? () => {
+                                 this._handleNodeClick(element);
+                               } : () => {
+                                 this._handleLinkClick(element, true);
+                               });
 
                                return {
-                                 click : () => click_method(element)
+                                 click : click_method
                                };
                              }
                              return {

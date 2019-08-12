@@ -586,8 +586,8 @@ export default class FindTool extends Component {
     else {
       results.links.forEach((link) => {
         grouped.push({
-          source: nodeMap[link.source_id],
-          target: nodeMap[link.target_id],
+          source: graph.nodes.filter((node)=>node.origin.id === link.source_id)[0],
+          target: graph.nodes.filter((node)=>node.origin.id === link.target_id)[0],
           link: graph.links.filter((link_2)=>link_2.origin===link)[0]
         });
       });
