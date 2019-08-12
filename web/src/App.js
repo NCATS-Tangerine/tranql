@@ -365,7 +365,8 @@ class App extends Component {
             title: "Select",
             description: `
             This tool allows you to view the additional data that nodes and links may possess. To use it, left click a node or link, which will bring up the object viewer.
-            From there, you can navigate the tree view of the selected object and view all the properties that it has.`
+            From there, you can navigate the tree view of the selected object and view all the properties that it has. The object viewer is inside a horizontal split pane
+            along with the graph, so it may be resized by dragging the border where the two intersect.`
           },
           {
             title: "Highlight Types",
@@ -608,7 +609,12 @@ class App extends Component {
           },
           {
             title: "Table View",
-            description: "This button brings up a tabular representation of the active graph. Regex can be used in the filters by entering a regex literal (e.g. /^.*$/)."
+            description: `
+            This button brings up a tabular representation of the active graph. The table viewer is in a vertical split pane along with the graph,
+            so it may be resized by dragging the border where the two intersect to take up more or less space if desired.
+            Regex may also be used in the filters by entering a regex literal (e.g. /^.*$/).
+            For example, if you wanted to find all elements whose reasoner property includes RTX, you could use the pattern "/^- rtx$/m".
+            `
           }
         ]
       },
@@ -3697,8 +3703,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                            const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
                            // Table viewer generates a tab for every property in the object provided, but we only want nodes and links as our tabs.
                            return {
-                             nodes : graph.nodes,
-                             links : graph.links
+                             nodes : graph.nodes.map((node) => node.origin),
+                             links : graph.links.map((link) => link.origin)
                            };
                          })()}
                          defaultTableAttributes={{
@@ -3713,6 +3719,29 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                              "type",
                              "source_database"
                            ]
+                         }}
+                         tableProps={{
+                           getTdProps: (tableState, rowInfo, columnInfo, tableInstance) => {
+                             const get_element = () => {
+                               const is_node = this._tableViewer.current._tabs.current.props.activeKey === "0";
+                               const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
+                               const elements = is_node ? graph.nodes : graph.links;
+                               const origin = rowInfo.original;
+
+                               const element = elements.filter((element) => element.origin.id === origin.id)[0];
+
+                               const click_method = is_node ? this._handleNodeClick : this._handleLinkClick;
+
+                               return {
+                                 click : () => click_method(element)
+                               };
+                             }
+                             return {
+                               onClick: () => {
+                                 get_element().click();
+                               }
+                             };
+                           }
                          }}/>
           </SplitPane>
         </div>

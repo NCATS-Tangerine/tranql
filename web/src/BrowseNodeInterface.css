@@ -1,5 +1,5 @@
 .BrowseNodeInterface {
-  position:fixed;
+  position:absolute;
   border:1px solid rgb(200,200,200);
   pointer-events:initial;
   min-width:325px;

@@ -13,6 +13,7 @@ export default class TableViewer extends Component {
     resetAttributesOnOpen : true,
     filterButtonProps : {},
     closeButtonProps : {},
+    tableProps: {},
     searchMethod : null,
     buttons : []
   };
@@ -28,6 +29,7 @@ export default class TableViewer extends Component {
    *    to the `defaultTableAttributes` prop whenever the table is opened.
    * @param {Object} [filterButtonProps={}] - Props to pass to the filter button. Overrides the props that TableViewer passes to it.
    * @param {Object} [closeButtonProps={}] - Props to pass to the close button. Overrides the props that TableViewer passes to it.
+   * @param {Object} [tableProps={}] - Props to pass to the react-table instance. Overrides the props that TableViewer passes to it.
    * @param {Function|null} [searchMethod=null] - Override TableViewer's default search method. Refer to the ReactTable prop `defaultFilterMethod` for usage.
    * @param {React.Component[]|React.Component} [buttons=[]] - Injects components into the button container. Recommended: reactstrap Button with size="sm".
    */
@@ -39,6 +41,8 @@ export default class TableViewer extends Component {
       tableFilterView : false,
       tableAttributes : this.props.defaultTableAttributes
     };
+
+    this._tabs = React.createRef();
 
     this.open = this.open.bind(this);
     this.close = this.close.bind(this);
@@ -73,7 +77,7 @@ export default class TableViewer extends Component {
           </Button>
           <Button className="table-viewer-close-button" size="sm" color="danger" onClick={() => this.close()} {...this.props.closeButtonProps}>Close</Button>
         </div>
-        <Tabs defaultActiveKey="0">
+        <Tabs defaultActiveKey="0" ref={this._tabs}>
           {
             (() => {
               const elementTypes = Object.keys(this.props.data);
@@ -82,7 +86,7 @@ export default class TableViewer extends Component {
                   {
                     (() => {
                       const graph = this.props.data;
-                      const elements = graph[elementType].map((el) => el.origin);
+                      const elements = graph[elementType];
                       const keys = elements.flatMap((el) => Object.keys(el)).unique()
 
                       // const serialize = (object) => {
@@ -159,7 +163,8 @@ export default class TableViewer extends Component {
                                         }
                                         return row[filter.id].includes(filter.value);
                                       }}
-                                      className="-striped -highlight"/>
+                                      className="-striped -highlight"
+                                      {...this.props.tableProps}/>
                         );
                       }
                     })()

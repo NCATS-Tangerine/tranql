@@ -11,7 +11,7 @@
   overflow-y:auto;
 }
 .TableViewer .rt-td {
-  white-space:pre;
+  white-space:pre !important;
 }
 .TableViewer > .nav-tabs {
   position:relative;
