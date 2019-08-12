@@ -353,7 +353,19 @@ class DiseaseVocab:
             stream.write (text)
 
 #{% if i < len(list(disease_map.items ())) %},{%
+def light_merge(source, destination, no_list_repeat=True):
+    for key, value in source.items():
+        if isinstance(value, list) and key in destination:
+            try:
+                destination[key] = destination[key] + value
+                if no_list_repeat:
+                    destination[key] = list(set(destination[key]))
+            except:
+                pass
+        else:
+            destination[key] = value
 
+    return destination
 def deep_merge(source, destination, no_list_repeat=True):
     for key, value in source.items():
         if isinstance(value, dict):

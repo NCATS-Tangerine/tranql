@@ -12,7 +12,7 @@ from tranql.concept import BiolinkModelWalker
 from tranql.tranql_schema import Schema
 from tranql.util import Concept
 from tranql.util import JSONKit
-from tranql.util import deep_merge
+from tranql.util import deep_merge, light_merge
 from tranql.request_util import async_make_requests
 from tranql.util import Text
 from tranql.tranql_schema import Schema
@@ -783,8 +783,8 @@ class SelectStatement(Statement):
                         if exists:
                             replace_edge_ids.append([n["id"], node["id"]])
                             # Ensure that both nodes' properties are represented in the new node.
-                            deep_merge(node,n)
-                            deep_merge(n,node)
+                            light_merge(node,n)
+                            light_merge(n,node)
                             break
                     if not exists:
                         node_map[n['id']] = n
@@ -804,15 +804,15 @@ class SelectStatement(Statement):
                 other_edges = rkg['edges'] if 'edges' in rkg else []
                 for e in other_edges:
                     exists = False
+                    e_type = e.get('type',None)
                     for edge in merged_edges:
                         edge_type = edge.get('type',None)
-                        e_type = e.get('type',None)
                         if sorted(edge_type) == sorted(e_type) and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
                             exists = True
                             break
                     if exists:
-                        deep_merge(edge,e)
-                        deep_merge(e,edge)
+                        light_merge(edge,e)
+                        light_merge(e,edge)
                     else:
                         merged_edges.append (e)
 
