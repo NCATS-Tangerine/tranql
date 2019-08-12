@@ -159,8 +159,9 @@ export default class BrowseNodeInterface extends Component {
   _updatePosition(x,y) {
     // const pos = this._getPos();
     const node = ReactDOM.findDOMNode(this._root.current);
-    node.style.left = x + "px";
-    node.style.top = y + "px";
+
+    // node.style.left = x + "px";
+    // node.style.top = y + "px";
   }
   _getPos() {
     // const node = this.state.node;
