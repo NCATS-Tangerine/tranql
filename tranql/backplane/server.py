@@ -146,8 +146,9 @@ class StandardAPIResource(Resource):
         nodeIds = []
         for result in results:
             # Convert 0.9.0 equivalent of knowledge_map to the knowledge_map format we want
-            node_bindings = result.get('node_bindings',None)
-            edge_bindings = result.get('edge_bindings',None)
+            node_bindings = result.get('node_bindings',{})
+            edge_bindings = result.get('edge_bindings',{})
+
             if node_bindings != None and edge_bindings != None:
                 message['knowledge_map'].append({
                     "node_bindings": node_bindings,
@@ -478,6 +479,8 @@ class RtxQuery(StandardAPIResource):
                             binding = "CHEMBL:"+identifierSource[1]
                         # print(element['curie'],curie)
                         i[n][k][enum] = binding
+                    if n == "node_bindings":
+                        i[n][k] = i[n][k][0]
         for element in message["knowledge_graph"]["nodes"]:
             identifierSource = element["id"].split(":")
             if identifierSource[0] == "CHEMBL.COMPOUND":

@@ -600,11 +600,13 @@ class SelectStatement(Statement):
         plan = self.planner.plan (self.query)
         statements = self.plan (plan)
         responses = []
+        duplicate_statements = []
         first_concept = None
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
             response = statement.execute (interpreter)
             responses.append (response)
+            duplicate_statements.append (response)
             if index < len(statements) - 1:
                 """ Implement handoff. Finds the type name of the first element of the
                 next plan segment, looks up values for that type from the answer bindings of the
@@ -615,11 +617,12 @@ class SelectStatement(Statement):
                 #name = statement.query.order[-1]
                 #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
                 # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
-                values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
                 first_concept = next_statement.query.concepts[name]
                 if statements[index].query.order == next_statement.query.order:
                     first_concept.set_nodes (statements[index].query.concepts[name].nodes)
                 else:
+                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
+                    duplicate_statements = []
                     first_concept.set_nodes (values)
                     if len(values) == 0:
                         print (f"---> {json.dumps(response, indent=2)}")
@@ -801,20 +804,14 @@ class SelectStatement(Statement):
                 node_bindings = answer.get('node_bindings',{})
 
                 for concept in node_bindings:
-                    identifiers = node_bindings[concept]
-                    if not isinstance(identifiers,list):
-                        identifiers = [identifiers]
-
-                    new_identifiers = []
-                    for identifier in identifiers:
-                        new_identifier = identifier
-                        if identifier == old_id:
-                            new_identifier = new_id
-                        new_identifiers.append(new_identifier)
-                    node_bindings[concept] = new_identifiers
+                    identifier = node_bindings[concept]
+                    if identifier == old_id:
+                        identifier = new_id
+                    node_bindings[concept] = identifier
 
 
         merged_edges = []
+        killed_edges = []
         for response in responses:
             if 'knowledge_graph' in response:
                 rkg = response['knowledge_graph']
@@ -830,9 +827,28 @@ class SelectStatement(Statement):
                     if exists:
                         light_merge(edge,e)
                         light_merge(e,edge)
+                        killed_edges.append ([e['id'], edge['id']])
                     else:
                         merged_edges.append (e)
 
+        for old_edge_id, new_edge_id in killed_edges:
+            new_answers = []
+            for answer in result['knowledge_map']:
+                edge_bindings = answer.get('edge_bindings',{})
+                delete = False
+                for concept in edge_bindings:
+                    if isinstance(edge_bindings[concept], list):
+                        identifiers = []
+                        for identifier in edge_bindings[concept]:
+                            if identifier == old_edge_id:
+                                identifier = new_edge_id
+                            identifiers.append(identifier)
+                        edge_bindings[concept] = identifiers
+                    else:
+                        identifier = edge_bindings[concept]
+                        if identifier == old_edge_id:
+                            identifier = new_edge_id
+                        edge_bindings[concept] = identifier
         kg['edges'] = merged_edges
 
         return result

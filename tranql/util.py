@@ -8,6 +8,7 @@ import unittest
 import datetime
 import os
 import re
+from collections import Iterable
 from collections import namedtuple
 from tranql.disease_vocab import DiseaseVocab
 from jinja2 import Template
@@ -351,6 +352,15 @@ class DiseaseVocab:
         text = template.render (disease_map=context.mem)
         with open("disease_vocab.py", "w") as stream:
             stream.write (text)
+
+# Flatten a list of generic type
+# source: https://stackoverflow.com/a/2158532
+def flatten(l):
+    for el in l:
+        if isinstance(el, Iterable) and not isinstance(el, (str, bytes)):
+            yield from flatten(el)
+        else:
+            yield el
 
 #{% if i < len(list(disease_map.items ())) %},{%
 def light_merge(source, destination, no_list_repeat=True):
