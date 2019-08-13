@@ -796,6 +796,23 @@ class SelectStatement(Statement):
                     edge['source_id'] = new_id
                 if old_id == edge['target_id']:
                     edge['target_id'] = new_id
+            # We also need to replace these old identifiers within the knowledge map or bad things will happen.
+            for answer in result['knowledge_map']:
+                node_bindings = answer.get('node_bindings',{})
+
+                for concept in node_bindings:
+                    identifiers = node_bindings[concept]
+                    if not isinstance(identifiers,list):
+                        identifiers = [identifiers]
+
+                    new_identifiers = []
+                    for identifier in identifiers:
+                        new_identifier = identifier
+                        if identifier == old_id:
+                            new_identifier = new_id
+                        new_identifiers.append(new_identifier)
+                    node_bindings[concept] = new_identifiers
+
 
         merged_edges = []
         for response in responses:
