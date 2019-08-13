@@ -1458,7 +1458,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _analyzeAnswer (message) {
     // If we've already created the answer, use that.
 
-    if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
+    if (false && this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
       var url = this.state.record.data.viewURL;
       console.log ('--cached-view-url: ' + url);
       this._answerViewer.current.handleShow (url);
@@ -1482,6 +1482,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           var url = this.robokop_url + "/simple/view/" + result;
           console.log ('--new ' + url);
           message.viewURL = url;
+          message.knowledge_map = message.answers;
+          delete message.answers;
           this._cacheWrite (message);
           this._answerViewer.current.handleShow (url);
           //var win = window.open (message.viewURL, 'answerViewer');
@@ -1561,7 +1563,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           this._queryController.abort();
           this._queryController = new window.AbortController();
           const args = {
-            'dynamicIdResolution' : this.state.dynamicIdResolution,
+            'dynamic_id_resolution' : this.state.dynamicIdResolution,
             'asynchronous' : true
           };
           fetch(this.tranqlURL + '/tranql/query?'+qs.stringify(args), {
@@ -2458,7 +2460,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       const answers = message.hasOwnProperty('answers') ? message.answers : message.knowledge_map;
       const kg = JSON.parse(JSON.stringify(message.knowledge_graph));
       kg.nodes = kg.nodes.filter((node) => !node.reasoner.includes('browse_nodes'));
-
       this._analyzeAnswer({
         "question_graph"  : message.question_graph,
         "knowledge_graph" : kg,
