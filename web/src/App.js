@@ -936,7 +936,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 let to = option.hasOwnProperty('to') ? option.to : pos;
 
                 option.from = { line : from.line, ch : from.ch - replaceText.length };
-                option.to = { line : to.line, ch : to.ch + option.text.length - replaceText.length};
+                option.to = { line : to.line, ch : to.ch};
 
                 delete option.replaceText;
               }
