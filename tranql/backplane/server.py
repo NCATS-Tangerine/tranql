@@ -470,9 +470,13 @@ class RtxQuery(StandardAPIResource):
     """
     @staticmethod
     def convert_curies_to_standard(message):
+        # i = node_bindings, edge_bindings
         for i in message["knowledge_map"]:
+            # n = question_graph=>knowledge_graph ids
             for n in i:
+                # k = question_graph id
                 for k in i[n]:
+                    # binding = knowledge_graph ids
                     for enum, binding in enumerate(i[n][k]):
                         identifierSource = binding.split(":")
                         if identifierSource[0] == "CHEMBL.COMPOUND":
@@ -481,6 +485,7 @@ class RtxQuery(StandardAPIResource):
                         i[n][k][enum] = binding
                     if n == "node_bindings":
                         i[n][k] = i[n][k][0]
+                        # {"disease" : ["chembl:x"]} becomes {"disease" : "chembl:x"}
         for element in message["knowledge_graph"]["nodes"]:
             identifierSource = element["id"].split(":")
             if identifierSource[0] == "CHEMBL.COMPOUND":

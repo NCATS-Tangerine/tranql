@@ -529,6 +529,8 @@ class SelectStatement(Statement):
 
             [self.ast.schema.validate_question(question) for question in questions]
 
+            root_question_graph = questions[0]['question_graph']
+
             service = interpreter.context.resolve_arg (self.service)
 
 
@@ -576,6 +578,10 @@ class SelectStatement(Statement):
             logger.setLevel (logging.DEBUG)
             logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
             logger.setLevel (logging.INFO)
+
+            for response in responses:
+                response['question_order'] = self.query.order
+
             if len(responses) == 0:
                 # interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
                 #     f"No valid results from {self.service} with query {self.query}"
@@ -586,7 +592,7 @@ class SelectStatement(Statement):
             self.decorate_results(responses, {
                 "schema" : self.get_schema_name(interpreter)
             })
-            result = self.merge_results (responses, interpreter)
+            result = self.merge_results (responses, interpreter, root_question_graph)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
@@ -602,9 +608,14 @@ class SelectStatement(Statement):
         responses = []
         duplicate_statements = []
         first_concept = None
+
+        # Generate the root statement's question graph
+        root_question_graph = self.generate_questions(interpreter)[0]['question_graph']
+
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
             response = statement.execute (interpreter)
+            response['question_order'] = statement.query.order
             responses.append (response)
             duplicate_statements.append (response)
             if index < len(statements) - 1:
@@ -621,7 +632,7 @@ class SelectStatement(Statement):
                 if statements[index].query.order == next_statement.query.order:
                     first_concept.set_nodes (statements[index].query.concepts[name].nodes)
                 else:
-                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", response)
+                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph))
                     duplicate_statements = []
                     first_concept.set_nodes (values)
                     if len(values) == 0:
@@ -631,13 +642,13 @@ class SelectStatement(Statement):
                         raise ServiceInvocationError (
                             message = message,
                             details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
-        merged = self.merge_results (responses, interpreter)
+        merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         questions = self.generate_questions (interpreter)
-        merged['question_graph'] = questions[0]['question_graph']
+        # merged['question_graph'] = questions[0]['question_graph']
         return merged
 
     @staticmethod
-    def merge_results (responses, interpreter):
+    def merge_results (responses, interpreter, question_graph, root_order=None):
         """ Merge results. """
 
         """
@@ -657,10 +668,7 @@ class SelectStatement(Statement):
                     "edges": []
                 },
                 "knowledge_map": [],
-                "question_graph": {
-                    "nodes": [],
-                    "edges": []
-                }
+                "question_graph": question_graph
         }
         # if not 'knowledge_graph' in result:
         #     message = "Malformed response does not contain knowledge_graph element."
@@ -764,10 +772,9 @@ class SelectStatement(Statement):
                 rkg = response['knowledge_graph']
                 #result['answers'] += response['answers']
                 [kg['edges'].append(e) for e in rkg.get('edges',[])]
-                result['knowledge_map'] += response.get('knowledge_map',[])
-                qg = response.get('question_graph',{})
-                result['question_graph']['nodes'].extend(qg.get('nodes',[]))
-                result['question_graph']['edges'].extend(qg.get('edges',[]))
+                # qg = response.get('question_graph',{})
+                # result['question_graph']['nodes'].extend(qg.get('nodes',[]))
+                # result['question_graph']['edges'].extend(qg.get('edges',[]))
                 other_nodes = rkg['nodes'] if 'nodes' in rkg else []
                 for n in other_nodes:
                     """
@@ -800,16 +807,19 @@ class SelectStatement(Statement):
                 if old_id == edge['target_id']:
                     edge['target_id'] = new_id
             # We also need to replace these old identifiers within the knowledge map or bad things will happen.
-            for answer in result['knowledge_map']:
-                node_bindings = answer.get('node_bindings',{})
+            for response in responses:
+                for answer in response['knowledge_map']:
+                    node_bindings = answer.get('node_bindings',{})
 
-                for concept in node_bindings:
-                    identifier = node_bindings[concept]
-                    if identifier == old_id:
-                        identifier = new_id
-                    node_bindings[concept] = identifier
+                    for concept in node_bindings:
+                        identifier = node_bindings[concept]
+                        if identifier == old_id:
+                            identifier = new_id
+                        node_bindings[concept] = identifier
 
 
+        # Kill all duplicate edges. Merge them into the winning edge.
+        # This has to occur after edge ids are replaced so that we can more succesfully detect duplicate edges, since nodes will have been merged into one another.
         merged_edges = []
         killed_edges = []
         for response in responses:
@@ -831,27 +841,95 @@ class SelectStatement(Statement):
                     else:
                         merged_edges.append (e)
 
+        # For each killed edge, go through the knowledge_map and replace the dead edge's id with the new edge's id.
         for old_edge_id, new_edge_id in killed_edges:
-            new_answers = []
-            for answer in result['knowledge_map']:
-                edge_bindings = answer.get('edge_bindings',{})
-                delete = False
-                for concept in edge_bindings:
-                    if isinstance(edge_bindings[concept], list):
-                        identifiers = []
-                        for identifier in edge_bindings[concept]:
+            for response in responses:
+                for answer in response['knowledge_map']:
+                    edge_bindings = answer.get('edge_bindings',{})
+                    delete = False
+                    for concept in edge_bindings:
+                        if isinstance(edge_bindings[concept], list):
+                            identifiers = []
+                            for identifier in edge_bindings[concept]:
+                                if identifier == old_edge_id:
+                                    identifier = new_edge_id
+                                identifiers.append(identifier)
+                            edge_bindings[concept] = identifiers
+                        else:
+                            identifier = edge_bindings[concept]
                             if identifier == old_edge_id:
                                 identifier = new_edge_id
-                            identifiers.append(identifier)
-                        edge_bindings[concept] = identifiers
-                    else:
-                        identifier = edge_bindings[concept]
-                        if identifier == old_edge_id:
-                            identifier = new_edge_id
-                        edge_bindings[concept] = identifier
+                            edge_bindings[concept] = identifier
+
         kg['edges'] = merged_edges
 
+
+        result['knowledge_map'] = SelectStatement.connect_knowledge_maps(responses, root_order)
+
+
         return result
+
+    @staticmethod
+    def connect_knowledge_maps(responses, root_order):
+        # Now that all the merging in the knowledge graph is completed, the answers in the knowledge maps must be merged.
+        # We need to connect answers from each response together with answers from every other response.
+        # For example, given the query `select population_of_individual_organisms->disease->gene`, which is split
+        # into two statements: `select population_of_individual_organisms->disease FROM icees` and `select disease->gene FROM robokop`,
+        # an answer with `population_of_individual_organisms : "COHORT:X" -> disease : "MONDO:Y"``
+        # must be connected to another answer with `disease : "MONDO:Y" -> gene : "HGNC:Z"` in order to form a complete answer.
+        # We need the entire path of a query in each answer.
+
+        result_km = []
+
+        if len(responses) == 1:
+            result_km = responses[0]['knowledge_map']
+
+        else:
+            for prev_response in responses:
+                detached = True
+                if root_order == None:
+                    detached = False
+                else:
+                    detached = root_order[0] != prev_response['question_order'][0]
+                if not detached:
+                    # logger.critical([prev_response['question_order'], 'detached'])
+                    result_km.extend(prev_response['knowledge_map'])
+                for response in responses:
+                    if prev_response == response: continue
+
+                    prev_response_end = prev_response['question_order'][-1]
+                    current_response_start = response['question_order'][0]
+
+                    # logger.critical([prev_response_end,current_response_start])
+
+                    if prev_response_end == current_response_start:
+                        prev_knowledge_map = prev_response['knowledge_map']
+                        current_knowledge_map = response['knowledge_map']
+                        for prev_answer in prev_knowledge_map:
+                            for current_answer in current_knowledge_map:
+                                prev_node_bindings = prev_answer['node_bindings']
+                                prev_edge_bindings = prev_answer['edge_bindings']
+                                current_node_bindings = current_answer['node_bindings']
+                                current_edge_bindings = current_answer['edge_bindings']
+
+                                prev_last_concept_id = prev_node_bindings[prev_response_end]
+                                current_first_concept_id = current_node_bindings[current_response_start]
+
+                                if prev_last_concept_id == current_first_concept_id:
+                                    # Merge these two answers and then add the result to the resulting knowledge map
+                                    merged_answer = copy.deepcopy(prev_answer)
+                                    # Merge node_bindings of current answer into the copied previous answer
+                                    merged_answer['node_bindings'].update (current_node_bindings)
+                                    # Same for edge_bindings
+                                    merged_answer['edge_bindings'].update (current_edge_bindings)
+                                    result_km.append(merged_answer)
+
+
+                # result_km.append(answer)
+
+                # logger.critical([question_graph, response['question_order']])
+        logger.critical(result_km)
+        return result_km
 
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""

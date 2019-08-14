@@ -109,8 +109,8 @@ class Schema:
             if isinstance(schema_data, str) and schema_data.startswith('http'):
                 # If schema_data is a URL
                 try:
-                    response = requests.get (schema_data)
                     old_s_d = schema_data
+                    response = requests.get (schema_data)
                     schema_data = response.json()
                     if 'message' in schema_data:
                         raise Exception(schema_data['message'])

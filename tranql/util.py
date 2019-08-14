@@ -264,14 +264,14 @@ class Concept:
         for n in nodes:
             exclude = False
             for pat in self.exclude_patterns:
-                identifier = n if isinstance(n, str) else n['id']
+                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
                 matches = re.search (pat, identifier, re.IGNORECASE)
                 if matches is not None:
                     exclude = True
                     break
             include = not len(self.include_patterns) > 0
             for pat in self.include_patterns:
-                identifier = n if isinstance(n, str) else n['id']
+                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
                 matches = re.search (pat, identifier, re.IGNORECASE)
                 if matches is not None:
                     include = True
@@ -280,7 +280,11 @@ class Concept:
                 final_list.append (n)
         return final_list
     def set_nodes (self, nodes):
-        self.nodes = self.filter_nodes (nodes)
+        keep_nodes = {}
+        for n in nodes:
+            identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
+            keep_nodes[identifier] = n
+        self.nodes = self.filter_nodes (list(keep_nodes.values()))
     def apply_filters (self):
         nodes = self.filter_nodes (self.nodes)
         self.nodes = nodes
