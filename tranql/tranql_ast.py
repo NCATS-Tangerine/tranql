@@ -886,7 +886,7 @@ class SelectStatement(Statement):
 
         elif root_order == None:
             for response in responses:
-                result_km.append(response['knowledge_map'])
+                result_km.extend(response['knowledge_map'])
         else:
             ordered_responses = {}
             for first_response in responses:
