@@ -928,7 +928,23 @@ class SelectStatement(Statement):
                 # result_km.append(answer)
 
                 # logger.critical([question_graph, response['question_order']])
-        logger.critical(result_km)
+
+        # Filter any answers whose node_bindings aren't the complete path
+        if root_order != None:
+            filtered_result_km = []
+            for answer in result_km:
+                delete = False
+                node_bindings = answer["node_bindings"]
+                for qg_node in root_order:
+                    if qg_node not in node_bindings:
+                        delete = True
+                        break
+                if not delete:
+                    filtered_result_km.append (answer)
+            result_km = filtered_result_km
+
+
+        # logger.critical(result_km)
         return result_km
 
 class TranQL_AST:
