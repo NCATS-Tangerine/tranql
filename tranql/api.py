@@ -316,6 +316,24 @@ class MergeMessages(StandardAPIResource):
                 (Experimental) Tells the merger to invoke the Bionames API on nodes in order to get more equivalent identifiers.
                 Ideally, this should result in a more thoroughly merged graph, as fewer equivalent nodes will fail to be detected.
                 This currently should not be used on large queries (1000+ nodes), or it will end up flooding the Bionames API.
+            - in: query
+              name: question_graph
+              schema:
+                type: string
+              description: The JSON serialized question graph that the result should retain
+            - in: query
+              name: root_order
+              schema:
+                type: array
+                items:
+                  type: string
+              required: false
+              description: >
+                If merging messages with separate paths, e.g. population_of_individual_organisms->chemical_substance and chemical_substance->disease,
+                the root order (["population_of_individual_organisms", "chemical_substance", "disease"]) of the two messages must be known in order to
+                successfully merge their knowledge maps together. If every message has the same order, you don't care about their knowledge maps, or
+                there is only one response, then this parameter is not required. If the parameter is not provided, then it will concatenate all each
+                response's knowledge map.
         responses:
             '200':
                 description: Message
@@ -334,11 +352,16 @@ class MergeMessages(StandardAPIResource):
         messages = request.json
         interpreter_options = {
             "name_based_merging" : request.args.get('name_based_merging','true').upper() == 'TRUE',
-            "resolve_names" : request.args.get('resolve-names','false').upper() == 'TRUE'
+            "resolve_names" : request.args.get('resolve_names','false').upper() == 'TRUE'
         }
-
+        root_question_graph = json.loads(request.args['question_graph'])
+        root_order = request.args.get('root_order',None)
+        if root_order != None:
+            # werkzeug.ImmutableMultiDict.getlist doesn't allow for a default if the key isn't present,
+            # so first check if its present, and, if so, get it as a list.
+            root_order = request.args.getlist('root_order')
         tranql = TranQL (options=interpreter_options)
-        return self.response(SelectStatement.merge_results(messages,tranql))
+        return self.response(SelectStatement.merge_results(messages,tranql,root_question_graph,root_order))
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """
 

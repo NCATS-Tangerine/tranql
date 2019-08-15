@@ -809,6 +809,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Get valid options in the `from` clause and their respective `reasoner` values.
     // Doesn't belong in state.
     this.reasonerURLs = this._getReasonerURLs ();
+
+    // Promises
+    this.schemaPromise = new Promise(()=>{});
   }
   /**
    * Updates the queries contained within the cache viewer modal.
@@ -914,7 +917,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const pos = codeMirror.getCursor();
     const textToCursorPosition = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
 
-    const showHint = function(options, noResultsTip) {
+    const setHint = function(options, noResultsTip) {
       if (typeof noResultsTip === 'undefined') noResultsTip = true;
       if (noResultsTip && options.length === 0) {
         options.push({
@@ -951,6 +954,48 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       };
 
       codeMirror.showHint(hintOptions);
+      // codeMirror.state.completionActive.pick = () => {
+      //   codeMirror.showHint({
+      //     hint: function() {
+      //       return {
+      //         from: pos,
+      //         to: pos,
+      //         list: [{
+      //           text: String(''),
+      //           displayText: 'foobar',
+      //           className: 'testing'
+      //         }]
+      //       };
+      //     },
+      //     disableKeywords: true,
+      //     completeSingle: false,
+      //   });
+      // }
+    }
+
+    const setError = (resultText, status, errors, resultOptions) => {
+      if (typeof resultOptions === "undefined") resultOptions = {};
+      codeMirror.showHint({
+        hint: function() {
+          return {
+            from: pos,
+            to: pos,
+            list: [{
+              text: String(''),
+              displayText: resultText,
+              className: 'autocomplete-result-error',
+              ...resultOptions,
+            }]
+          };
+        },
+        disableKeywords: true,
+        completeSingle: false,
+      });
+      if (typeof status !== "undefined" && typeof errors !== "undefined") {
+        codeMirror.state.completionActive.pick = () => {
+          this._handleMessageDialog (status, errors);
+        }
+      }
     }
 
     const setLoading = function(loading) {
@@ -979,14 +1024,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     /**
      * TODO:
-     * set no results tip
-     * set error tip instead of showing entire dialog
-     * wrap in try catch for errors in the query syntax
-     * complete the ending of an predicate when selected
-     *    Instead of it resulting in:
-     *      'select foo-[completed'
-     *    You should end up with:
-     *      'select foo-[completed]->'
      * could try to see if its possible to have two select menus for predicates that also show concepts from the predicates
      *    would look something like this image, when, for example, you pressed the right arrow or left clicked or something on a predicate:
      *        https://i.imgur.com/LBsdrcq.png
@@ -994,8 +1031,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
      *    Ex: 'select foo-[what_can_I_put_here?]->baz'
      *    Would involve sending more of the query instead of cutting it off at cursor.
      *    Then would somehow have to backtrack and locate which token the cursor's position translates to.
-     * arrow suggestions?
-     *    Ex: 'select foo-{what_can_I_put_here?}' => suggestions: ['foo->', 'foo<-', 'foo-[', 'foo<-[']
      */
 
     this._autoCompleteController.abort();
@@ -1016,9 +1051,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         setLoading(false)
 
         if (parsedTree.errors) {
-          this._handleMessageDialog (parsedTree.status, parsedTree.errors);
+          // this._handleMessageDialog (parsedTree.status, parsedTree.errors);
+          setError("Failed to parse", parsedTree.status, parsedTree.errors);
         }
         else {
+          setLoading(true);
+          await this.schemaPromise;
+          setLoading(false);
           const graph = this.state.schemaMessage.knowledge_graph;
 
           // Filter whitespace from the statements
@@ -1095,12 +1134,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
           console.log(statementType, lastStatement, lastToken);
 
+          // Try/catch the entirety of the logic
+          try {
           if (statementType === 'select') {
             let validConcepts;
             if (lastToken === "-") {
               // Arrow suggestion
               // "select foo-"
-              validConcepts = all_arrows;
+              validConcepts = all_arrows.map((arrow) => {
+                return {
+                  displayText: arrow,
+                  text: arrow,
+                  replaceText: "-"
+                };
+              });
             }
             else if (Array.isArray(lastToken) && lastToken.length < 3) {
               // If the last token is an array and not length 3 then it is an incomplete predicate.
@@ -1213,7 +1260,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 };
               });
             }
-            showHint(validConcepts);
+            setHint(validConcepts);
 
           }
           else if (statementType === 'from') {
@@ -1300,11 +1347,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               };
             });
 
-            showHint(validReasonerValues);
+            setHint(validReasonerValues);
           }
           else if (statementType === 'where') {
 
           }
+          }
+          catch (e) {
+            setError('Failed to parse', e.message, e.stack);
+          }
+        }
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setError('Error', error.message, error.stack);
         }
       });
   }
@@ -1773,6 +1829,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
    _getSchema () {
+     this.schemaPromise = new Promise((resolveSchemaPromise) => {
      this.setState(p => ({}),() => {
        var cachePromise = this.state.useCache ? this._cache.get ('schema', 0) : Promise.resolve (undefined);
        cachePromise.then (
@@ -1785,6 +1842,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
              this._configureMessage(msg,false,true);
              this._translateGraph(msg,false,true);
              this.setState(() => ({ schemaLoaded : true }));
+             resolveSchemaPromise();
              this.state.schemaViewerActive && this._setSchemaViewerActive(true);
            } else {
              fetch(this.tranqlURL + '/tranql/schema', {
@@ -1813,6 +1871,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                  });
                  // Reset the state to have this updated opacity
                  this.setState(() => ({ schemaLoaded : true, schema : result.schema.graph, schemaMessage : result.schema }));
+                 resolveSchemaPromise();
                  this.state.schemaViewerActive && this._setSchemaViewerActive(true);
 
                  let { graph, hiddenTypes, ...schemaCachedMessage } = result.schema;
@@ -1828,6 +1887,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
          function error (result) {
            this._handleMessageDialog (result.status, result.message, result.details);
          }.bind(this));
+     });
      });
    }
   /**
@@ -2459,7 +2519,30 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
       const answers = message.hasOwnProperty('answers') ? message.answers : message.knowledge_map;
       const kg = JSON.parse(JSON.stringify(message.knowledge_graph));
-      kg.nodes = kg.nodes.filter((node) => !node.reasoner.includes('browse_nodes'));
+      // The results from the browse node tool shouldn't be included. The most reliable method of filtering
+      // them is to remove any nodes that aren't found in the knowledge_map, which is never modified.
+      const km_node_ids = [];
+      const km_edge_ids = [];
+      message.knowledge_map.forEach((answer) => {
+        const node_bindings = answer.node_bindings;
+        const edge_bindings = answer.edge_bindings;
+        // Iterate over each binding_type ("node_bindings" and "edge_bindings")
+        Object.keys(answer).forEach((binding_type) => {
+          const bindings = answer[binding_type];
+          // Iterate over the values (knowledge_graph ids) of the binding.
+          // The keys are the question_graph ids which we don't care about.
+          Object.values(bindings).forEach((kg_id) => {
+            // If the id is an array we need to iterate over each id inside of it.
+            (Array.isArray(kg_id) ? kg_id : [kg_id]).forEach((id) => {
+              // Make sure that we place the ids in the correct array.
+              (binding_type === "node_bindings" ? km_node_ids : km_edge_ids).push(id);
+            });
+          });
+        });
+      });
+      // Filter out any nodes and egdes whose ids aren't present in the knowledge map, and are therefore from the browse node tool.
+      kg.nodes = kg.nodes.filter((node) => km_node_ids.includes(node.id));
+      kg.edges = kg.edges.filter((edge) => km_edge_ids.includes(edge.id));
       this._analyzeAnswer({
         "question_graph"  : message.question_graph,
         "knowledge_graph" : kg,
@@ -3520,10 +3603,15 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     this.setState({ showCodeMirror : false });
                     localStorage.setItem('showCodeMirror', false);
                   }} className="editor-vis-control legend-vis-control"/>
-                  <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;window.editor=editor;}}
+                  <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;}}
                   className="query-code"
                   value={this.state.code}
                   onBeforeChange={(editor, data, code) => this._updateCode(code)}
+                  onChange={(editor) => {
+                    if (editor.state.completionActive) {
+                      this._codeAutoComplete();
+                    }
+                  }}
                   options={this.state.codeMirrorOptions}
                   autoFocus={true} />
                 </>

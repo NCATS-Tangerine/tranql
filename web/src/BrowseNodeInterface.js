@@ -132,8 +132,14 @@ export default class BrowseNodeInterface extends Component {
     try {
       this._controller = new window.AbortController();
       const args = {
+        // This feature is great.
         'name_based_merging' : true,
-        'resolve_names' : false
+        // This feature isn't, at least for now.
+        'resolve_names' : false,
+        // Retain the original message's question graph,
+        // because the nodes/edges added by the browse node
+        // tool won't be used in the answer viewer.
+        'question_graph' : JSON.stringify(this.props.message.question_graph),
       };
       const resp = await fetch(this.props.tranqlURL+'/tranql/merge_messages?'+qs.stringify(args),{
         signal: this._controller.signal,
@@ -143,11 +149,20 @@ export default class BrowseNodeInterface extends Component {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify([
-            this.props.message,
+            {
+              // We don't want to send a bunch of garbage like the `graph` object, which is enormous and only slows down request times.
+              knowledge_graph : this.props.message.knowledge_graph,
+              knowledge_map : this.props.message.knowledge_map,
+              question_graph : this.props.message.question_graph
+            },
             ...fetches
         ])
       });
       const merged = await resp.json();
+      // Since the 'root_order' parameter wasn't passed to the request, it will have concatenated the knowledge maps, which we don't want because
+      // we don't use the Robokop fetches inside the answer viewer. We just want the original knowledge map because that's what is going to be used
+      // in the answer viewer.
+      merged.knowledge_map = this.props.message.knowledge_map;
       console.log('Finished browse node');
       this.hide();
       this.props.onReturnResult(merged);

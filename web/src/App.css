@@ -655,6 +655,12 @@ body {
 .Resizer.disabled:hover {
   border-color: transparent;
 }
+.testing {
+  transform:translateX(15px);
+}
+.autocomplete-result-error {
+  background-color:var(--danger) !important;
+}
 .loading-animation::after {
   content: '';
   -ms-animation:loading-text 2.5s linear infinite;
