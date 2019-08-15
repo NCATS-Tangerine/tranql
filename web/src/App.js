@@ -914,8 +914,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     // Other general hint config, like 'completeSingle' and 'completeOnSingleClick'
     // should be specified here and will be honored
 
-    const pos = codeMirror.getCursor();
-    const textToCursorPosition = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
+    // Shallow copy it.
+    const pos = Object.assign({}, codeMirror.getCursor());
+    const untrimmedPos = codeMirror.getCursor();
+    const textToCursorPositionUntrimmed = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
+    const textToCursorPosition = textToCursorPositionUntrimmed.trimRight();
+
+    // const splitLines = textToCursorPosition.split(/\r\n|\r|\n/);
+    // // Adjust the position after trimming to be on the correct line.
+    // pos.line = splitLines.length - 1;
+    // // Adjust the position after trimming to be on the correct char.
+    // pos.ch = splitLines[splitLines.length-1].length;
 
     const setHint = function(options, noResultsTip) {
       if (typeof noResultsTip === 'undefined') noResultsTip = true;
@@ -930,13 +939,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         hint: function() {
           return {
             from: pos,
-            to: pos,
+            to: untrimmedPos,
             list: options.map((option) => {
               // Process custom options - `replaceText`
               if (option.hasOwnProperty('replaceText')) {
                 let replaceText = option.replaceText;
                 let from = option.hasOwnProperty('from') ? option.from : pos;
-                let to = option.hasOwnProperty('to') ? option.to : pos;
+                let to = option.hasOwnProperty('to') ? option.to : untrimmedPos;
 
                 option.from = { line : from.line, ch : from.ch - replaceText.length };
                 option.to = { line : to.line, ch : to.ch};
@@ -1045,7 +1054,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         'Accept': 'application/json',
         'Content-Type': 'text/plain',
       },
-      body: textToCursorPosition
+      body: textToCursorPositionUntrimmed
     }).then(res => res.json())
       .then(async (parsedTree) => {
         setLoading(false)
@@ -3738,7 +3747,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         ref={this._linkExaminer}
                                         onClose={() => {}}
                                         onLinkClick={(link) => {
-                                          this._handleLinkClick(link, true);
+                                          // Prevent user from accidentilly clicking on a link while having the link examiner tool select,
+                                          // which results in it setting the link examiner interface to only display said link.
+                                          if (!this.state.connectionExaminer) {
+                                            this._handleLinkClick(link, true);
+                                          }
                                         }}/>
                         </div>
                         <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}

@@ -118,6 +118,19 @@ statement <<= (
         Optional(Group(WHERE + whereExpression("where"))) + Suppress(optWhite) +
         Optional(Group(SET + setExpression("set")))("select")
     )
+    |
+    Group(
+        SET + (columnName + EQ + ( quotedString |
+                                   ident |
+                                   intNum |
+                                   realNum ))
+    )("set")
+    |
+    Group(
+        Group(CREATE + GRAPH + ident) + optWhite +
+        Group(AT + ( ident | quotedString )) + optWhite +
+        Group(AS + ( ident | quotedString ))
+    )
 )("statement")
 
 """ Make a program a series of statements. """
