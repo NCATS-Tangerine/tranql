@@ -381,6 +381,136 @@ def test_ast_multiple_reasoners (requests_mock):
 
     assert_lists_equal(statements[2].query.order,['disease','gene'])
     assert statements[2].get_schema_name(tranql) == "robokop"
+def test_ast_merge_knowledge_maps (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+    tranql = TranQL ()
+    tranql.asynchronous = False
+    tranql.resolve_names = False
+    ast = tranql.parse ("""
+        select chemical_substance->disease->gene
+          from "/schema"
+         where chemical_substance="CHEMBL:CHEMBL3"
+    """)
+
+    # select = ast.statements[0]
+    # statements = select.plan (select.planner.plan (select.query))
+    # print(statements[0].query.order)
+
+    # (select.execute_plan(tranql))
+
+    responses = [
+        {
+            'knowledge_map' : [
+                {
+                    'node_bindings' : {
+                    'chemical_substance' : 'CHEBI:100',
+                        'disease' : 'MONDO:50'
+                    },
+                    'edge_bindings' : {
+                        'e0' : 'ROOT_EDGE'
+                    }
+                }
+            ],
+            'question_order' : ['chemical_substance','disease']
+        },
+        {
+            'knowledge_map' : [
+                {
+                    'node_bindings' : {
+                        'disease' : 'MONDO:50',
+                        'gene' : 'HGNC:1',
+                        'metabolite' : 'KEGG:C00017'
+                    },
+                    'edge_bindings' : {
+                        'e1' : 'TEST_EDGE'
+                    }
+                }
+            ],
+            'question_order' : ['disease','gene','metabolite']
+        },
+        {
+            'knowledge_map' : [
+                {
+                    'node_bindings' : {
+                        'disease' : 'MONDO:50',
+                        'gene' : 'HGNC:1',
+                        'metabolite' : 'KEGG:FOOBAR'
+                    },
+                    'edge_bindings' : {
+
+                    }
+                }
+            ],
+            'question_order' : ['disease','gene','metabolite']
+        },
+        {
+            'knowledge_map' : [
+                {
+                    'node_bindings' : {
+                        'metabolite' : 'KEGG:FOOBAR',
+                        'protein' : 'UniProtKB:TESTING'
+                    },
+                    'edge_bindings' : {
+
+                    }
+                }
+            ],
+            'question_order' : ['metabolite','protein']
+        },
+        {
+            'knowledge_map' : [
+                {
+                    'node_bindings' : {
+                        'metabolite' : 'KEGG:C00017',
+                        'protein' : 'UniProtKB:Q9NZJ5'
+                    },
+                    'edge_bindings' : {
+
+                    }
+                }
+            ],
+            'question_order' : ['metabolite','protein']
+        }
+    ]
+
+    merged = SelectStatement.connect_knowledge_maps(responses,[
+        'chemical_substance',
+        'disease',
+        'gene',
+        'metabolite',
+        'protein'
+    ])
+
+    assert_lists_equal(ordered(merged), ordered([
+        {
+            "node_bindings" : {
+                "chemical_substance" : "CHEBI:100",
+                "disease" : "MONDO:50",
+                "gene" : "HGNC:1",
+                "metabolite" : "KEGG:FOOBAR",
+                "protein" : "UniProtKB:TESTING"
+            },
+            "edge_bindings" : {
+                "e0" : "ROOT_EDGE"
+            }
+        },
+        {
+            "node_bindings" : {
+                "chemical_substance" : "CHEBI:100",
+                "disease" : "MONDO:50",
+                "gene" : "HGNC:1",
+                "metabolite" : "KEGG:C00017",
+                "protein" : "UniProtKB:Q9NZJ5"
+            },
+            "edge_bindings" : {
+                "e0" : "ROOT_EDGE",
+                "e1" : "TEST_EDGE",
+            }
+        }
+    ]))
+
+    # print(json.dumps(merged,indent=2))
+
 def test_ast_merge_results (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that

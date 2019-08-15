@@ -899,7 +899,7 @@ class SelectStatement(Statement):
             while sum(len(resp) for resp in ordered_responses.values()) < len(responses):
                 response = list(ordered_responses.values())[-1][0]
                 next_response_start = response['question_order'][-1]
-                print(next_response_start)
+                # print(next_response_start)
                 for next_response in responses:
                     if next_response['question_order'][0] == next_response_start:
                         if next_response_start in ordered_responses:
@@ -907,32 +907,31 @@ class SelectStatement(Statement):
                         else:
                             ordered_responses[next_response_start] = [next_response]
 
-            print (json.dumps(
-                ordered_responses,
-                indent=2
-            ))
+            # print (json.dumps(
+            #     ordered_responses,
+            #     indent=2
+            # ))
             for enum, current_responses in enumerate(list(ordered_responses.values())[:-1]):
                 new_answers = []
                 next_responses = list(ordered_responses.values())[enum+1]
+                # First responses, must be head answers that will be used to build off of.
+                if enum == 0:
+                    for current_response in current_responses:
+                        for answer in current_response['knowledge_map']:
+                            result_km.append (answer)
+
                 for current_response in current_responses:
                     for next_response in next_responses:
 
                         current_response_end = current_response['question_order'][-1]
                         next_response_start = next_response['question_order'][0]
 
-                        # First response, must be head answers that will be used to build off of.
-                        if enum == 0:
-                            for answer in current_response['knowledge_map']:
-                                result_km.append (answer)
-
-
-                        print([
-                            current_response_end,
-                            next_response_start,
-                            result_km,
-                            next_response['knowledge_map']
-                        ])
-
+                        # print([
+                        #     current_response_end,
+                        #     next_response_start,
+                        #     result_km,
+                        #     next_response['knowledge_map']
+                        # ])
 
                         for current_answer in result_km:
                             for next_answer in next_response['knowledge_map']:
@@ -953,7 +952,15 @@ class SelectStatement(Statement):
 
                                     new_answers.append(merged_answer)
 
-                result_km = new_answers
+                result_km = []
+                dump_map = {}
+                # Filter duplicates and set new result_km
+                for answer in new_answers:
+                    dumped = json.dumps(answer)
+                    if dumped not in dump_map:
+                        dump_map[dumped] = answer
+                        result_km.append(answer)
+
 
             # for prev_response in responses:
             #     detached = root_order[0] != prev_response['question_order'][0]

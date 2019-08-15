@@ -1516,7 +1516,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
   _analyzeAnswer (message) {
     // If we've already created the answer, use that.
 
-    if (false && this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
+    if (this.state.record && this.state.record.data && this.state.record.data.hasOwnProperty ("viewURL")) {
       var url = this.state.record.data.viewURL;
       console.log ('--cached-view-url: ' + url);
       this._answerViewer.current.handleShow (url);
