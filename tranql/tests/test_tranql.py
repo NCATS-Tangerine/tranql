@@ -561,7 +561,8 @@ def test_ast_merge_results (requests_mock):
                         'target_id' : 'egg',
                         'type': ['merge_this'],
                         'merge_this_list' : ['edge_1'],
-                        'unique_attr_e_1' : 'e_1'
+                        'unique_attr_e_1' : 'e_1',
+                        'id' : 'winning_edge_id'
                     },
                 ]
             },
@@ -571,29 +572,9 @@ def test_ast_merge_results (requests_mock):
                         'chemical_substance': 'CHEBI:28177',
                         'gene': 'HGNC:2597'
                     },
-                    'edge_bindings': {
-                        'e1': [
-                            'e0'
-                        ],
-                        's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
-                    },
-                    'score': 0.09722323258334348
+                    'edge_bindings': {}
                 }
-            ],
-            'question_graph': {
-                'edges': [
-                    {
-                        'id': 'foo',
-                        'type': 'test'
-                    }
-                ],
-                'nodes': [
-                    {
-                        'id': 'bar',
-                        'type': 'bartest'
-                    }
-                ]
-            }
+            ]
         },
         {
             'knowledge_graph': {
@@ -624,13 +605,7 @@ def test_ast_merge_results (requests_mock):
                         'chemical_substance': 'CHEBI:28177',
                         'test': 'TEST:00000'
                     },
-                    'edge_bindings': {
-                        'e1': [
-                            'e0'
-                        ],
-                        's0': '1cdd83d6-7f6b-4b17-9139-63f8e81f2122'
-                    },
-                    'score': 0.09722323258334348
+                    'edge_bindings': {}
                 }
             ]
         }
@@ -652,6 +627,7 @@ def test_ast_merge_results (requests_mock):
                     "type": []
                 },
                 {
+                    "id" : "winning_edge_id",
                     "source_id" : "CHEBI:28177",
                     "target_id" : "egg",
                     "type" : ["merge_this"],
@@ -705,30 +681,18 @@ def test_ast_merge_results (requests_mock):
         },
         "knowledge_map": [
             {
-                "edge_bindings": {
-                    "e1": [
-                        "e0"
-                    ],
-                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
-                },
+                "edge_bindings": {},
                 "node_bindings": {
                     "chemical_substance": "CHEBI:28177",
                     "gene": "HGNC:2597"
-                },
-                "score": 0.09722323258334348
+                }
             },
             {
-                "edge_bindings": {
-                    "e1": [
-                        "e0"
-                    ],
-                    "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
-                },
+                "edge_bindings": {},
                 "node_bindings": {
                     "chemical_substance": "CHEBI:28177",
-                    "test": "TEST:00000"
-                },
-                "score": 0.09722323258334348
+                    "test": "equivalent_identifier_merge"
+                }
             }
         ],
         'question_graph': {
@@ -746,7 +710,25 @@ def test_ast_merge_results (requests_mock):
             ]
         }
     }
-    merged_results = select.merge_results (mock_responses, tranql)
+    merged_results = select.merge_results (
+        mock_responses,
+        tranql,
+        {
+            'edges': [
+                {
+                    'id': 'foo',
+                    'type': 'test'
+                }
+            ],
+            'nodes': [
+                {
+                    'id': 'bar',
+                    'type': 'bartest'
+                }
+            ]
+        },
+        root_order=None
+    )
     assert ordered(merged_results) == ordered(expected_result)
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")

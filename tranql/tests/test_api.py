@@ -97,7 +97,8 @@ def test_merge_messages (client):
               "type": "gene"
             }
           ]
-        }
+        },
+        "knowledge_map": []
       },
       {
         "knowledge_graph": {
@@ -128,7 +129,8 @@ def test_merge_messages (client):
               "type": "gene"
             }
           ]
-        }
+        },
+        "knowledge_map": []
       }
     ]
     expected = {
@@ -198,7 +200,11 @@ def test_merge_messages (client):
     }
     args = {
         'name_based_merging': True,
-        'resolve_names': False
+        'resolve_names': False,
+        'question_graph': json.dumps({
+          "nodes": [],
+          "edges": []
+        })
     }
     response = client.post(
         f'/tranql/merge_messages',

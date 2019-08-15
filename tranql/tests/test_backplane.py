@@ -76,7 +76,7 @@ def test_rtx_convert_curies(client):
         "knowledge_map" : [
             {
                 "node_bindings" : {
-                    "chemical_substance" : ["CHEMBL:CHEMBL3"]
+                    "chemical_substance" : "CHEMBL:CHEMBL3"
                 },
                 "edge_bindings" : {
                     "foo" : [""]
