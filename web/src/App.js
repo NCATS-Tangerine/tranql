@@ -231,11 +231,9 @@ class App extends Component {
 
     // Configure initial state.
     this.state = {
-      code : `
-      select chemical_substance->gene->disease
-        from \"/graph/gamma/quick\"
-       where disease=\"asthma\"
-      `,
+      code : `select chemical_substance->gene->disease
+  from \"/graph/gamma/quick\"
+ where disease=\"asthma\"`,
       dynamicIdResolution: true,
 
       // Concept model concepts and relations.
@@ -684,6 +682,24 @@ select metabolite->protein
   from "/graph/rtx"
  where metabolite=$metabolite
 
+`
+        },
+        {
+          title: 'Chemical substances target genes that target asthma',
+          query:
+`-- Which chemical substances target genes that target asthma?
+select chemical_substance->gene->disease
+  from "/graph/gamma/quick"
+ where disease="asthma"
+`
+        },
+        {
+          title: 'Usage of predicates to narrow results',
+          query:
+`-- Which chemical substances decrease activity of genes that contribute to asthma?
+select chemical_substance-[decreases_activity_of]->gene-[contributes_to]->disease
+  from "/graph/gamma/quick"
+ where disease="asthma"
 `
         },
         {
