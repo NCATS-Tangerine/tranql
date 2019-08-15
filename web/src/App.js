@@ -1178,7 +1178,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 }
               }).map((edge) => edge.type).unique().map((type) => {
                 const replaceText = currentPredicate[1];
-                const actualText = type + currentPredicate[2];
+                // const actualText = type + currentPredicate[2];
+                const actualText = type;
                 const displayText = type;
                 return {
                   displayText: displayText,
@@ -1342,7 +1343,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             }).map((reasonerValue) => {
               return {
                 displayText: reasonerValue,
-                text: startingQuote + reasonerValue + endingQuote,
+                text: startingQuote + reasonerValue,
+                // text: startingQuote + reasonerValue + endingQuote,
                 replaceText: currentReasoner
               };
             });
@@ -2988,7 +2990,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                   this.setState({ showImportExportModal : false });
                                   this._setSchemaViewerActive(false);
 
-                                  this.setState({ code : graph.key }, () => {
+                                  this._updateCode(graph.key);
+                                  this.setState({}, () => {
                                     console.log(JSON.parse(JSON.stringify(graph)));
                                     // this._configureMessage(graph.data);
 
@@ -3534,7 +3537,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         <QueriesModal ref={this._exampleQueriesModal}
                       runButtonCallback={(code, e) => {
                         this._exampleQueriesModal.current.hide();
-                        this.setState({ code: code }, () => {
+                        this._updateCode(code);
+                        this.setState({}, () => {
                           this._executeQuery();
                         });
                       }}
@@ -3544,7 +3548,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                       id="cachedQueriesModal"
                       runButtonCallback={(code, e) => {
                         this._cachedQueriesModal.current.hide();
-                        this.setState({ code: code }, () => {
+                        this._updateCode(code);
+                        this.setState({}, () => {
                           this._executeQuery();
                         });
                       }}
