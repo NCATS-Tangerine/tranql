@@ -160,7 +160,7 @@ export default class QueriesModal extends Component {
                   this.state.queries.map((query, i) => {
                     return (
                       // On click, set the current query and scroll back to the top
-                      <ListGroup.Item active={this.state.currentQueryIndex===i} action onClick={() => {this.currentQuery = i;this._modalBody.current.scrollTop = 0;}}>
+                      <ListGroup.Item active={this.state.currentQueryIndex===i} key={i} action onClick={() => {this.currentQuery = i;this._modalBody.current.scrollTop = 0;}}>
                         {query.title}
                       </ListGroup.Item>
                     );
@@ -191,7 +191,9 @@ export default class QueriesModal extends Component {
                   }
                   <div className="query-button-container">
                     {
-                      this._getTools()
+                      this._getTools().map((tool,i) => (
+                        <React.Fragment key={i}>{tool}</React.Fragment>
+                      ))
                     }
                   </div>
                 </div>

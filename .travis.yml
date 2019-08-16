@@ -7,7 +7,8 @@ python:
 notifications:
   email:
     - scox@renci.org
-    
+    - groupe@cfsnc.org
+
 # command to install dependencies
 install:
   - pip install -r tranql/requirements.txt
@@ -15,7 +16,10 @@ install:
 env:
   global:
     - PATH=$PWD/bin:$PATH
-    
+
 # command to run tests
 script:
   - tranql test
+
+after_success:
+  - coveralls

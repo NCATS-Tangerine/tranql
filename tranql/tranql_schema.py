@@ -16,11 +16,14 @@ class NetworkxGraph:
     def add_edge (self, start, predicate, end, properties={}):
         return self.net.add_edge (start, end, key=predicate, **properties)
     def add_node (self, identifier, label=None, properties={}):
-        return self.net.add_node (identifier, attr_dict=properties)
+        node = self.net.add_node (identifier, attr_dict=properties)
+        return node
     def has_node (self, identifier):
         return identifier in self.net.nodes
     def get_node (self, identifier, properties=None):
-        return self.net.nodes [identifier]
+        nodes = self.net.nodes(data=True)
+        filtered = [i for i in nodes if i[0] == identifier]
+        return filtered[0] if len(filtered) > 0 else None
     def get_edge (self, start, end, properties=None):
         result = None
         for e in self.net.edges:
@@ -68,14 +71,14 @@ class GraphTranslator:
         Write underlying graph interface to a KGS message
         :return: Return a KGS message
         """
-        nodes = list (self.graph.get_nodes ())
+        nodes = [[i[0], i[1].get('attr_dict',{})] for i in list (self.graph.get_nodes (data=True))]
         edges = list (self.graph.get_edges (data=True))
         return {
             "knowledge_graph" : {
                 "nodes" : nodes,
                 "edges" : edges
             },
-            "knowledge_maps" : [
+            "knowledge_map" : [
                 {}
             ],
             "options" : {}
@@ -106,16 +109,19 @@ class Schema:
             if isinstance(schema_data, str) and schema_data.startswith('http'):
                 # If schema_data is a URL
                 try:
+                    old_s_d = schema_data
                     response = requests.get (schema_data)
                     schema_data = response.json()
-                except requests.exceptions.RequestException as e:
+                    if 'message' in schema_data:
+                        raise Exception(schema_data['message'])
+                except Exception as e:
                     # If the request errors for any number of reasons (likely a timeout), append an error message
                     if isinstance(e,requests.exceptions.Timeout):
-                        error = 'Request timed out while fetching schema at "'+schema_data+'"'
+                        error = 'Request timed out while fetching schema at "'+old_s_d+'"'
                     elif isinstance(e,requests.exceptions.ConnectionError):
-                        error = 'Request could not connect while fetching schema at "'+schema_data+'"'
+                        error = 'Request could not connect while fetching schema at "'+old_s_d+'"'
                     else:
-                        error = 'Request failed while fetching schema at "'+schema_data+'"'
+                        error = TranQLException('Request failed while fetching schema at "'+old_s_d+'"',details=json.dumps(next(iter(e.args)),indent=2))
                     self.loadErrors.append(error)
                     # Delete the key here because it has no data.
                     del self.config['schema'][schema_name]
@@ -144,15 +150,19 @@ class Schema:
         :param layer: Knowledge schema metadata layers.
         """
         for source_name, targets_list in layer.items ():
-            source_node = self.get_node (node_id=source_name)
+            source_node = self.get_node (node_id=source_name, attrs={'reasoner': [name]})
+            if name not in source_node[1]['attr_dict']['reasoner']:
+                source_node[1]['attr_dict']['reasoner'].append(name)
             for target_type, links in targets_list.items ():
-                target_node = self.get_node (node_id=target_type)
+                target_node = self.get_node (node_id=target_type, attrs={'reasoner': [name]})
+                if name not in target_node[1]['attr_dict']['reasoner']:
+                    target_node[1]['attr_dict']['reasoner'].append(name)
                 #self.schema_graph.commit ()
                 if isinstance(links, str):
                     links = [links]
                 for link in links:
                     #print (f" {source_name}->{target_type} [{link}]")
-                    self.schema_graph.add_edge (source_name, link, target_type, {"provided_by":name})
+                    self.schema_graph.add_edge (source_name, link, target_type, {"reasoner":[name]})
 
     def get_edge (self, plan, source_name, source_type, target_name, target_type,
                   predicate, edge_direction):
@@ -240,12 +250,15 @@ class Schema:
         """
         #return self.knet.nodes [node_id] if node_id in self.knet.nodes else \
         #    self.knet.add_node (node_id, attr_dict=attrs)
-        return self.schema_graph.get_node (node_id, attrs) if \
-            self.schema_graph.has_node (node_id) else \
+        if self.schema_graph.has_node (node_id):
+            node = self.schema_graph.get_node (node_id, attrs)
+            return node
+        else:
             self.schema_graph.add_node (
                 label="thing",
                 identifier=node_id,
                 properties=attrs)
+            return self.schema_graph.get_node (node_id)
 
     def validate_edge (self, source_type, target_type):
         """
@@ -255,7 +268,7 @@ class Schema:
         """
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
-            raise InvalidTransitionException (source_type, target_type)
+            raise InvalidTransitionException (source_type, target_type, explanation=f'No valid transitions exist between {source_type} and {target_type} in this schema.')
 
     def validate_question (self, message):
         """

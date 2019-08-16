@@ -1,0 +1,57 @@
+.BrowseNodeInterface {
+  position:absolute;
+  /* Appear above the find tool */
+  z-index:1;
+  top:10px;
+  right:10px;
+  /* Sadly, this results in the typeahead overflowing and it's virtually unusable. */
+  /* max-height:calc(100% - 20px); */
+  /* overflow-y:auto; */
+  border:1px solid rgb(200,200,200);
+  pointer-events:initial;
+  min-width:325px;
+  background-color:white;
+}
+.BrowseNodeInterface > * > * {
+  padding:10px;
+}
+.browse-node-header {
+  text-align:center;
+  display:flex;
+  align-items:center;
+  border-bottom:1px solid rgb(200,200,200);
+  background-color:rgb(245,245,245);
+}
+.browse-node-header > h6 {
+  margin:0;
+  font-size:17px;
+  margin-right:6px;
+  flex:1;
+}
+.browse-node-header > svg {
+  padding:0;
+  position:absolute;
+  right:10px;
+}
+.browse-node-body > div:not(.button-container) {
+  padding:10px;
+  padding-bottom:0;
+}
+.browse-node-body > div:not(.button-container) > *:last-child {
+  margin-top:5px;
+}
+.browse-node-body > .button-container {
+  margin-top:15px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-top:1px solid rgb(220,220,220);
+  background-color:rgb(240,240,240);
+}
+.browse-node-body > .button-container > * {
+  font-size:14px;
+}
+.browse-node-body .dropdown-menu {
+  /* Sadly, a bug with Chrome 75 (and almost certainly other versions) causes text to be blurry when this element has a border radius. */
+  border-radius:initial !important;
+}

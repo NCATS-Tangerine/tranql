@@ -1,6 +1,3 @@
-import { Component } from 'react';
-import Actor from "./Actor.js";
-
 class Chain {
   constructor (chain=[]) {
     this._chain = chain;
@@ -15,7 +12,7 @@ class Chain {
       }
     }
     return message;
-  }  
+  }
 }
 
 export default Chain;

@@ -16,7 +16,7 @@ class RenderInit extends Actor {
             origin: node        // keep the origin node.
           }; }),
         links: message.knowledge_graph.edges.map(function (edge, index) {
-          var weight = edge.weight === undefined ? null : Math.round (edge.weight * 100) / 100;
+          var weight = edge.weight === undefined ? 0.5 : Math.round (edge.weight * 100) / 100;
           var opacity = (100 - (100 * weight) ) / 100;
           return {
             source: edge.source_id,
@@ -38,14 +38,16 @@ class RenderSchemaInit extends Actor {
   handle(message, context) {
     message.knowledge_graph = {
       nodes: message.knowledge_graph.nodes.map((node) => {
-        if (typeof node === "string") {
+        if (Array.isArray(node)) {
           return {
-            id: node,
-            type: node,
-            name: node
+            id: node[0],
+            type: node[0],
+            name: node[0],
+            ...node[1]
           };
         }
         else {
+          // Already formatted
           return node;
         }
       }),
@@ -92,20 +94,19 @@ class IdFilter extends Actor {
       }
     };
     message.graph.links.forEach((link) => {
-      link.id = id.get();
+      if (!link.hasOwnProperty('id')) link.id = id.get();
     });
   }
 }
 class LinkFilter extends Actor {
   handle (message, context) {
     // Filter links:
-    var links = [];
     var node_ref = [];
     var min = context.linkWeightRange[0] / 100;
     var max = context.linkWeightRange[1] / 100;
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
-        if (link.weight === null || link.weight >= min && link.weight <= max) {
+        if (link.weight === null || (link.weight >= min && link.weight <= max)) {
           result.push (link);
           if (! node_ref.includes (link.source)) {
             node_ref.push (link.source);
@@ -162,7 +163,48 @@ class NodeFilter extends Actor {
     message.graph = { nodes : nodes_2, links: links };
   }
 }
+class ReasonerFilter extends Actor {
+  handle (message, context) {
+    const filteredReasoners = context.reasonerSources.filter((reasoner) => !reasoner.checked);
+    const new_nodes = message.graph.nodes.reduce (function (result, node) {
+      const reasoners = node.origin.reasoner;
+      const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
+      if (keep_it) {
+        result.push(node);
+      }
+      return result;
+    }, []);
+    const new_links = message.graph.links.reduce (function (result, link) {
+      const reasoners = link.origin.reasoner;
+      const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
+      if (keep_it) {
+        result.push(link);
+      }
+      return result;
+    }, []);
 
+    // Get rid of unused links.
+    var node_ids = new_nodes.map ((n, i) => n.id);
+    var links = new_links.reduce ((acc, link) => {
+      if (node_ids.includes (link.target) && node_ids.includes (link.source)) {
+        acc.push (link);
+      }
+      return acc;
+    }, []);
+    // Filter unreferenced nodes.
+    var nodes_2 = new_nodes.reduce ((acc, node) => {
+      var count = links.reduce ((lacc, link) => {
+        return link.source === node.id || link.target === node.id ? lacc + 1 : lacc;
+      }, 0);
+      if (count > 0) {
+        acc.push (node);
+      }
+      return acc;
+    }, []);
+
+    message.graph = { nodes : nodes_2, links: links };
+  }
+}
 class SourceDatabaseFilter extends Actor {
   handle (message, context) {
     // Filter edges by source database:
@@ -171,6 +213,7 @@ class SourceDatabaseFilter extends Actor {
     message.graph = {
       links: message.graph.links.reduce (function (result, link) {
         var source_db = link.origin.source_database;
+        let keep_it;
         if (typeof source_db === "undefined") {
           keep_it = true
         }
@@ -179,7 +222,7 @@ class SourceDatabaseFilter extends Actor {
             source_db = [ source_db ];
             link.origin.source_database = source_db;
           }
-          var keep_it = true;
+          keep_it = true;
           for (var c = 0; c < dataSources.length; c++) {
             if (source_db.includes (dataSources[c].label)) {
               if (! dataSources[c].checked) {
@@ -206,7 +249,7 @@ class SourceDatabaseFilter extends Actor {
         }
         return result;
       }, [])
-    }
+    };
   }
 }
 class LegendFilter extends Actor {
@@ -266,13 +309,22 @@ class LegendFilter extends Actor {
     // (Zip structure ( [type, {quantity:x}] ))
     for (let elementType in typeMappings) {
       let sortedTypes = Object.entries(typeMappings[elementType]).sort((a,b) => b[1].quantity-a[1].quantity);
+      //eslint-disable-next-line
       sortedTypes.forEach((obj) => {
         // let index = elementType === "nodes" ? i : colors.length-(i+1);
         let type = obj[0];
 
         let color;
-
-        if (index >= colors.length) {
+        if (!context.colorGraph) {
+          // Links should be a slightly different color
+          if (elementType === "links") {
+            color = "#c0c0c0";
+          }
+          else {
+            color = "#808080";
+          }
+        }
+        else if (index >= colors.length) {
           // If run out of colors, start recycling but shift the hues down. Make sure to shift the hues. Ensure that after multiple times iterating colors you continue to shift more.
           // Note - this method runs out of colors and starts cycling after hue has been shifted over 360
           let cycles = Math.ceil(index/colors.length);
@@ -313,7 +365,7 @@ class LegendFilter extends Actor {
 
     // Filter nodes that are hidden (NodeFilter source)
     // Couldn't understand the NodeFilter and LinkFilter code so I didn't bother trying to write this feature into the filters with an additional argument or something and reinvoke it
-    var nodes = message.graph.nodes.reduce ((acc, node) => {
+    nodes = message.graph.nodes.reduce ((acc, node) => {
       //keep node if all of its types are visible
       if (node.type.every(type => message.hiddenTypes.nodes.indexOf(type) === -1)) {
         acc.push (node);
@@ -322,7 +374,7 @@ class LegendFilter extends Actor {
     }, []);
     // Remove unused links attached to those nodes
     var node_ids = nodes.map ((n, i) => n.id);
-    var links = message.graph.links.reduce ((acc, link) => {
+    links = message.graph.links.reduce ((acc, link) => {
       if (node_ids.includes (link.target) && node_ids.includes (link.source)) {
         acc.push (link);
       }
@@ -343,7 +395,7 @@ class LegendFilter extends Actor {
       links:links
     };
 
-    var links = [];
+    links = [];
     var node_ref = [];
     // Link filter source
     message.graph = {
@@ -402,7 +454,7 @@ class CurvatureAdjuster extends Actor {
       group.forEach((link, index) => {
         // Group length of 1 would result in curvature of 1, which generates a semicircle.
         // link.curvature = group.length === 1 ? 0 : (i+1) / group.length;
-        link.allConnections = group;
+        // link.allConnections = group;
         link.concatName = allTypesString;
         if (context.curvedLinks) {
           link.curvature = index/group.length;
@@ -420,6 +472,7 @@ export {
   LegendFilter,
   LinkFilter,
   NodeFilter,
+  ReasonerFilter,
   SourceDatabaseFilter,
   CurvatureAdjuster
 }

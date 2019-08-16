@@ -1,0 +1,56 @@
+.FileLoader {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.FileLoader > *:first-child {
+  margin-bottom:15px;
+}
+.FileLoader > button {
+  width:100%;
+}
+.FileLoader > .filepond--wrapper {
+  border:1.5px dashed rgb(210,210,210);
+}
+.FileLoader > .filepond--wrapper .filepond--root {
+  position:relative;
+  contain:initial;
+  /* width:fit-content; */
+}
+.FileLoader > .filepond--wrapper .filepond--drop-label {
+  /* width:fit-content; */
+  position:relative;
+  z-index:7;
+}
+.FileLoader > .filepond--wrapper .filepond--panel-root {
+  display:none;
+  position:relative;
+  top:-100%;
+}
+.FileLoader > .filepond--wrapper .filepond--browser {
+  /* position:relative; */
+  /* top:-100%; */
+}
+.FileLoader > .filepond--wrapper .filepond--list-scroller {
+  position:relative;
+  /* width:auto; */
+  margin:0;
+  height:100%;
+  transform:initial !important;
+  top:calc(-100% + 1px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.FileLoader > .filepond--wrapper .filepond--list {
+  position:relative;
+  left:0;
+  /* width:fit-content; */
+}
+.FileLoader > .filepond--wrapper .filepond--item {
+  position:relative;
+}
+.import-upload-area {
+  box-sizing:content-box;
+  margin:0 !important;
+}

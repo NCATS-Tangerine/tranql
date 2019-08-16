@@ -43,114 +43,32 @@ from tranql.util import JSONKit
 from tranql.util import Concept
 from tranql.util import LoggingUtil
 from tranql.tranql_ast import TranQL_AST
-from pyparsing import (
-    Combine, Word, White, Literal, delimitedList, Optional,
-    Group, alphas, alphanums, printables, Forward, oneOf, quotedString,
-    ZeroOrMore, restOfLine, CaselessKeyword, ParserElement, LineEnd,
-    removeQuotes, pyparsing_common as ppc)
+from tranql.grammar import program_grammar, incomplete_program_grammar
 
 LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
 
-"""
-A program is a list of statements.
-Statements can be 'set' or 'select' statements.
-
-"""
-statement = Forward()
-SELECT, FROM, WHERE, SET, AS, CREATE, GRAPH, AT = map(
-    CaselessKeyword,
-    "select from where set as create graph at".split())
-
-concept_name    = Word( alphas, alphanums + ":_")
-ident          = Word( "$" + alphas, alphanums + "_$" ).setName("identifier")
-columnName     = delimitedList(ident, ".", combine=True).setName("column name")
-columnNameList = Group( delimitedList(columnName))
-tableName      = delimitedList(ident, ".", combine=True).setName("column name")
-tableName      = quotedString.setName ("service name")
-tableNameList  = Group(delimitedList(tableName))
-
-SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
-arrow = \
-        Group(Literal("-[") + concept_name + Literal("]->")) | \
-        Group(Literal("<-[") + concept_name + Literal("]-")) | \
-        Literal ("->") | \
-        Literal ("<-") 
-question_graph_element = (
-    concept_name + ZeroOrMore ( LineEnd () )
-) | \
-Group (
-    concept_name + COLON + concept_name + ZeroOrMore ( LineEnd () )
-)
-question_graph_expression = question_graph_element + ZeroOrMore(arrow + question_graph_element)
-
-whereExpression = Forward()
-and_, or_, in_ = map(CaselessKeyword, "and or in".split())
-
-binop = oneOf("= != =~ !=~ < > >= <= eq ne lt le gt ge", caseless=True)
-realNum = ppc.real()
-intNum = ppc.signed_integer()
-
-# need to add support for alg expressions
-columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName
-whereCondition = Group(
-    ( columnName + binop + (columnRval | Word(printables) ) ) |
-    ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
-    ( columnName + in_ + "(" + statement + ")" ) |
-    ( "(" + whereExpression + ")" )
-)
-whereExpression << whereCondition + ZeroOrMore( ( and_ | or_ ) + whereExpression )
-
-''' Assignment for handoff. '''
-setExpression = Forward ()
-setStatement = Group(
-    ( ident ) |
-    ( quotedString("json_path") + AS + ident("name") ) |
-    ( "(" + setExpression + ")" )
-)
-setExpression << setStatement + ZeroOrMore( ( and_ | or_ ) + setExpression )
-
-optWhite = ZeroOrMore(LineEnd() | White())
-
-""" Define the statement grammar. """
-statement <<= (
-    Group(
-        Group(SELECT + question_graph_expression)("concepts") + optWhite +
-        Group(FROM + tableNameList) + optWhite +
-        Group(Optional(WHERE + whereExpression("where"), "")) + optWhite +
-        Group(Optional(SET + setExpression("set"), ""))("select")
-    )
-    |
-    Group(
-        SET + (columnName + EQ + ( quotedString |
-                                   ident |
-                                   intNum |
-                                   realNum ))
-    )("set")
-    |
-    Group(
-        Group(CREATE + GRAPH + ident) + optWhite +
-        Group(AT + ( ident | quotedString )) + optWhite +
-        Group(AS + ( ident | quotedString ))
-    )
-)("statement")
-
-""" Make a program a series of statements. """
-program_grammar = statement + ZeroOrMore(statement)
-
-""" Make rest-of-line comments. """
-comment = "--" + restOfLine
-program_grammar.ignore (comment)
-
-class TranQLParser:
-    """ Defines the language's grammar. """
-    def __init__(self, backplane):
-        self.program = program_grammar
+class Parser:
+    def __init__(self, grammar, backplane):
+        self.program = grammar
         self.backplane = backplane
+
+    def tokenize (self, line):
+        return self.program.parseString (line)
+
     def parse (self, line):
         """ Parse a program, returning an abstract syntax tree. """
-        result = self.program.parseString (line)
+        result = self.tokenize (line)
         return TranQL_AST (result.asList (), self.backplane)
+
+class TranQLParser(Parser):
+    """ Defines the language's grammar. """
+    def __init__(self, backplane):
+        super().__init__ (program_grammar, backplane)
+
+class TranQLIncompleteParser(Parser):
+    def __init__(self, backplane):
+        super().__init__ (incomplete_program_grammar, backplane)
 
 class TranQL:
     """
@@ -160,7 +78,7 @@ class TranQL:
       Generate an abstract syntax tree
       Execute statements in the abstract syntax tree.
     """
-    def __init__(self, backplane="http://localhost:8099", asynchronous=True):
+    def __init__(self, backplane="http://localhost:8099", options={}):
         """ Initialize the interpreter. """
         self.context = Context ()
         config_path = "conf.yml"
@@ -176,11 +94,15 @@ class TranQL:
         self.context.set ("backplane", backplane)
         self.parser = TranQLParser (backplane)
 
-        # If config has arg use, else use constructor arg
-        asynchronous = self.config.get('ASYNCHRONOUS_REQUESTS',asynchronous)
+        # Priority:
+        #   1 - Options
+        #   2 - Config
+        #   3 - Default
 
-        self.asynchronous = asynchronous
-        self.resolve_names = False
+        self.asynchronous = options.get("asynchronous", self.config.get('ASYNCHRONOUS_REQUESTS', True))
+        self.name_based_merging = options.get("name_based_merging", self.config.get('NAME_BASED_MERGING', True))
+        self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
+        self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
 
     def parse (self, program):
         """ If we just want the AST. """
@@ -298,8 +220,10 @@ def main ():
     arg_parser.add_argument('-o', '--output', help="Output destination")
     arg_parser.add_argument('-a', '--arg', help="Output destination",
                             action="append", default=[])
-    # -x is placeholder as '-a' taken; should eventually replace with better fitting letter
-    arg_parser.add_argument('-x', '--asynchronous', default=False, help="Run requests asynchronously with asyncio")
+    # -x is placeholder as '-a' taken; should eventually replace with a more fitting letter
+    arg_parser.add_argument('-x', '--asynchronous', default=True, help="Run requests asynchronously resulting in faster queries")
+    arg_parser.add_argument('-n', '--name_based_merging', default=True, help="Merge nodes that have the same name properties as one another")
+    arg_parser.add_argument('-r', '--resolve_names', default=False, help="(Experimental) Resolve equivalent identifiers of nodes in responses via the Bionames API. Can result in a more thoroughly merged graph.")
     args = arg_parser.parse_args ()
 
     global logger
@@ -315,7 +239,8 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    tranql = TranQL (backplane = args.backplane, asynchronous = args.asynchronous)
+    options = {x: vars(args)[x] for x in vars(args) if x in ["asynchronous","name_based_merging","resolve_names","dynamic_id_resolution"]}
+    tranql = TranQL (backplane = args.backplane, options = options)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")
         tranql.context.set (k, v)

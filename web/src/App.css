@@ -1,3 +1,7 @@
+:root {
+  --background-hover-transition-time: .85s;
+  --background-active-transition-time: .35s;
+}
 .App {
     /*text-align: center;*/
      position : absolute;
@@ -24,7 +28,7 @@ body {
 }
 /* Add additional 5 pixels of margin to the loading icon when it is visible */
 #headerContainer > p ~ div {
-  margin-right: 5px;
+  margin-right: 10px;
 }
 #headerContainer > p {
 }
@@ -52,6 +56,9 @@ body {
 #viewContainer > .SplitPane {
     flex:1 !important;
 }
+#graphContainer[data-vis-mode='VR'], #graphContainer[data-vis-mode='VR'] > div, #graphContainer[data-vis-mode='VR'] > div > div {
+  height:100%;
+}
 #bottomContainer {
   position: absolute;
   z-index: 1;
@@ -66,15 +73,32 @@ body {
   pointer-events:initial; /* So that the container's children can still receive pointer events */
 }
 #toolbar {
-  background-color:rgba(30,30,30, 1);
+  flex:0 0 auto;
+  border-color:rgba(70,70,70,1);
+  background-color:rgba(45,45,45, 1);
   border-bottom-width:5px;
 }
+.Tool {
+}
+.Tool[data-active-tool="true"] {
+  background-color:rgb(15,15,15);
+  /* background-color:rgb(220,220,220); */
+}
+.Tool[data-active-tool="true"] > * {
+  /* color:black; */
+}
 #graphOverlayContainer {
+  flex-grow:1;
+  height:100%;
   display:flex;
-  flex-grow: 1;
-  flex-direction:column;
   align-items:flex-start;
   pointer-events:none;
+}
+#graphOverlayVerticalContainer {
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
 }
 #schemaBanner {
     /* background-color: rgb(30, 30, 30); */
@@ -98,9 +122,19 @@ body {
   max-height:400px;
 }
 .FindTool {
-  position:absolute;
+  margin: 8px;
+  margin-left:0;
+  /* 16px for margin */
+  max-height:calc(100% - 16px);
+  /* position:absolute;
   right:5px;
-  top:5px;
+  top:5px; */
+}
+.find-tool-tabs {
+  border-bottom:1px solid #dee2e6;
+}
+.tab-content .tab-content {
+  margin-top:25px;
 }
 .fa-spin {
   /* Pseudo fa-spin class because react-icons doesn't seem to natively support it */
@@ -119,18 +153,55 @@ body {
   color: #007bff;
   pointer-events:initial;
 }
+.tableViewPane {
+  overflow-y:auto;
+  padding:15px;
+}
 #info {
-    /* position: absolute; */
+    position: relative;
     background-color: rgb(39, 40, 34);
+    /* We want it to always be at least the same size as the split pane, but we want it to overflow if the JSONTree component is much larger */
+    min-height:100%;
     /* bottom: 0px; */
-    overflow:auto;
-    height:100%;
-    width:100%;
+    /* overflow:auto; */
     border-left: 2px solid rgb(166, 226, 46);
 }
 #info > ul {
-    margin:5px !important;
-    margin-bottom: 12.5px !important;
+    padding:0 1em .5em .5em !important;
+    margin:0 !important;
+    /* margin:5px !important; */
+}
+.react-json-view {
+    height:100%;
+    position: absolute;
+    overflow: auto;
+ }
+.object-viewer-header {
+  position:relative;
+  width:100%;
+  padding:.5em;
+  padding-bottom:.25em;
+  text-align:center;
+  /* border-bottom:2px solid rgb(166, 226, 46); */
+ }
+.object-viewer-header > h6 {
+  color:rgb(166, 226, 46);
+  margin-bottom:0;
+}
+.object-viewer-close-button {
+  position:absolute;
+  /* Margin is for the 10px padding */
+  margin:.5em;
+  top:0;
+  right:0;
+  color:rgb(166, 226, 46);
+  font-size:18px;
+}
+.object-viewer-close-button:hover {
+  color:rgb(147, 199, 42);
+}
+.object-viewer-close-button:active {
+  color:rgb(116, 156, 36);
 }
 .type-chart {
   width: 95%;
@@ -147,7 +218,10 @@ body {
   margin-left:12.5px;
   font-size:24px;
 }
-
+.Resizer {
+  border-width:0;
+  background: transparent;
+}
 .Resizer.disabled {
   cursor:auto !important;
 }
@@ -158,11 +232,6 @@ body {
     width : 100%;
     height : 200px;
     border-top: 2px solid lightblue;
- }
-.react-json-view {
-    height:100%;
-    position: absolute;
-    overflow: auto;
  }
 .App-logo {
     /*animation: App-logo-spin infinite 20s linear; */
@@ -193,6 +262,9 @@ body {
 .App-control-toolbar {
   color: rgba(220,220,220,.9);
 }
+.App-control-toolbar[data-active="true"] {
+  color: rgba(160,160,160,.9);
+}
 .App-control-toolbar.ionic {
   font-size: 22px;
 }
@@ -219,12 +291,105 @@ body {
     border: 1px solid rgba(0,0,0,.2);
     border-radius: .3rem;
     outline: 0;
-    max-height: 90%;
-    height: 90%;
+    /* max-height: 90%; */
+    height: 100%;
 }
-.messageDialog .react-tabs__tab-panel {
+.messageDialog .tab-content {
+  margin-top:10px;
+}
+.messageDialog .tab-pane {
   /* Retain the formatting from the message */
   white-space:pre-wrap;
+}
+.import-export-modal {
+  display:flex !important;
+  justify-content:center;
+  align-items:center;
+}
+.import-export-modal-dialog {
+  /* height:400px; */
+  /* width:500px; */
+  max-width:none;
+}
+.import-export-modal-dialog .modal-body {
+  display:flex;
+}
+.import-export-modal-dialog .modal-body > * {
+  /* flex:1; */
+  margin:0 5px;
+  background-color:rgb(245,245,245);
+  border-radius:5px;
+  border:1.5px solid rgb(230,230,230);
+  height:auto;
+  display:flex;
+  flex-direction:column;
+  min-height:200px;
+}
+.import-export-modal-dialog .modal-body > * > * {
+  padding:10px;
+}
+.import-export-modal-dialog .modal-body > * > *:not(:last-child) {
+  padding-bottom:0;
+}
+.import-export-icon-container {
+  width:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.import-export-icon-container > * {
+  margin-left:7.5px;
+  margin-right:7.5px;
+}
+.import-export-icon-container > svg {
+  /* float:left; */
+  font-size:28px;
+}
+.import-export-icon-container > span {
+  flex-grow:1;
+  font-weight:600;
+  font-size:16px;
+  display:block;
+  text-align:center;
+  padding-bottom:10px;
+}
+.import-options-container, .export-options-container {
+  padding:15px !important;
+  padding-bottom:0 !important;
+  /* 2.5px from horizontal-bar */
+  /* padding-top:calc(15px + 2.5px) !important; */
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+}
+.import-options-container > form > div, .export-options-container > form > div {
+  /* display:flex; */
+  /* align-items:center; */
+}
+/* .import-options-container > form > div > label, .export-options-container > form > div > label {
+  margin-left:0.5rem;
+} */
+.import-options-container > form, .export-options-container > form {
+  flex-grow:1;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+}
+.import-options-container > form > *, .export-options-container > form > * {
+  margin-bottom:15px;
+}
+.import-options-container > *:not(:last-child), .export-options-container > *:not(:last-child) {
+  margin-bottom:15px;
+}
+.import-export-icon-container.horizontal-bar::after {
+  width:95%;
+  left:2.5%;
+  top:calc(100% + 2.5px);
+  background-color:transparent;
+  height:2px;
+}
+.export-options-container > form > .form-group.form-inline > *:first-child {
+  margin-right:.3125rem;
 }
 .help-modal {
   /* height:60%; */
@@ -237,27 +402,36 @@ body {
   height:100%;
 }
 .toolbar-help-modal-dialog {
-  height:50%;
+  height:75%;
   margin:0;
   width:700px;
   max-width:none;
 }
 .toolbar-help-modal-dialog .modal-body {
   display:flex;
+  flex-direction:column;
+}
+.toolbar-help-modal-dialog .modal-body > .tab-content {
+  height:calc(90% - 5px);
+  margin-top:10px;
+  display:flex;
 }
 .toolbar-help-tabs {
-  flex-grow:1;
-  display:flex;
-  flex-direction:column;
-  height:100%;
+  /* flex-grow:1; */
+  /* display:flex; */
+  /* flex-direction:column; */
+  /* height:100%; */
 }
 .toolbar-help-tab-panel {
-  display:flex;
   flex-grow:1;
 }
-.toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
-  display:none;
+.toolbar-help-tab-panel.active {
+  display:flex !important;
+  flex-grow:1;
 }
+/* .toolbar-help-tab-panel:not(.react-tabs__tab-panel--selected) {
+  display:none;
+} */
 .toolbar-help-content {
   flex-grow:1;
   margin-left:10px;
@@ -347,6 +521,9 @@ body {
     max-width: none!important;
     height: 95%;
     /*max-height: 95%; */
+}
+.checkbox-container > *:first-child {
+  margin-top:5px;
 }
 #appControlContainer {
   display:flex;
@@ -478,6 +655,20 @@ body {
 .Resizer.disabled:hover {
   border-color: transparent;
 }
+.testing {
+  transform:translateX(15px);
+}
+.autocomplete-result-error {
+  background-color:var(--danger) !important;
+}
+.loading-animation::after {
+  content: '';
+  -ms-animation:loading-text 2.5s linear infinite;
+  -o-animation:loading-text 2.5s linear infinite;
+  -webkit-animation:loading-text 2.5s linear infinite;
+  -moz-animation:loading-text 2.5s linear infinite;
+  animation:loading-text 2.5s linear infinite;
+}
 .no-select {
   user-select:none;
   -webkit-user-select:none;
@@ -485,9 +676,47 @@ body {
   -o-user-select:none;
   -ms-user-select:none;
 }
-
+.horizontal-bar {
+  position:relative;
+  padding-bottom:2.5px;
+}
+.horizontal-bar::after {
+  content:'';
+  position:absolute;
+  bottom:-1.5px;
+  left: 0;
+  width:100%;
+  height:1.5px;
+  background-color:rgba(240,240,240,1);
+}
+.vertical-bar {
+  position:relative;
+}
+.vertical-bar::before {
+  content:'';
+  position:absolute;
+  width:1.25px;
+  height:100%;
+  left:-1.25px;
+  background-color:rgb(215,215,215);
+}
 @-ms-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-o-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
 @-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
 @keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
+
+@keyframes loading-text {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+}

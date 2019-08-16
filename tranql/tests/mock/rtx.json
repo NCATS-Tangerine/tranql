@@ -1,3 +1,31 @@
 {
-
+  "knowledge_graph" : {
+    "nodes" : [ {
+      "id" : "CHEBI:00001",
+      "type" : "chemical_substance"
+    },{
+      "id" : "HGNC:9999",
+      "type" : "gene"
+    } ],
+    "edges" : [ {
+      "id" : "e0",
+      "source_id" : "n0",
+      "target_id" : "n1"
+    } ]
+  },
+  "knowledge_map" : [
+    {
+      "node_bindings": {
+        "chemical_substance": "CHEBI:00001",
+        "gene": "HGNC:9999"
+      },
+      "edge_bindings": {
+        "e1": [
+          "e0"
+        ],
+        "s0": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+      },
+      "score": 0.09722323258334348
+    }
+  ]
 }

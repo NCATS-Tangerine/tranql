@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactTooltip from 'react-tooltip'
 import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle } from 'react-icons/io';
 import { ButtonToolbar, ToggleButtonGroup, ToggleButton } from 'react-bootstrap';
-import { adjustTitle, shadeColor } from './Util.js';
+import { shadeColor, hydrateState } from './Util.js';
 import './Legend.css';
 
 // Legend button group component (TypeButton wrapper)
@@ -66,10 +66,6 @@ class TypeButtonGroup extends React.Component {
 
 // Legend button component
 class TypeButton extends Component {
-  constructor(props) {
-    super(props);
-  }
-
   render() {
     //Bootstrap doesn't like custom coloring schemes, but it is necessary here to deviate from the bootstrap color theme as it is specifically color-coded.
     //When a react-bootstrap ToggleButton is active, it uses the box-shadow property as what looks like the "border." This is set as the css variable `--highlight-box-shadow-color`,
@@ -93,7 +89,7 @@ class TypeButton extends Component {
         value={this.props.value}
         size="sm"
         className="TypeButton">
-        {this.props.active ? <b>{adjustTitle(this.props.data.type)}</b> : adjustTitle(this.props.data.type)}
+        {this.props.active ? <b>{(this.props.data.type)}</b> : (this.props.data.type)}
         {this.props.active ? <b>({this.props.data.actualQuantity}/{this.props.data.quantity})</b> : "("+this.props.data.actualQuantity+"/"+this.props.data.quantity+")"}
       </ToggleButton>
     );
@@ -130,6 +126,7 @@ class Legend extends Component {
       collapse : false
     };
 
+    this._hydrateState = hydrateState.bind(this);
   }
 
   /**
@@ -183,6 +180,10 @@ class Legend extends Component {
     return newMappings;
   }
 
+  componentDidMount() {
+    this._hydrateState();
+  }
+
   render() {
     //Move some of this logic elsewhere? Not really supposed to have any in render, but I don't know where to properly place it
 
@@ -216,7 +217,10 @@ class Legend extends Component {
           <ReactTooltip place="left"/>
           <IoIosArrowDropdownCircle data-tip="Open legend"
           className="legend-vis-control-open"
-          onClick={(e) => this.setState({ collapse : false })}
+          onClick={(e) => {
+            this.setState({ collapse : false })
+            localStorage.setItem('collapse', false);
+          }}
           color="rgba(40,40,40,1)"
           />
           </div>
@@ -226,7 +230,10 @@ class Legend extends Component {
         return (
           <div id={this.props.id} className="Legend">
           {/*+2px in margin-top is because of 2px border*/}
-          <IoIosArrowDropupCircle onClick={(e) => this.setState({ collapse : true })} data-tip="Close legend" className="legend-vis-control"/>
+          <IoIosArrowDropupCircle onClick={(e) => {
+            this.setState({ collapse : true });
+            localStorage.setItem('collapse', true);
+          }} data-tip="Close legend" className="legend-vis-control"/>
           {
             Object.keys(sortedMappings).map((elementType,i) => {
               let types = sortedMappings[elementType];

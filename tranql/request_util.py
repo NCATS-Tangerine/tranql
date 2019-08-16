@@ -25,7 +25,7 @@ async def make_request_async (semaphore, **kwargs):
                         raise ServiceInvocationError(
                             f"An error occurred invoking service: {kwargs['url']}.",
                             response['message'])
-                    print (f"** asyncio-response: {json.dumps(response,indent=2)}")
+                    # print (f"** asyncio-response: {json.dumps(response,indent=2)}")
                 elif http_response.status == 404:
                     raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?")
                 else:
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         except ServiceInvocationError as e:
             raise e
         except Exception as e:
-            print (e)
+            raise e
             # logger.error (f"error performing request: {json.dumps(message, indent=2)} to url: {url}")
             #traceback.print_exc ()
             # logger.error (traceback.format_exc ())

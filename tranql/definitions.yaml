@@ -1,0 +1,29 @@
+Error:
+  type: object
+  description: Errors encountered during the request. If status is Warning, the request still was able to complete.
+  required:
+    - status
+    - errors
+  properties:
+    status:
+      type: string
+      enum:
+        - Error
+        - Warning
+      description: Severity of the errors.
+    errors:
+      type: array
+      items:
+        $ref: '#/definitions/ErrorMessage'
+ErrorMessage:
+  type: object
+  description: An individual error message.
+  required:
+    - message
+  properties:
+    message:
+      type: string
+      example: Something went wrong.
+    details:
+      type: string
+      example: '{stack trace}'

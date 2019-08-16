@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
-import { IoIosClose } from 'react-icons/io';
-import { FaLongArrowAltRight } from 'react-icons/fa';
+import { IoIosClose, IoIosSettings } from 'react-icons/io';
+import { FaLongArrowAltRight, FaLongArrowAltLeft } from 'react-icons/fa';
 import * as JSON5 from 'json5';
+import * as jp from 'jsonpath';
+import { debounce, hydrateState } from './Util.js';
 import './FindTool.css';
 
 export default class FindTool extends Component {
@@ -16,7 +18,9 @@ export default class FindTool extends Component {
     this.state = {
       active: false,
       results: null,
-      entered: null
+      entered: null,
+      showSettings: false,
+      useJSONPath: false
     };
 
     this.toggleShow = this.toggleShow.bind(this);
@@ -27,11 +31,17 @@ export default class FindTool extends Component {
     this._onInputBlur = this._onInputBlur.bind(this);
     this._onInput = this._onInput.bind(this);
 
-    this._findResults = this._findResults.bind(this);
+    this._hydrateState = hydrateState.bind(this);
+
     this._results = this._results.bind(this);
     this.updateResults = this.updateResults.bind(this);
+    this.showSettings = this.showSettings.bind(this);
+
+    this._setDefaultJSONPathQuery = this._setDefaultJSONPathQuery.bind(this);
 
     this._input = React.createRef();
+
+    this._inputHandler = debounce(this._onInput,300);
   }
   show() {
     this.setState({ active : true }, () => {
@@ -43,6 +53,11 @@ export default class FindTool extends Component {
   }
   toggleShow() {
     this.state.active ? this.hide() : this.show();
+  }
+  showSettings() {
+    this.setState({
+      showSettings : true
+    });
   }
   _onInput(e) {
     this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
@@ -65,6 +80,18 @@ export default class FindTool extends Component {
       // this._input.current.focus();
     }
   }
+  _setDefaultJSONPathQuery() {
+    if (this._input.current.textContent === "") {
+      this._input.current.textContent = "$.*";
+      // Update cursor position (required with contenteditable elements)
+      let range = document.createRange();
+      range.selectNodeContents(this._input.current);
+      range.collapse(false);
+      let selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
   static parse(text) {
     const transitionTokens = [
       '->',
@@ -75,7 +102,7 @@ export default class FindTool extends Component {
       "links",
       "*"
     ];
-    text = text.replace(/\s/g, "");
+    // text = text.replace(/\s/g, "");
     const transitionRegex = transitionTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
     // This prevents anything that could technically be a selector inside of selector attributes being matched as a new selector
     // Explanation:
@@ -85,7 +112,7 @@ export default class FindTool extends Component {
     const selectorRegex = new RegExp(`(${selectorTokens.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})({.*?})?(${transitionRegex}|$)`,"gi");
     let selectors = [];
     let selector;
-    while (selector = selectorRegex.exec(text)) {
+    while ((selector = selectorRegex.exec(text))) {
       selectors.push({
         selectorType : selector[1],
         selectorAttributes: selector[2],
@@ -150,6 +177,8 @@ export default class FindTool extends Component {
         // This allows for unrestrained access of the object but is not recommended unless necessary.
         try {
           if (typeof value === "string") {
+            // Sadly, it's necessary to use eval here. It doesn't really pose as a threat here as long as find tool input is never cached.
+            // eslint-disable-next-line
             value = eval(value);
           }
           return value(elementValue);
@@ -206,7 +235,29 @@ export default class FindTool extends Component {
       "!=": function(elementValue, value) {
         // Performs != operator on the provided values (default operator is ===)
         try {
+          // (eslint complains about non eqeqeq)
+          // eslint-disable-next-line
           return elementValue != value
+        }
+        catch {
+          return false;
+        }
+      },
+      "===": function(elementValue, value) {
+        // Performs === operator on the provided values (completely redundant but present for comprehensiveness)
+        try {
+          return elementValue === value
+        }
+        catch {
+          return false;
+        }
+      },
+      "==": function(elementValue, value) {
+        // Performs == operator on the provided values (default operator is ===)
+        try {
+          // (eslint complains about non eqeqeq)
+          // eslint-disable-next-line
+          return elementValue == value
         }
         catch {
           return false;
@@ -312,8 +363,8 @@ export default class FindTool extends Component {
           )
         }
         transitionAttributes = {
-          "source_id:regex":source_re.source,
-          "target_id:regex":target_re.source
+          "source_id:regex":source_re,
+          "target_id:regex":target_re
           // "origin:func": `(origin)=>origin.source_id.match(${source_re}) && origin.target_id.match(${target_re})`
         };
       }
@@ -357,6 +408,28 @@ export default class FindTool extends Component {
 
     return results;
   }
+  static repr(obj) {
+    let primitive = false;
+    let str;
+    if (Array.isArray(obj)) {
+      // Array
+      str = "[" + obj.length + "]";
+    }
+    else if (obj.constructor.name === "Object") {
+      // Object literal
+      str = "{" + Object.keys(obj).length + "}";
+    }
+    else if (obj === Object(obj)) {
+      // Not primitive or object literal or array
+      str = obj.constructor.name;
+    }
+    else {
+      // Primitive
+      str = obj.toString();
+      primitive = true;
+    }
+    return {value: str, primitive: primitive};
+  }
   static findElems(graph, selectorType, attributes, transition, transitionSelector, nextSelector, magicVariables) {
     let elements = {
       nodes: [],
@@ -388,10 +461,11 @@ export default class FindTool extends Component {
       );
     }
 
+    magicVariables["__nodes__"] = JSON.stringify(graph.nodes);
+    magicVariables["__links__"] = JSON.stringify(graph.links,(key,val)=>key!=="allConnections"?val:undefined);
+
     Object.keys(elements).forEach((elementType) => {
       elements[elementType].forEach((element) => {
-        const actualElement = element;
-        element.origin.source_el = { id : element.id, name : element.name };
         element = element.origin;
         let every = Object.entries(attributes).every((obj) => {
           let [attributeName, flagCallback, attributeValue] = FindTool.parseAttribute(obj);
@@ -408,18 +482,23 @@ export default class FindTool extends Component {
                     return false;
                   }
                 }
+                else {
+                  // If the flag is an attribute of the value (as opposed to a method)
+                  return elementValue[flag] === value
+                }
               }
             }
-            magicVariables["__element__"] = JSON.stringify(element);
+            magicVariables["__element__"] = JSON.stringify(element,(key,val)=>key!=="allConnections"?val:undefined);
             // Replace any magic variables
             let re = /[^\\](__.*?__)/g;
             let sel;
-            while (sel = re.exec(attributeValue)) {
+            while ((sel = re.exec(attributeValue))) {
               attributeValue = attributeValue.replace(sel[1],(val) => magicVariables[val]);
             }
             // if (typeof attributeValue === "string") attributeValue = attributeValue.replace(, (val) => magicVariables[val]);
             return flagCallback(element[attributeName],attributeValue);
           }
+          return false;
         });
         if (every) {
           addElem(elementType,element);
@@ -428,28 +507,49 @@ export default class FindTool extends Component {
     });
     return results;
   }
-  _findResults() {
+  static findResults(graph, val, useJSONPath) {
     // Results stores the results of each transition
     const results = {
       nodes:[],
       links:[]
     };
 
-    const val = this._input.current === null ? "" : this._input.current.value;
+    // const replaceNodes = this.props.graph.nodes;
+    // const replaceLinks = this.props.graph.links.map((link) => {
+    //   // Remove circular objects.
+    //   return Object.assign({}, link, { allConnections : undefined });
+    // });
+    // let graph = JSON.parse(JSON.stringify({
+    //   nodes:replaceNodes,
+    //   links:replaceLinks
+    // }));
+
+    if (useJSONPath) {
+      let results = [];
+      let graphElement = false;
+      try {
+        results = jp.nodes({nodes:graph.nodes,links:graph.links},val).map((el) => {
+          // Must be a node or link object
+          if (el.path.length === 3) {
+            graphElement = true;
+            return el;
+          }
+          return el;
+        });
+      }
+      catch {}
+      return {
+        grouped: false,
+        groups: results,
+        graphElement: graphElement
+      }
+    }
+
     const selectors = FindTool.parse(val);
     if (typeof selectors === "string") {
       return selectors;
     }
 
-    const replaceNodes = this.props.graph.nodes;
-    const replaceLinks = this.props.graph.links.map((link) => {
-      // Remove circular objects.
-      return Object.assign({}, link, { allConnections : undefined });
-    });
-    let graph = JSON.parse(JSON.stringify({
-      nodes:replaceNodes,
-      links:replaceLinks
-    }));
 
     let anyTransitions = false;
 
@@ -469,22 +569,26 @@ export default class FindTool extends Component {
 
     let grouped = [];
 
+    let nodeMap = {};
+    results.nodes.forEach((node) => {
+      nodeMap[node.id] = node;
+    });
     if (!anyTransitions) {
       return {
         grouped : false,
-        groups: [...results.nodes, ...results.links]
+        groups: [
+          ...graph.nodes.filter((node)=>nodeMap.hasOwnProperty(node.origin.id)),
+          ...results.links.map((link)=>graph.links.filter((link_2)=>link_2.origin===link)[0])
+        ].map((el)=>({value:el}))
+        // groups: [...results.nodes, ...results.links].map((el)=>({value:el}))
       };
     }
     else {
-      let nodeMap = {};
-      results.nodes.forEach((node) => {
-        nodeMap[node.id] = node;
-      });
       results.links.forEach((link) => {
         grouped.push({
-          source: nodeMap[link.source_id],
-          target: nodeMap[link.target_id],
-          link: link
+          source: graph.nodes.filter((node)=>node.origin.id === link.source_id)[0],
+          target: graph.nodes.filter((node)=>node.origin.id === link.target_id)[0],
+          link: graph.links.filter((link_2)=>link_2.origin===link)[0]
         });
       });
 
@@ -496,13 +600,14 @@ export default class FindTool extends Component {
 
   }
   _results() {
-    const results = this._findResults();
+    const input = this._input.current === null ? "" : this._input.current.textContent;
+    const results = FindTool.findResults(this.props.graph, input, this.state.useJSONPath);
     let elements;
     if (typeof results === "string") {
       // Error
       elements = (
         <div>
-          <div className="result result-header">
+          <div className="find-tool-result find-tool-result-header">
             <span style={{fontWeight:"500"}}>{results}</span>
           </div>
         </div>
@@ -511,25 +616,132 @@ export default class FindTool extends Component {
     else {
       elements = (
         <div>
-          <div className="result result-header">
-            <span style={{fontWeight:"500"}}>{results.groups.length} results</span>
+          <div className="find-tool-result find-tool-result-header">
+            {
+              (() => {
+                let invalid;
+
+                let jsonPathComp;
+
+                let path_on_render;
+                try {
+                  if (this._input.current.textContent === '') {
+                    path_on_render = [];
+                  }
+                  else {
+                    path_on_render = jp.parse(this._input.current.textContent);
+                  }
+                }
+                catch (e) {
+                  path_on_render = [];
+                  if (this.state.useJSONPath) invalid = e.message;
+                }
+                if (!results.grouped && this.state.useJSONPath) jsonPathComp = (
+                  <div className="find-tool-back-button-wrapper">
+                  <FaLongArrowAltLeft className="find-tool-back-button" style={{...(path_on_render.length < 2 ? {display:"none"} : {})}} onClick={() => {
+                    // Remove the second to last path component from the query
+                    // If the path is only one level deep (`$.*`), remove the last because there is no second to last path component.
+                    const path = jp.parse(this._input.current.textContent);
+                    console.log(path,path.length);
+                    const newPath = path.length > 2 ? path.slice(0,-2).concat(path.slice(-1)) : path.slice(0,-1);
+                    this._input.current.textContent = jp.stringify(newPath)
+                    this._inputHandler();
+                  }}/>
+                  </div>
+                )
+
+                return (
+                  <>
+                    {!invalid && jsonPathComp}
+                    <span style={{fontWeight:"500"}}>
+                    {
+                      invalid ?
+                        invalid :
+                        (results.groups.length + " results")
+                    }
+                    </span>
+                  </>
+                );
+            })()
+            }
           </div>
           {
             results.groups.map((group, i) => {
+              let value = (results.grouped ? Object.values(group) : [group.value]);
               return (
-                <div className="result" onMouseEnter={()=>{this.setState({ entered : results.grouped ? Object.values(group) : [group] });this.props.resultMouseEnter(results.grouped ? Object.values(group) : [group])}}
-                                        onMouseLeave={()=>{this.setState({ entered : null });this.props.resultMouseLeave(results.grouped ? Object.values(group) : [group])}}
-                                        onClick={()=>this.props.resultMouseClick(results.grouped ? Object.values(group) : [group])} key={i}>
+                <div className="find-tool-result"
+                     onMouseEnter={()=>{
+                       if (results.hasOwnProperty('graphElement') && !results.graphElement) return;
+                       this.setState({ entered : value });
+                       this.props.resultMouseEnter(value);
+                     }}
+                     onMouseLeave={()=>{
+                       if (results.hasOwnProperty('graphElement') && !results.graphElement) return;
+                       this.setState({ entered : null });
+                       this.props.resultMouseLeave(value);
+                     }}
+                     onClick={()=>{
+                       this.props.resultMouseClick(value);
+                     }}
+                     key={i}>
                   {
                     results.grouped ?
                       <>
-                        <span>{group.source.source_el.name + " (" + group.source.source_el.id + ")"}</span>
-                        <div><FaLongArrowAltRight/></div>
-                        <span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ") + " (" + group.link.source_el.id + ")"}</span>
-                        <div><FaLongArrowAltRight/></div>
-                        <span>{group.target.source_el.name + " (" + group.target.source_el.id + ")"}</span>
+                        <div className="result-group"><span>{group.source.name}</span><span>{" (" + group.source.id + ")"}</span></div>
+                        <div className="group-arrow"><FaLongArrowAltRight/></div>
+                        <div className="result-group"><span>{(Array.isArray(group.link.type) ? group.link.type : [group.link.type]).join(" / ")}</span></div>
+                        <div className="group-arrow"><FaLongArrowAltRight/></div>
+                        <div className="result-group"><span>{group.target.name}</span><span>{" (" + group.target.id + ")"}</span></div>
                       </> :
-                      <><span>{group.source_el.name + " (" + group.source_el.id + ")"}</span></>
+                        <div>
+                          {
+                            (() => {
+                              let repr;
+                              // group.value was once undefined, couldn't recreate it but just to be safe
+                              try {
+                                repr = FindTool.repr(group.value);
+                              }
+                              catch {
+                                repr = ['<Error>',true]
+                                console.warn('Group value broken',group);
+                              }
+                              return (
+                                <>
+                                  <div className="result-group">
+                                    <span>
+                                    {
+                                      (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                        group.value.hasOwnProperty('name') ?
+                                          group.value.name :
+                                          (Array.isArray(group.value.type) ? group.value.type : [group.value.type]).join(" / ")
+                                      ) :
+                                      group.path[group.path.length-1] + ": "
+                                    }
+                                    </span>
+                                    <span>
+                                    {
+                                      (!results.hasOwnProperty('graphElement') || results.graphElement) ? (
+                                        (group.value.hasOwnProperty('id') ? " (" + group.value.id + ")" : "")
+                                      ) :
+                                      repr.value
+                                    }
+                                    </span>
+                                  </div>
+                                  {
+                                    this.state.useJSONPath && !repr.primitive && (
+                                      <div className="find-tool-select-button-wrapper">
+                                      <FaLongArrowAltRight className="find-tool-select-button" onClick={() => {
+                                        this._input.current.textContent = jp.stringify(group.path) + ".*";
+                                        this._inputHandler();
+                                      }}/>
+                                      </div>
+                                    )
+                                  }
+                                </>
+                              );
+                            })()
+                          }
+                        </div>
                   }
                 </div>
               );
@@ -546,29 +758,65 @@ export default class FindTool extends Component {
   componentWillUnmount() {
     window.removeEventListener('keydown',this._onKeyDown);
     this._input.current.removeEventListener('blur', this._onInputBlur);
-    this._input.current.removeEventListener('input',this._onInput);
+    this._input.current.removeEventListener('input',this._inputHandler);
     this.state.entered !== null && this.props.resultMouseLeave(this.state.entered);
   }
   componentDidMount() {
     window.addEventListener('keydown',this._onKeyDown);
     this._input.current.addEventListener('blur', this._onInputBlur);
-    this._input.current.addEventListener('input',this._onInput);
+    this._input.current.addEventListener('input',this._inputHandler);
+
+    this._hydrateState();
+
+    this.setState({},() => {
+      this.state.useJSONPath && this._setDefaultJSONPathQuery();
+    });
 
     this.updateResults();
   }
   render() {
     return (
       <div data-hide={!this.state.active} className="FindTool">
-        <div className="find-container">
-          <input type="text" ref={this._input} className="find-tool-input" autoFocus />
-          <div className="find-tool-button-container">
-            <IoIosClose onClick={() => this.hide()}/>
+        <div data-hide={this.state.showSettings} className="find-container">
+          <span contentEditable={true} ref={this._input} className="find-tool-input" autoFocus placeholder={this.state.useJSONPath ? "JSONPath ($):" : "Query:"}></span>
+          <div className="find-tool-button-container vertical-bar">
+            <IoIosSettings className="find-tool-settings-button" onClick={() => this.showSettings()}/>
+            <IoIosClose className="find-tool-close-button" onClick={() => this.hide()}/>
           </div>
         </div>
-        <div className="result-container">
+        <div data-hide={this.state.showSettings} className="find-tool-result-container">
           {
             this.state.results
           }
+        </div>
+        <div data-hide={!this.state.showSettings} className="find-tool-settings">
+          <div className="find-tool-settings-top horizontal-bar">
+            <span className="find-tool-settings-header">Find Tool Settings</span>
+            <div className="find-tool-button-container vertical-bar">
+              <IoIosClose className="find-tool-close-button" onClick={() => this.setState({ showSettings : false })}/>
+            </div>
+          </div>
+          <div className="find-tool-settings-body">
+            <div>
+              <input type="checkbox"
+                     name="useJSONPath"
+                     checked={this.state.useJSONPath}
+                     onChange={(e) => {
+                       const name = e.currentTarget.name;
+                       const checked = e.currentTarget.checked;
+                       this.setState({
+                         useJSONPath : checked
+                       }, () => {
+                         if (checked) {
+                           this._setDefaultJSONPathQuery();
+                         }
+                         this.updateResults();
+                       });
+                       localStorage.setItem(name,JSON.stringify(checked));
+                     }}/>
+               <span>Use <a target="_blank" rel="noopener noreferrer" href="https://goessner.net/articles/JsonPath/">JSONPath</a> syntax</span>
+            </div>
+          </div>
         </div>
       </div>
     )

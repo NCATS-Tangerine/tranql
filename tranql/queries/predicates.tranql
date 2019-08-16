@@ -1,0 +1,3 @@
+SELECT chemical_substance-[treats]->disease
+          FROM "/graph/gamma/quick"
+          WHERE chemical_substance='PUBCHEM:2083' --Salbutamol
