@@ -966,6 +966,14 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 option.from = { line : from.line, ch : from.ch - replaceText.length };
                 option.to = { line : to.line, ch : to.ch};
 
+                if (replaceText.length > 0) {
+                  const trimmedLines = textToCursorPositionUntrimmed.trimRight().split(/\r\n|\r|\n/);
+                  const lastLine = trimmedLines[trimmedLines.length-1];
+                  option.from.line = trimmedLines.length - 1;
+                  option.from.ch = lastLine.length - replaceText.length;
+                }
+
+
                 delete option.replaceText;
               }
 
