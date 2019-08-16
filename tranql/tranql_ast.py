@@ -207,7 +207,7 @@ class SelectStatement(Statement):
         self.where = []
         self.set_statements = []
         self.jsonkit = JSONKit ()
-        self.planner = QueryPlanStrategy (ast.backplane)
+        self.planner = QueryPlanStrategy (ast.schema)
 
     def __repr__(self):
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
@@ -1204,9 +1204,9 @@ class QueryPlan:
 class QueryPlanStrategy:
     """ A strategy for developing a query plan given a schema. """
 
-    def __init__(self, backplane):
+    def __init__(self, schema):
         """ Construct a query strategy, specifying the schema. """
-        self.schema = Schema (backplane)
+        self.schema = schema
 
     def plan (self, query):
         """
