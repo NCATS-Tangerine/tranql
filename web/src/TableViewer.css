@@ -24,15 +24,24 @@
   top:0;
   right:0;
   z-index:1;
+  display:flex;
+  align-items:center;
+}
+.table-viewer-button-container > * {
+  white-space:nowrap;
 }
 .table-viewer-button-container > *:not(:last-child) {
   margin-right:5px;
 }
 .table-filter-container {
-  display:flex;
-  flex-wrap:wrap;
-  margin:5px;
+  /* display:flex; */
+  /* flex-wrap:wrap; */
+  /* margin:5px; */
 }
 .table-filter-container > * {
-  margin:7.5px 20px;
+  float:left;
+  width:25%;
+  word-break:break-all;
+  padding:5px;
+  margin:0;
 }

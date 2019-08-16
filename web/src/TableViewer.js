@@ -39,15 +39,18 @@ export default class TableViewer extends Component {
     this.state = {
       tableView : false,
       tableFilterView : false,
-      tableAttributes : this.props.defaultTableAttributes
+      tableAttributes : this.props.defaultTableAttributes,
+      filterFilter : ''
     };
 
     this._tabs = React.createRef();
+    this._filterInputFilter = React.createRef();
 
     this.open = this.open.bind(this);
     this.close = this.close.bind(this);
     this.toggleVisibility = this.toggleVisibility.bind(this);
     this.resetAttributes = this.resetAttributes.bind(this);
+    this._getActiveTabName = this._getActiveTabName.bind(this);
   }
   resetAttributes() {
     this.setState({ tableAttributes : this.props.defaultTableAttributes });
@@ -64,12 +67,30 @@ export default class TableViewer extends Component {
     this.setState({ tableView : false });
     this.props.onClose();
   }
+  _getActiveTabName() {
+    return this._tabs.current.props.activeKey;
+  }
   render() {
     if (!this.state.tableView) return null;
     return (
       <div className="TableViewer">
         <div className="table-viewer-button-container">
+          {
+            this.state.tableFilterView && (<Form.Control className="form-inline" type="text" ref={ref => {this._filterInputFilter = ref;}} onChange={() => {
+              const value = this._filterInputFilter.value;
+              this.setState({ filterFilter : value });
+            }}/>)
+          }
           {this.props.buttons}
+          {
+            this.state.tableFilterView && (<Button className="table-viewer-filter-button" size="sm" color="warning" onClick={() => {
+              const tableAttributes = this.state.tableAttributes;
+              tableAttributes[this._getActiveTabName()] = [];
+              this.setState({ tableAttributes });
+            }}>
+              Uncheck all
+            </Button>)
+          }
           <Button className="table-viewer-filter-button" size="sm" color={this.state.tableFilterView?"secondary":"primary"} onClick={() => {
             this.setState({ tableFilterView : !this.state.tableFilterView });
           }} {...this.props.filterButtonProps}>
@@ -77,12 +98,12 @@ export default class TableViewer extends Component {
           </Button>
           <Button className="table-viewer-close-button" size="sm" color="danger" onClick={() => this.close()} {...this.props.closeButtonProps}>Close</Button>
         </div>
-        <Tabs defaultActiveKey="0" ref={this._tabs}>
+        <Tabs defaultActiveKey={Object.keys(this.props.data)[0]} ref={this._tabs}>
           {
             (() => {
               const elementTypes = Object.keys(this.props.data);
               return elementTypes.map((elementType,index) => (
-                <Tab eventKey={index.toString()} title={elementType} key={index.toString()}>
+                <Tab eventKey={elementType} title={elementType} key={index.toString()}>
                   {
                     (() => {
                       const graph = this.props.data;
@@ -106,7 +127,7 @@ export default class TableViewer extends Component {
                         return (
                           <div className="table-filter-container">
                             {
-                              keys.map((key,i) => (
+                              keys.filter((key) => key.startsWith(this.state.filterFilter)).map((key,i) => (
                                   <Form.Check
                                       type="checkbox"
                                       label={key}
