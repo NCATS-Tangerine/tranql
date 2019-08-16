@@ -29,10 +29,10 @@ arrow = \
         Literal ("->") | \
         Literal ("<-")
 question_graph_element = (
-    concept_name + Suppress(ZeroOrMore ( LineEnd () ))
+    concept_name + ZeroOrMore ( LineEnd () )
 ) | \
 Group (
-    concept_name + COLON + concept_name + Suppress(ZeroOrMore ( LineEnd () ))
+    concept_name + COLON + concept_name + ZeroOrMore ( LineEnd () )
 )
 question_graph_expression = question_graph_element + ZeroOrMore(arrow + question_graph_element)
 

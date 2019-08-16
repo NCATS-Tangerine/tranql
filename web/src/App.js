@@ -1093,9 +1093,22 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           setLoading(false);
           const graph = this.state.schemaMessage.knowledge_graph;
 
+          // Recursviely removes any tokens that are linebreaks from a parsed tree.
+          const stripLinebreaks = function(tree) {
+            if (Array.isArray(tree)) {
+              return tree.filter((token) => stripLinebreaks(token));
+            }
+            else {
+              return tree.match(/\r\n|\r|\n/) === null;
+            }
+          }
+          
           // Filter whitespace from the statements
-          const block = parsedTree[parsedTree.length-1];
+          const block = parsedTree[parsedTree.length-1].map((statement) => {
+            return stripLinebreaks(statement);
+          });
           const lastStatement = block[block.length-1];
+
 
           const statementType = lastStatement[0];
 
