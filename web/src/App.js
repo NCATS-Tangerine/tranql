@@ -935,6 +935,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const untrimmedPos = codeMirror.getCursor();
     const textToCursorPositionUntrimmed = codeMirror.getRange({ line : 0, ch : 0 }, { line : pos.line, ch : pos.ch });
     const textToCursorPosition = textToCursorPositionUntrimmed.trimRight();
+    const entireText = codeMirror.getValue();
 
     // const splitLines = textToCursorPosition.split(/\r\n|\r|\n/);
     // // Adjust the position after trimming to be on the correct line.
@@ -1076,9 +1077,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       method: "POST",
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'text/plain',
+        'Content-Type': 'application/json',
       },
-      body: textToCursorPositionUntrimmed
+      body: JSON.stringify([textToCursorPositionUntrimmed, entireText])
     }).then(res => res.json())
       .then(async (parsedTree) => {
         setLoading(false)
@@ -1103,12 +1104,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             }
           }
 
+          const incompleteTree = parsedTree[0];
+          const completeTree = parsedTree[1];
+
           // Filter whitespace from the statements
-          const block = parsedTree[parsedTree.length-1].map((statement) => {
+          const block = incompleteTree[incompleteTree.length-1].map((statement) => {
             return stripLinebreaks(statement);
           });
-          const lastStatement = block[block.length-1];
+          const completeBlock = completeTree[completeTree.length-1].map((statement) => {
+            return stripLinebreaks(statement);
+          });
 
+          const lastStatement = block[block.length-1];
+          const lastStatementComplete = completeBlock[block.length-1];
 
           const statementType = lastStatement[0];
 
@@ -1174,6 +1182,22 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             return predicate;
           }
 
+          const concept = (old_concept) => {
+            // Concept identifiers aren't actually parsed by the lexer, but rather the ast in Query::add.
+            // This just copies the methods that the ast uses to parse concept identifiers.
+            if (old_concept.indexOf(":") !== -1) {
+              const split = old_concept.split(":");
+              if (split.length - 1 > 1) {
+                throw new Error(`Invalid concept identifier "${old_concept}"`);
+              }
+              const [name, type_name] = split;
+              return type_name;
+            }
+            else {
+              return old_concept;
+            }
+          }
+
           const lastToken = lastStatement[lastStatement.length-1];
           const secondLastToken = lastStatement[lastStatement.length-2];
           const thirdLastToken = lastStatement[lastStatement.length-3];
@@ -1202,23 +1226,29 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 lastToken[0],
                 lastToken[1] !== undefined ? lastToken[1] : ""
               ]);
-              let previousConcept = secondLastToken;
+              let previousConcept = concept(secondLastToken);
+              // May be undefined if there is no next concept
+              let nextConcept = concept(lastStatementComplete[lastStatement.length]);
+              // See https://github.com/frostyfan109/tranql/issues/117 for why this approach doesn't work
+              nextConcept = undefined;
 
 
               const backwards = isBackwardsPredicate (currentPredicate);
 
-              console.log ([previousConcept, currentPredicate]);
+              console.log ([previousConcept, currentPredicate, nextConcept]);
 
               // Should replace this method with reduce
 
               const allEdges = graph.edges.filter((edge) => {
                 if (backwards) {
                   return edge.target_id === previousConcept &&
+                  (nextConcept === undefined || edge.source_id === nextConcept) &&
                   edge.type.startsWith(currentPredicate[1]);
                 }
                 else {
                   return (
                     edge.source_id === previousConcept &&
+                    (nextConcept === undefined || edge.target_id === nextConcept) &&
                     edge.type.startsWith(currentPredicate[1])
                   );
                 }
@@ -1254,17 +1284,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
               else if (secondLastToken === statementType) {
                 // "select foo"
-                currentConcept = lastToken;
+                currentConcept = concept(lastToken);
               }
               else if (concept_arrows.includes(lastToken) || Array.isArray(lastToken)) {
                 // "select foo->" or "select foo-[bar]->"
                 predicate = lastToken;
-                previousConcept = secondLastToken;
+                previousConcept = concept(secondLastToken);
               }
               else {
-                previousConcept = thirdLastToken;
+                previousConcept = concept(thirdLastToken);
                 predicate = secondLastToken;
-                currentConcept = lastToken;
+                currentConcept = concept(lastToken);
               }
 
 
@@ -1346,16 +1376,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               let valid = true;
               if (tokens.length === 1) {
                 // Handles if there's only one concept ("select foo")
-                const currentConcept = tokens[0];
+                const currentConcept = concept(tokens[0]);
                 graph.nodes.filter((node) => node.type.startsWith(currentConcept)).forEach(node => node.reasoner.forEach((reasoner) => {
                   !validReasoners.includes(reasoner) && validReasoners.push(reasoner);
                 }));
               }
               else {
                 for (let i=0;i<tokens.length-2;i+=2) {
-                  const previousConcept = tokens[i];
+                  const previousConcept = concept(tokens[i]);
                   let predicate = tokens[i+1];
-                  const currentConcept = tokens[i+2];
+                  const currentConcept = concept(tokens[i+2]);
 
                   if (!Array.isArray(predicate)) {
                     predicate = arrowToEmptyPredicate (predicate);
@@ -1411,13 +1441,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           }
           }
           catch (e) {
-            setError('Failed to parse', e.message, e.stack);
+            setError('Failed to parse', 'Failed to parse', [{message: e.message, details: e.stack}]);
           }
         }
       })
       .catch((error) => {
         if (error.name !== "AbortError") {
-          setError('Error', error.message, error.stack);
+          setError('Error', 'Error', [{message: error.message, details: error.stack}]);
         }
       });
   }
