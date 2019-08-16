@@ -1102,7 +1102,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               return tree.match(/\r\n|\r|\n/) === null;
             }
           }
-          
+
           // Filter whitespace from the statements
           const block = parsedTree[parsedTree.length-1].map((statement) => {
             return stripLinebreaks(statement);
@@ -1211,7 +1211,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
               // Should replace this method with reduce
 
-              validConcepts = graph.edges.filter((edge) => {
+              const allEdges = graph.edges.filter((edge) => {
                 if (backwards) {
                   return edge.target_id === previousConcept &&
                   edge.type.startsWith(currentPredicate[1]);
@@ -1222,11 +1222,20 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     edge.type.startsWith(currentPredicate[1])
                   );
                 }
-              }).map((edge) => edge.type).unique().map((type) => {
+              });
+              const uniqueEdgeMap = {};
+              allEdges.forEach((edge) => {
+                if (!uniqueEdgeMap.hasOwnProperty(edge.type)) {
+                  uniqueEdgeMap[edge.type] = edge;
+                }
+              });
+              const uniqueEdges = Object.values(uniqueEdgeMap);
+              validConcepts = uniqueEdges.map((edge) => {
                 const replaceText = currentPredicate[1];
                 // const actualText = type + currentPredicate[2];
-                const actualText = type;
-                const displayText = type;
+                const conceptHint = " (" + (backwards ? edge.source_id : edge.target_id) + ")";
+                const actualText = edge.type;
+                const displayText = edge.type + conceptHint;
                 return {
                   displayText: displayText,
                   text: actualText,

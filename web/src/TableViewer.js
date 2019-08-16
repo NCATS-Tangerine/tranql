@@ -147,21 +147,25 @@ export default class TableViewer extends Component {
                                         if (this.props.searchMethod !== null) {
                                           return this.props.searchMethod(filter,row);
                                         }
-
+                                        const attributeValue = row[filter.id];
+                                        if (typeof attributeValue === 'undefined') {
+                                          // If the object doesn't have this attribute just don't include it.
+                                          return false;
+                                        }
                                         const isRegexLiteral = filter.value.match(/^\/(.*)\/([g|i|m|u|y]*)$/);
                                         if (isRegexLiteral !== null) {
                                           try {
                                             const expr = isRegexLiteral[1];
                                             const flags = isRegexLiteral[2];
                                             const re = new RegExp(expr,flags);
-                                            return row[filter.id].match(re);
+                                            return attributeValue.match(re);
                                           }
                                           catch {
                                             // Return false if the regex is invalid
                                             return false;
                                           }
                                         }
-                                        return row[filter.id].includes(filter.value);
+                                        return attributeValue.includes(filter.value);
                                       }}
                                       className="-striped -highlight"
                                       {...this.props.tableProps}/>
