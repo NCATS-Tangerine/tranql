@@ -84,8 +84,8 @@ QtAwesome==0.6.0
 qtconsole==4.4.3
 QtPy==1.9.0
 readme-renderer==24.0
-#redis==3.2.0
-#redisgraph==1.7
+redis==3.2.0
+redisgraph==1.7
 requests==2.21.0
 requests-cache==0.4.13
 requests-mock==1.5.2
