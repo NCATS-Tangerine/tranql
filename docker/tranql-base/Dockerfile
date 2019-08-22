@@ -4,9 +4,12 @@ WORKDIR /
 
 RUN apk add git
 RUN pip install --upgrade pip
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r ./requirements.txt
+#COPY requirements.txt ./
+#RUN pip install --no-cache-dir -r ./requirements.txt
 RUN git clone https://github.com/NCATS-Tangerine/tranql.git
+RUN grep -v mysql tranql/tranql/requirements.txt > r
+RUN mv r tranql/tranql/requirements.txt
+RUN pip install --no-cache-dir -r tranql/tranql/requirements.txt
 RUN apk del git
 
 ENV PYTHONPATH /tranql
