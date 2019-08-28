@@ -10,7 +10,7 @@ import traceback
 import yaml
 import jsonschema
 import requests
-from flask import Flask, request, abort, Response, send_from_directory
+from flask import Flask, request, abort, Response, send_file, send_from_directory, render_template
 from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
@@ -28,7 +28,8 @@ logger = logging.getLogger (__name__)
 
 web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
 
-app = Flask(__name__, static_folder=web_app_root)
+app = Flask(__name__)
+#app = Flask(__name__, static_folder=web_app_root)
 #dashboard.bind(app)
 
 api = Api(app)
@@ -58,6 +59,7 @@ with open(filename, 'r') as file_obj:
     }
     with open(definitions_filename, 'r') as definitions_file:
         template['definitions'].update(yaml.load(definitions_file))
+
 swagger = Swagger(app, template=template, config={
     "headers": [
     ],
@@ -136,7 +138,7 @@ class WebAppRoot(Resource):
         consumes': [ 'text/plain' ]
         """
         return send_from_directory(web_app_root, 'index.html')
-api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
+#api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
 
 class WebAppPath(Resource):
     def get(self, path):
@@ -152,14 +154,18 @@ class WebAppPath(Resource):
               required: true
               description: Resource path.
         """
-        resource_path = os.path.join (os.path.dirname (__file__), os.path.sep, path)
-        logger.debug (f"--path: {resource_path}")
+        logger.error (f"........................PATH: {path}")
         if path != "" and os.path.exists(web_app_root + "/" + path):
-            return send_from_directory(web_app_root, path)
+            return send_from_directory (web_app_root, filename=path)
         else:
             abort (404)
-api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
 
+#api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
+#api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return request.path, 404
 
 class Configuration(StandardAPIResource):
     """ Configuration """
@@ -743,6 +749,14 @@ api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
 api.add_resource(ReasonerURLs, '/tranql/reasonerURLs')
+
+api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
+api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')

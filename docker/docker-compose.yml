@@ -13,8 +13,8 @@ services:
       - BACKPLANE=http://backplane:8099
       - APP_PORT
     entrypoint: /usr/local/bin/gunicorn --workers=2 --bind=0.0.0.0:$APP_PORT --name=tranql --timeout=600 tranql.api:app
-#    volumes:
-#      - /Users/scox/dev/tranql:/tranql
+    volumes:
+      - /Users/scox/dev/tranql:/tranql
     ports:
       - "${APP_PORT}:${APP_PORT}"
 networks:
