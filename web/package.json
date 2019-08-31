@@ -50,7 +50,7 @@
     "uuid": "^3.3.2"
   },
   "scripts": {
-    "start": "rescripts start",
+    "start": "react-scripts start",
     "build": "rescripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

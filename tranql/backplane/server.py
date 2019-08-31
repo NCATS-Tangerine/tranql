@@ -652,7 +652,7 @@ class GammaResource(StandardAPIResource):
         super().__init__()
         self.robokop_url = 'https://robokop.renci.org' # TODO - make a configuration setting.
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
-        self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
+        self.quick_url = f'{self.robokop_url}/api/simple/quick/?rebuild=false&output_format=MESSAGE&max_connectivity=0&max_results=25'
     def view_url (self, uid):
         return f'{self.robokop_url}/simple/view/{uid}'
 
