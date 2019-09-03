@@ -426,7 +426,10 @@ class TranQLQuery(StandardAPIResource):
         result = {}
 
         logging.debug (request.data)
-        query = request.data.decode('utf-8')
+        if request.json is None:
+            query = request.data.decode('utf-8')
+        else:
+            query = request.json['query']
         dynamic_id_resolution = request.args.get('dynamic_id_resolution','False').upper() == 'TRUE'
         asynchronous = request.args.get('asynchronous', 'True').upper() == 'TRUE'
         logging.debug (f"--> query: {query}")
