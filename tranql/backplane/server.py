@@ -711,6 +711,8 @@ class GammaQuery(GammaResource):
         del request.json['knowledge_graph']
         del request.json['knowledge_maps']
         del request.json['options']
+        app.logger.debug (f"Making request to {self.quick_url}")
+        app.logger.debug (json.dumps(request.json, indent=2))
         response = requests.post (self.quick_url, json=request.json)
         # print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
@@ -721,6 +723,8 @@ class GammaQuery(GammaResource):
             }
         else:
             result = self.normalize_message (response.json ())
+        if app.logger.isEnabledFor(logging.DEBUG):
+            app.logger.debug (json.dumps(result, indent=2))
         return self.response(result)
 
 class PublishToGamma(GammaResource):
@@ -942,6 +946,11 @@ api.add_resource(ICEESSchema, '/clincial/icees/schema')
 api.add_resource(PublishToGamma, '/visualize/gamma')
 api.add_resource(PublishToNDEx, '/visualize/ndex')
 
+if __name__ != "__main__":
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='TranQL Backplane')
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
