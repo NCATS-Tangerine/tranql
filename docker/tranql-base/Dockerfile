@@ -22,4 +22,4 @@ ENV PORT=8099
 # Including it here to avoid a superfluous additional layer.
 ENV BACKPLANE=http://tranql-backplane.renci.org
 
-ENTRYPOINT /usr/local/bin/gunicorn --workers=$WORKERS --bind=0.0.0.0:$PORT --name=$APP_NAME --timeout=600 $APP_MODULE
+ENTRYPOINT /usr/local/bin/gunicorn --workers=$WORKERS --bind=0.0.0.0:$PORT --name=$APP_NAME --timeout=600 --log-level=debug $APP_MODULE
