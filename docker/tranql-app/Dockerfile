@@ -9,4 +9,4 @@ RUN ln -s /tranql/web/build/static/ /tranql/tranql/static
 RUN apk del nodejs npm git
 WORKDIR /
 
-#ENTRYPOINT /usr/local/bin/gunicorn --workers=$WORKERS --bind=0.0.0.0:$PORT --name=$APP_NAME $APP_MODULE
+#ENTRYPOINT /usr/local/bin/gunicorn --workers=$WORKERS --bind=0.0.0.0:$PORT --name=$APP_NAME --log-level=debug $APP_MODULE
