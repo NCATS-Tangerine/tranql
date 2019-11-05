@@ -9,7 +9,7 @@ spec:
   terminationGracePeriodSeconds: 10
   containers:
   - name: tranql-app
-    image: greentranslator/tranql-app
+    image: renciorg/tranql-app
     command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "tranql.api:app" ]
     ports:
       - containerPort: 8001

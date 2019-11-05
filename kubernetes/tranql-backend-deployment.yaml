@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: tranql-backplane
-        image: greentranslator/tranql-base
+        image: renciorg/tranql-base
         command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "tranql.backplane.server:app" ]
         ports:
           - containerPort: 8099
