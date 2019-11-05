@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tranql-frontend-deployment
+  labels:
+    app: tranql-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tranql-frontend
+  template:
+    metadata:
+      labels:
+        app: tranql-frontend
+    spec:
+      containers:
+      - name: tranql-app
+        image: greentranslator/tranql-app
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "tranql.api:app" ]
+        ports:
+          - containerPort: 8001
+            name: http
+        env:
+          - name: APP_PORT
+            value: "8001"
+          - name: BACKPLANE
+            value: http://tranql-backend-service.bennettc.svc.stars-cluster.local:8099

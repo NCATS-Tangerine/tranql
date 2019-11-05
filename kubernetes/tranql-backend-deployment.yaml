@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tranql-backend-deployment
+  labels:
+    app: tranql-backend
+spec:
+  selector:
+    matchLabels:
+      app: tranql-backend
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: tranql-backend
+    spec:
+      containers:
+      - name: tranql-backplane
+        image: greentranslator/tranql-base
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "tranql.backplane.server:app" ]
+        ports:
+          - containerPort: 8099
+            name: http
+        env:
+          - name: BACKPLANE_PORT
+            value: "8099"

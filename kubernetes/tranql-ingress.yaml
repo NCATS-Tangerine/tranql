@@ -11,18 +11,14 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "6000"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "6000"
 spec:
- rules:
- - host: tranql.local.org
-   http:
-     paths:
-     - path: /
-       backend:
-         serviceName: tranql
-         servicePort: 8001
- - host: tranql.local.org
-   http:
-     paths:
-     - path: /*
-       backend:
-         serviceName: tranql
-         servicePort: 8001
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: tranql-frontend-service
+          servicePort: 8001
+      - path: /*
+        backend:
+          serviceName: tranql-frontend-service
+          servicePort: 8001

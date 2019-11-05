@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: tranql
+  name: tranql-frontend-service
 spec:
-  type: NodePort
+  type:	LoadBalancer
   selector:
-    app: tranql
+    app: tranql-frontend
   ports:
   - protocol: TCP
     port: 8001
