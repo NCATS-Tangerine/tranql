@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tranql-frontend-deployment
+  namespace: translator
   labels:
     app: tranql-frontend
 spec:
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
       - name: tranql-app
-        image: greentranslator/tranql-app
+        image: renciorg/tranql-app
         command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "tranql.api:app" ]
         ports:
           - containerPort: 8001
