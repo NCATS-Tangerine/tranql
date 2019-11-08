@@ -4,6 +4,7 @@ metadata:
   name: tranql-frontend-deployment
   namespace: translator
   labels:
+    service: tranql-frontend-service
     app: tranql-frontend
 spec:
   replicas: 2
@@ -15,10 +16,11 @@ spec:
       labels:
         app: tranql-frontend
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
       - name: tranql-app
         image: renciorg/tranql-app
-        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "tranql.api:app" ]
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "--access-logfile='-'", "--error-logfile='-'", "--log-level=debug", "tranql.api:app" ]
         ports:
           - containerPort: 8001
             name: http
@@ -26,4 +28,11 @@ spec:
           - name: APP_PORT
             value: "8001"
           - name: BACKPLANE
-            value: http://tranql-backend-service.bennettc.svc.stars-cluster.local:8099
+            value: http://tranql-backend-service.translator.svc.stars-cluster.local:8099
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 1Gi
+        stdin: true
+      restartPolicy: Always

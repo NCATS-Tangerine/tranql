@@ -4,7 +4,8 @@ metadata:
   name: tranql-backend-service
   namespace: translator
 spec:
-  type:	ClusterIP
+  type:	LoadBalancer
+  loadBalancerIP: nnn.nn.nn.nnn
   selector:
     app: tranql-backend
   ports:

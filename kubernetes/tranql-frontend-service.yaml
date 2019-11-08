@@ -5,6 +5,7 @@ metadata:
   namespace: translator
 spec:
   type:	LoadBalancer
+  loadBalancerIP: nnn.nn.nn.nnn
   selector:
     app: tranql-frontend
   ports:

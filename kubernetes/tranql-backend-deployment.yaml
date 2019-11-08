@@ -4,6 +4,7 @@ metadata:
   name: tranql-backend-deployment
   namespace: translator
   labels:
+    service: tranql-backend-service
     app: tranql-backend
 spec:
   selector:
@@ -15,13 +16,20 @@ spec:
       labels:
         app: tranql-backend
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
       - name: tranql-backplane
         image: renciorg/tranql-base
-        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "tranql.backplane.server:app" ]
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "--access-logfile='-'", "--error-logfile='-'", "--log-level=debug", "tranql.backplane.server:app" ]
         ports:
           - containerPort: 8099
             name: http
         env:
           - name: BACKPLANE_PORT
             value: "8099"
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 1Gi
+      restartPolicy: Always
