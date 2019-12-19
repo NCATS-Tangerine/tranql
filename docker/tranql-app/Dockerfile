@@ -1,4 +1,4 @@
-FROM greentranslator/tranql-base
+FROM renciorg/tranql-base
 
 WORKDIR /
 RUN apk add nodejs npm git
