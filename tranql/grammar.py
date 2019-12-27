@@ -23,6 +23,10 @@ tableName      = quotedString.setName ("service name")
 tableNameList  = Group(delimitedList(tableName))
 
 SEMI,COLON,LPAR,RPAR,LBRACE,RBRACE,LBRACK,RBRACK,DOT,COMMA,EQ = map(Literal,";:(){}[].,=")
+
+concept_value = quotedString.setName('concept value')
+concept_value_list = Group(LBRACK.suppress() + delimitedList(concept_value) + RBRACK.suppress())
+
 arrow = \
         Group(Literal("-[") + concept_name + Literal("]->")) | \
         Group(Literal("<-[") + concept_name + Literal("]-")) | \
@@ -49,6 +53,7 @@ whereCondition = Group(
     ( columnName + binop + (columnRval | Word(printables) ) ) |
     ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
     ( columnName + in_ + "(" + statement + ")" ) |
+    ( columnName + in_ + (columnRval | Word(printables))) |
     ( "(" + whereExpression + ")" )
 )
 whereExpression << whereCondition + ZeroOrMore( ( and_ | or_ ) + whereExpression )
@@ -77,7 +82,8 @@ statement <<= (
         SET + (columnName + EQ + ( quotedString |
                                    ident |
                                    intNum |
-                                   realNum ))
+                                   realNum |
+                                   concept_value_list ))
     )("set")
     |
     Group(

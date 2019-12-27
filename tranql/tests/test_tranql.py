@@ -189,6 +189,18 @@ def test_ast_set_variable (requests_mock):
     statement = SetStatement (variable="variable", value="x")
     statement.execute (tranql)
     assert tranql.context.resolve_arg ("$variable") == 'x'
+
+def test_ast_set_variable_as_list ():
+    tranql = TranQL()
+    curie_list = ['chebi:16576', 'chebi:00004']
+    ast_tree = tranql.parse(f"""
+        set chemical_substance = {curie_list}
+        """).parse_tree
+    set_statment = ast_tree[0]
+    value_list = set_statment[3]
+    assert isinstance(value_list, list)
+    assert value_list[0] == curie_list[0] and value_list[-1] == curie_list[-1]
+
 def test_ast_set_graph (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Set a variable to a graph passed as a result. """
@@ -234,6 +246,24 @@ def test_ast_generate_questions (requests_mock):
     questions = ast.statements[0].generate_questions (app)
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
+def test_ast_generate_questions_from_list():
+    tranql = TranQL()
+    curie_list = ['chebi:123', 'water']
+    ast = tranql.parse(
+        f"""
+            SET c = {curie_list}
+            SELECT chemical_substance->gene
+            FROM '/schema'
+            WHERE chemical_substance in $c
+            """
+    )
+    questions = ast.statements[1].generate_questions(tranql)
+    print(questions)
+    assert len(questions) == 2
+
+
+
+
 def test_ast_format_constraints (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that
