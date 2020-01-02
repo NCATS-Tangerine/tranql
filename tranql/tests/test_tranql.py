@@ -195,11 +195,15 @@ def test_ast_set_variable_as_list ():
     curie_list = ['chebi:16576', 'chebi:00004']
     ast_tree = tranql.parse(f"""
         set chemical_substance = {curie_list}
-        """).parse_tree
-    set_statment = ast_tree[0]
-    value_list = set_statment[3]
+        """)
+    set_statment_parsed = ast_tree.parse_tree[0]
+    set_statment = ast_tree.statements[0]
+    value_list = set_statment_parsed[3]
     assert isinstance(value_list, list)
     assert value_list[0] == curie_list[0] and value_list[-1] == curie_list[-1]
+    set_statment.execute(tranql)
+    assert tranql.context.mem.get('chemical_substance') == curie_list
+
 
 def test_ast_set_graph (requests_mock):
     set_mock(requests_mock, "workflow-5")
