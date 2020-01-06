@@ -5,6 +5,7 @@ import itertools
 import requests
 from pprint import pprint
 from deepdiff import DeepDiff
+from functools import reduce
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
 from tranql.tranql_ast import SetStatement, SelectStatement
@@ -258,12 +259,75 @@ def test_ast_generate_questions_from_list():
             SET c = {curie_list}
             SELECT chemical_substance->gene
             FROM '/schema'
-            WHERE chemical_substance in $c
+            WHERE chemical_substance=$c
             """
     )
+    # first let's run the set statement
+    ast.statements[0].execute(tranql)
     questions = ast.statements[1].generate_questions(tranql)
-    print(questions)
+    question_nodes = reduce(lambda x, y: x + y,
+                            list(
+                                map(lambda question: question['question_graph']['nodes'],
+                                questions)), [])
+    question_curies = list(map(lambda x: x['curie'], filter(lambda node: node['type'] == 'chemical_substance', question_nodes)))
+    assert len(set(question_curies)) == 2
     assert len(questions) == 2
+    for curie in question_curies:
+        assert curie in curie_list
+
+
+    # Multiple variable setting
+    chemicals = curie_list
+    gene_list = ['BRAC1', 'BRAC2']
+    ast_2 = tranql.parse(
+        f"""
+        SET chemicals= {chemicals}
+        SET genes = {gene_list}
+        SELECT chemical_substance->gene
+        FROM '/schema'
+        WHERE gene=$genes
+        AND chemical_substance=$chemicals
+        """
+    )
+    # Here we should get the following  chebi:123 -> BRAC1, chebi:123 -> BRAC2 , water -> BRAC1 and water -> BRAC2
+    # run set statements
+    set_chemicals = ast_2.statements[0]
+    set_genes = ast_2.statements[1]
+    select_statement = ast_2.statements[2]
+
+    set_chemicals.execute(tranql)
+    set_genes.execute(tranql)
+
+    # generate question
+
+    questions = select_statement.generate_questions(tranql)
+    # get all chemical and genes
+
+
+    grab_ids = lambda node_type: list(
+        # using SET to select unique ids only and casting back to list
+        # grabs ids from questions based on node type
+        set(reduce(
+            lambda acc, question_graph: acc + list(map(
+                lambda node: node['curie'],
+                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
+            )),
+            map(
+                lambda question: question['question_graph'],
+                questions
+            ),
+            []
+        ))
+    )
+    chemicals_ids = grab_ids('chemical_substance')
+    gene_ids = grab_ids('gene')
+    assert len(questions) == 4
+    chemicals.sort()
+    chemicals_ids.sort()
+    gene_ids.sort()
+    gene_list.sort()
+    assert_lists_equal(chemicals_ids, chemicals)
+    assert_lists_equal(gene_list, gene_ids)
 
 
 
@@ -960,3 +1024,71 @@ def test_program (requests_mock):
     kg = tranql.context.resolve_arg("$knowledge_graph")
     assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
     assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
+
+
+def test_unique_ids_for_repeated_concepts():
+    tranql = TranQL()
+    ast = tranql.parse(
+        """
+        SELECT g1:gene->g2:gene
+        FROM '/schema'
+        """
+    )
+    select_statement = ast.statements[0]
+    question = select_statement.generate_questions(tranql)[0]
+    import json
+    print(
+        json.dumps(
+            question, indent=4
+        )
+    )
+    assert question['question_graph']['nodes'] == [
+        {
+            'id': 'g1',
+            'type': 'gene'
+        },
+        {
+            'id': 'g2',
+            'type': 'gene'
+        }
+    ]
+
+def test_setting_values_for_repeated_concepts():
+    tranql = TranQL()
+    gene_list_1 = ['BRCA1', 'BRCA2']
+    gene_list_2 = ['LTA', 'TNF']
+    ast = tranql.parse(
+        f"""
+        SET brca={gene_list_1}
+        SET tnf={gene_list_2}
+        SELECT g1:gene->g2:gene
+        FROM '/schema'
+        WHERE g1 = $brca
+        AND g2 = $tnf
+        """
+    )
+    # exec set statments
+    set_brcas = ast.statements[0]
+    set_tnfs = ast.statements[1]
+    set_brcas.execute(tranql)
+    set_tnfs.execute(tranql)
+
+    # generate questions
+    questions = ast.statements[2].generate_questions(tranql)
+    question_nodes = reduce(lambda x, y: x + y,
+                            map(lambda question: question['question_graph']['nodes'], questions),
+                            [])
+    question_edges = reduce(lambda x, y: x + y,
+                            map(lambda question: question['question_graph']['edges'], questions),
+                            [])
+    curies = list(map(lambda node: node['curie'], question_nodes))
+    for gene in gene_list_1:
+        assert gene in curies
+    for gene in gene_list_2:
+        assert gene in curies
+
+    # also test if direction is good
+    for e in question_edges:
+        print(e)
+        assert e['source_id'] == 'g1'
+        assert e['target_id'] == 'g2'
