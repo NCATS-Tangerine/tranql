@@ -48,7 +48,7 @@ realNum = ppc.real()
 intNum = ppc.signed_integer()
 
 # need to add support for alg expressions
-columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName
+columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_value_list
 whereCondition = Group(
     ( columnName + binop + (columnRval | Word(printables) ) ) |
     ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |

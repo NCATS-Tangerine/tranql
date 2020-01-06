@@ -329,8 +329,34 @@ def test_ast_generate_questions_from_list():
     assert_lists_equal(chemicals_ids, chemicals)
     assert_lists_equal(gene_list, gene_ids)
 
+def test_generate_questions_where_clause_list():
+    # Try to generate questions if values for nodes are set as lists in the where clause
+    curies = ['HGNC:3', 'HGNC:34']
+    query = f"""
+    SELECT gene->chemical_substance
+    FROM '/schema'
+    WHERE gene={curies}
+    """
+    tranql = TranQL()
+    ast = tranql.parse(query)
+    select_statememt = ast.statements[0]
+    questions = select_statememt.generate_questions(tranql)
 
-
+    question_nodes = reduce(
+        lambda x, y: x + y,
+        list(
+            map(
+                lambda x: x['question_graph']['nodes'],
+                questions
+            )
+        ), [])
+    # filter out gene curies from the questions
+    gene_curies = list(map(lambda node: node['curie'], filter(lambda node: node['type'] == 'gene', question_nodes)))
+    # we should have two questions
+    assert len(questions) == 2
+    gene_curies.sort()
+    curies.sort()
+    assert set(gene_curies) == set(curies)
 
 def test_ast_format_constraints (requests_mock):
     set_mock(requests_mock, "workflow-5")
