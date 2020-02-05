@@ -44,6 +44,8 @@ from tranql.util import Concept
 from tranql.util import LoggingUtil
 from tranql.tranql_ast import TranQL_AST
 from tranql.grammar import program_grammar, incomplete_program_grammar
+from pyparsing import ParseException
+from tranql.exception import TranQLException
 
 LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
@@ -58,7 +60,16 @@ class Parser:
 
     def parse (self, line):
         """ Parse a program, returning an abstract syntax tree. """
-        result = self.tokenize (line)
+        try:
+            result = self.tokenize (line)
+        except ParseException as pEx:
+            message = f"Parsing error at line {pEx.lineno}, col {pEx.col}."
+            details = f'{pEx.line}'
+            details += f"\n{' ' * (pEx.col -1)}^^^"
+            details += f"\n{pEx.msg}"
+            logger.error(message + '\n' + details)
+            raise TranQLException(message, details)
+
         return TranQL_AST (result.asList (), self.backplane)
 
 class TranQLParser(Parser):
