@@ -51,9 +51,10 @@ LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
 
 class Parser:
-    def __init__(self, grammar, backplane):
+    def __init__(self, grammar, backplane, use_registry=False):
         self.program = grammar
         self.backplane = backplane
+        self.use_registry = use_registry
 
     def tokenize (self, line):
         return self.program.parseString (line)
@@ -70,12 +71,12 @@ class Parser:
             logger.error(message + '\n' + details)
             raise TranQLException(message, details)
 
-        return TranQL_AST (result.asList (), self.backplane)
+        return TranQL_AST (result.asList (), self.backplane, self.use_registry)
 
 class TranQLParser(Parser):
     """ Defines the language's grammar. """
-    def __init__(self, backplane):
-        super().__init__ (program_grammar, backplane)
+    def __init__(self, backplane, use_registry):
+        super().__init__ (program_grammar, backplane, use_registry=use_registry)
 
 class TranQLIncompleteParser(Parser):
     def __init__(self, backplane):
@@ -103,7 +104,7 @@ class TranQL:
         if env_backplane:
             backplane = env_backplane
         self.context.set ("backplane", backplane)
-        self.parser = TranQLParser (backplane)
+
 
         # Priority:
         #   1 - Options
@@ -114,6 +115,8 @@ class TranQL:
         self.name_based_merging = options.get("name_based_merging", self.config.get('NAME_BASED_MERGING', True))
         self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
         self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
+        self.use_registry = options.get("use_registry", self.config.get('USE_REGISTRY', False))
+        self.parser = TranQLParser (backplane, self.use_registry)
 
     def parse (self, program):
         """ If we just want the AST. """
@@ -235,6 +238,7 @@ def main ():
     arg_parser.add_argument('-x', '--asynchronous', default=True, help="Run requests asynchronously resulting in faster queries")
     arg_parser.add_argument('-n', '--name_based_merging', default=True, help="Merge nodes that have the same name properties as one another")
     arg_parser.add_argument('-r', '--resolve_names', default=False, help="(Experimental) Resolve equivalent identifiers of nodes in responses via the Bionames API. Can result in a more thoroughly merged graph.")
+    arg_parser.add_argument('-R', '--use_registry', help="Use registries to get data", default=False, action='store_true')
     args = arg_parser.parse_args ()
 
     global logger
@@ -250,7 +254,13 @@ def main ():
                                      allowable_methods=('GET', 'POST', ))
 
     """ Create an interpreter. """
-    options = {x: vars(args)[x] for x in vars(args) if x in ["asynchronous","name_based_merging","resolve_names","dynamic_id_resolution"]}
+    options = {x: vars(args)[x] for x in vars(args) if x in [
+        "asynchronous",
+        "name_based_merging",
+        "resolve_names",
+        "dynamic_id_resolution",
+        "use_registry"
+    ]}
     tranql = TranQL (backplane = args.backplane, options = options)
     for k, v in query_args.items ():
         logger.debug (f"setting {k}={v}")

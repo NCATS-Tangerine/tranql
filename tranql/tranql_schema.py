@@ -144,7 +144,7 @@ class RegistryAdapter:
 class Schema:
     """ A schema for a distributed knowledge network. """
 
-    def __init__(self, backplane):
+    def __init__(self, backplane, use_registry):
         """
         Create a metadata map of the knowledge network.
         """
@@ -162,12 +162,13 @@ class Schema:
         """ Resolve remote schemas. """
         for schema_name, metadata in self.config['schema'].copy ().items ():
             if 'registry' in metadata:
-                registry_name = metadata['registry']
-                registry_url = metadata['registry_url']
-                new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url)
-                ## Extend config['schema'] with these new onces
-                self.config['schema'].update(new_schemas)
-                # remove registry entry
+                if use_registry:
+                    registry_name = metadata['registry']
+                    registry_url = metadata['registry_url']
+                    new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url)
+                    ## Extend config['schema'] with these new onces
+                    self.config['schema'].update(new_schemas)
+                    # remove registry entry
                 del self.config['schema'][schema_name]
                 continue
             schema_data = metadata['schema']

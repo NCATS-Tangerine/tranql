@@ -3,6 +3,7 @@ import pytest
 import os
 import itertools
 import requests
+import yaml
 from pprint import pprint
 from deepdiff import DeepDiff
 from functools import reduce
@@ -1118,3 +1119,44 @@ def test_setting_values_for_repeated_concepts():
         print(e)
         assert e['source_id'] == 'g1'
         assert e['target_id'] == 'g2'
+
+def test_schema_can_talk_to_automat():
+    config_file = os.path.join(os.path.dirname(__file__),"..","conf","schema.yaml")
+    with open(config_file) as stream:
+        schema_yml = yaml.load(stream, Loader=yaml.Loader)
+    automat_url = schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
+    live_kps = requests.get(f'{automat_url}/registry').json()
+
+    tranql = TranQL(options={
+        'use_registry': True
+    })
+    ast = tranql.parse("""
+            SELECT disease->d2:disease
+              FROM '/schema'             
+        """)
+
+    select = ast.statements[0]
+    tranql_schema = select.planner.schema
+    ## Test each KP is registered in schema
+    for kp in live_kps:
+        assert f'automat_{kp}' in tranql_schema.schema, f'KP Tranql schema entry not found for {kp}'
+        ## Test if URL is refering to backplane url
+        automat_kp_schema = tranql_schema.schema[f'automat_{kp}']
+        assert automat_kp_schema['url'] == f'/graph/automat/{kp}', 'Automat backplane url incorrect'
+
+def test_registry_disable():
+    tranql = TranQL(options={
+        'use_registry': False
+    })
+    ast = tranql.parse("""
+        SELECT disease->d2:disease
+        FROM '/schema'
+    """)
+    select = ast.statements[0]
+    tranql_schema = select.planner.schema.schema
+    config_file = os.path.join(os.path.dirname(__file__), "..", "conf", "schema.yaml")
+    with open(config_file) as stream:
+        schema_yml = yaml.load(stream, Loader=yaml.Loader)['schema']
+    schema_with_registry = {x: schema_yml[x] for x in schema_yml if 'registry'  in schema_yml[x]}
+    for schema_key in tranql_schema:
+        assert schema_key not in schema_with_registry
