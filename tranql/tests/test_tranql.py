@@ -13,6 +13,11 @@ from tranql.tranql_ast import SetStatement, SelectStatement
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
+from tranql.tranql_schema import SchemaFactory
+import requests_mock
+from unittest.mock import patch
+import copy, time
+
 #set_verbose ()
 
 def assert_parse_tree (code, expected):
@@ -1145,18 +1150,130 @@ def test_schema_can_talk_to_automat():
         assert automat_kp_schema['url'] == f'/graph/automat/{kp}', 'Automat backplane url incorrect'
 
 def test_registry_disable():
-    tranql = TranQL(options={
-        'use_registry': False
-    })
-    ast = tranql.parse("""
-        SELECT disease->d2:disease
-        FROM '/schema'
-    """)
-    select = ast.statements[0]
-    tranql_schema = select.planner.schema.schema
-    config_file = os.path.join(os.path.dirname(__file__), "..", "conf", "schema.yaml")
-    with open(config_file) as stream:
-        schema_yml = yaml.load(stream, Loader=yaml.Loader)['schema']
-    schema_with_registry = {x: schema_yml[x] for x in schema_yml if 'registry'  in schema_yml[x]}
-    for schema_key in tranql_schema:
-        assert schema_key not in schema_with_registry
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, update_interval=1)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) == 0
+
+def test_registry_enabled():
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) > 1
+
+
+def test_registry_adapter_automat():
+    from tranql.tranql_schema import RegistryAdapter
+
+    # let pretend automat url is automat and we will mask what we expect to be called
+    # since there is no real logic here we just have to make sure apis are called
+
+    with requests_mock.mock() as mock_server:
+        mock_server.get('http://automat/registry', json=['kp1'])
+        expected_response = ['lets pretend this was a schema']
+        mock_server.get('http://automat/kp1/graph/schema', json=expected_response)
+        ra = RegistryAdapter()
+        response = ra.get_schemas('automat', 'http://automat')
+        assert 'automat_kp1' in response
+        assert 'schema' in response['automat_kp1']
+        assert 'url' in response['automat_kp1']
+        assert response['automat_kp1']['schema'] == expected_response
+
+
+def test_schema_should_not_change_once_initilalized():
+    """
+    Scenario: In a registry aware schema,
+    UserObject initializes schema object.
+    Schema object now has entries from registry(eg. automat).
+    UserObject starts work on that schema. During this time,
+    Schema instance is updated by it's thread and some entries on
+    the schema might have changed. When UserObject looks back at the schema
+    it's different
+    """
+
+    mock_schema_yaml = {
+        'schema':{
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    mock_schema_response = {
+        'kp1': {
+            'type1': {
+                'type2':[
+                    'related_to'
+                ]
+            }
+        },
+        'kp2': {
+            'type99': {
+                'type300': [
+                    'related_to'
+                ]
+            }
+        }
+    }
+
+
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        update_interval = 0.5
+        schema_factory = SchemaFactory(
+            backplane='http://localhost:8091',
+            use_registry=True,
+            update_interval=update_interval
+        )
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # say registry returns kp1 on first call
+            m.get('https://automat.renci.org/registry', json=['kp1'])
+            # here some Tranql objects have this instance.
+            schema1 = schema_factory.get_instance()
+            schema2 = schema_factory.get_instance()
+            # Doing something on second  schema instance should not affect the first.
+            schema2.schema['Lets add something'] = {'add some thing': 'dsds'}
+            assert 'Lets add something' not in schema1.schema
+
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # Now we change what registry returns and wait for update
+            m.get('https://automat.renci.org/registry', json=['kp2'])
+            # lets wait for next updated and request a new object
+            # testing to see if our new request results will affect the
+            # the original schema
+            time.sleep(update_interval + .1) # sleeping to ensure update thread is working
+            schema2 = schema_factory.get_instance()
+            # original reference to Schema should be different from second.
+            assert schema1.schema != schema2.schema

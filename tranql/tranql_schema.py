@@ -1,6 +1,7 @@
 import networkx as nx
 import json
 import yaml
+import copy
 import logging
 import requests
 import requests_cache
@@ -9,6 +10,8 @@ from tranql.concept import BiolinkModelWalker
 from collections import defaultdict
 from tranql.exception import TranQLException, InvalidTransitionException
 from tranql.redis_graph import RedisGraph
+import time
+import threading
 
 class NetworkxGraph:
     def __init__(self):
@@ -139,6 +142,42 @@ class RegistryAdapter:
                 }
             return main_schema
 
+
+class SchemaFactory:
+    """
+    Keeps a single SchemaInstance object till next update.
+    """
+    _cached = None
+    _update_thread = None
+
+    def __init__(self, backplane, use_registry, update_interval):
+        """
+        Make a new schema object if there is nothing cached
+        and start update thread.
+        :param backplane:
+        :param use_registry:
+        """
+
+        if not SchemaFactory._cached:
+            SchemaFactory._cached = Schema(backplane, use_registry)
+
+        if not SchemaFactory._update_thread:
+            # avoid creating multiple threads.
+            SchemaFactory._update_thread = threading.Thread(
+                target=SchemaFactory.update_cache_loop,
+                args=(backplane, use_registry , update_interval),
+                daemon=True)
+            SchemaFactory._update_thread.start()
+
+    @staticmethod
+    def get_instance():
+        return copy.deepcopy(SchemaFactory._cached)
+
+    @staticmethod
+    def update_cache_loop(backplane, use_registry, update_interval=20*60):
+        while True:
+            SchemaFactory._cached = Schema(backplane, use_registry)
+            time.sleep(update_interval)
 
 
 class Schema:

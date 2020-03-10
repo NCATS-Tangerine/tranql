@@ -44,6 +44,7 @@ from tranql.util import Concept
 from tranql.util import LoggingUtil
 from tranql.tranql_ast import TranQL_AST
 from tranql.grammar import program_grammar, incomplete_program_grammar
+from tranql.tranql_schema import SchemaFactory
 from pyparsing import ParseException
 from tranql.exception import TranQLException
 
@@ -51,10 +52,11 @@ LoggingUtil.setup_logging ()
 logger = logging.getLogger (__name__)
 
 class Parser:
-    def __init__(self, grammar, backplane, use_registry=False):
+    def __init__(self, grammar, schema):
         self.program = grammar
-        self.backplane = backplane
-        self.use_registry = use_registry
+        self.schema = schema
+        # self.backplane = backplane
+        # self.use_registry = use_registry
 
     def tokenize (self, line):
         return self.program.parseString (line)
@@ -71,16 +73,16 @@ class Parser:
             logger.error(message + '\n' + details)
             raise TranQLException(message, details)
 
-        return TranQL_AST (result.asList (), self.backplane, self.use_registry)
+        return TranQL_AST (result.asList (), schema=self.schema)
 
 class TranQLParser(Parser):
     """ Defines the language's grammar. """
-    def __init__(self, backplane, use_registry):
-        super().__init__ (program_grammar, backplane, use_registry=use_registry)
+    def __init__(self, schema):
+        super().__init__ (program_grammar, schema)
 
 class TranQLIncompleteParser(Parser):
-    def __init__(self, backplane):
-        super().__init__ (incomplete_program_grammar, backplane)
+    def __init__(self, schema):
+        super().__init__ (incomplete_program_grammar, schema)
 
 class TranQL:
     """
@@ -116,7 +118,9 @@ class TranQL:
         self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
         self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
         self.use_registry = options.get("use_registry", self.config.get('USE_REGISTRY', False))
-        self.parser = TranQLParser (backplane, self.use_registry)
+        schema_factory = SchemaFactory(backplane=backplane, use_registry=self.use_registry,update_interval=20*60)
+        self.schema = schema_factory.get_instance()
+        self.parser = TranQLParser (self.schema)
 
     def parse (self, program):
         """ If we just want the AST. """
