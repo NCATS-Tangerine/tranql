@@ -209,7 +209,11 @@ class StandardAPIResource(Resource):
         return (data, status_code)
 class ICEESSchema(StandardAPIResource):
     def __init__(self):
-        self.schema_url = "https://icees.renci.org/2.0.0/knowledge_graph/schema"
+        self.version_to_url_map = {
+            "icees": "https://icees.renci.org/2.0.0/knowledge_graph/schema",
+            "icees3_and_epr": "https://icees.renci.org:16339/knowledge_graph/schema"
+        }
+
     def get(self):
         """
         ICEES schema
@@ -238,6 +242,21 @@ class ICEESSchema(StandardAPIResource):
                         schema:
                             $ref: '#/definitions/Error'
         """
+        icees_version = request.args.get('provider')
+        if not icees_version:
+            self.response({
+                "status": "error",
+                "code" : "400",
+                "message": "Bad request. Need to provide version as get parameter."
+            })
+
+        self.schema_url = self.version_to_url_map.get(icees_version)
+        if not self.schema_url:
+            self.response({
+                "status": "error",
+                "code": "500",
+                "message": f"The specified ICEES version could not be found - {icees_version}"
+            })
         response = requests.get (
             self.schema_url,
             verify=False)
@@ -258,6 +277,11 @@ class ICEESSchema(StandardAPIResource):
 
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
+    def __init__(self):
+        self.version_to_url_map = {
+            "icees": "https://icees.renci.org/2.0.0/knowledge_graph",
+            "icees3_and_epr": "https://icees.renci.org:16339/knowledge_graph"
+        }
 
     def post(self):
         """
@@ -316,7 +340,8 @@ class ICEESClusterQuery(StandardAPIResource):
                             $ref: '#/definitions/Error'
 
         """
-        self.validate (request, 'Message')
+        self.validate(request, 'Message')
+        icees_version = request.args.get('provider', 'icees')
         #print (f"{json.dumps(request.json, indent=2)}")
         request.json['options'] = self.compile_options (request.json['options'])
 
@@ -336,15 +361,21 @@ class ICEESClusterQuery(StandardAPIResource):
         result = {}
 
         ''' Invoke ICEES '''
-        icees_kg_url = "https://icees.renci.org/2.0.0/knowledge_graph"
+        icees_kg_url = self.version_to_url_map.get(icees_version) #"https://icees.renci.org/2.0.0/knowledge_graph"
+        if not icees_version:
+            self.response({
+                "status": "error",
+                "code": "500",
+                "message": f"The specified ICEES version could not be found - {icees_version}"
+            })
         app.logger.debug (f"--request.json({icees_kg_url})--> {json.dumps(request.json, indent=2)}")
         response = requests.post (icees_kg_url,
                                   json=request.json,
                                   verify=False)
 
-        with open ('icees.out', 'w') as stream:
-            json.dump (response.json (), stream, indent=2)
-        app.logger.debug (f"-- response --> {json.dumps(response.json(), indent=2)}")
+        # with open ('icees.out', 'w') as stream:
+        #     json.dump (response.json (), stream, indent=2)
+        # app.logger.debug (f"-- response --> {json.dumps(response.json(), indent=2)}")
 
         response_json = response.json ()
         its_an_error = response_json.\

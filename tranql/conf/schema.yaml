@@ -20,8 +20,18 @@ schema:
       capable of answering. For backplane URLs, the protocol, host, and port are implicit.
       The ICEES schema endpoint requires additional formatting and handling which we take care
       of in the backplane wrapper.
-    url: /clinical/cohort/disease_to_chemical_exposure
-    schema: /clincial/icees/schema
+    url: /clinical/cohort/disease_to_chemical_exposure?provider=icees
+    schema: /clincial/icees/schema?provider=icees
+
+  icees3_and_epr:
+    doc: |
+      We point at the ICEES clinical reasoners schema endpoint, mapping questions it is
+      capable of answering. For backplane URLs, the protocol, host, and port are implicit.
+      The ICEES schema endpoint requires additional formatting and handling which we take care
+      of in the backplane wrapper.
+    url: /clinical/cohort/disease_to_chemical_exposure?provider=icees3_and_epr
+    schema: /clincial/icees/schema?provider=icees3_and_epr
+
   rtx :
     doc: |
       The Rtx reasoner provides an endpoint returning the transitions it supports.
