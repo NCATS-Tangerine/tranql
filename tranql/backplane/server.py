@@ -411,7 +411,8 @@ class ICEESClusterQuery(StandardAPIResource):
                 for index, level in enumerate(levels):
                     if index < len(levels) - 1:
                         last = obj
-                        obj = obj.get(level, {})
+                        obj = obj.get(level, {}) if level != 'feature' else {} # we only allow one feature, last feature
+                                                                               # is the winner
                         last[level] = obj
                     else:
                         obj[level] = {
