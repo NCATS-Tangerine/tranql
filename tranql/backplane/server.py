@@ -411,7 +411,7 @@ class ICEESClusterQuery(StandardAPIResource):
                 for index, level in enumerate(levels):
                     if index < len(levels) - 1:
                         last = obj
-                        obj = {}
+                        obj = obj.get(level, {})
                         last[level] = obj
                     else:
                         obj[level] = {
