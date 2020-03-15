@@ -745,7 +745,7 @@ class GammaQuery(GammaResource):
         del request.json['options']
         app.logger.debug (f"Making request to {self.quick_url}")
         app.logger.debug (json.dumps(request.json, indent=2))
-        response = requests.post (self.quick_url, json=request.json)
+        response = requests.post (self.quick_url, json=request.json, verify=False)
         # print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
             result = {
