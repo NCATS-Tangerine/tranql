@@ -1133,7 +1133,7 @@ def test_schema_can_talk_to_automat():
     live_kps = requests.get(f'{automat_url}/registry').json()
 
     tranql = TranQL(options={
-        'use_registry': True
+        'registry': True
     })
     ast = tranql.parse("""
             SELECT disease->d2:disease
