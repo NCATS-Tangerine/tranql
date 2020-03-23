@@ -373,7 +373,7 @@ def test_ast_format_constraints (requests_mock):
     tranql = TranQL ()
     ast = tranql.parse ("""
         SELECT population_of_individual_organisms->chemical_substance
-          FROM "/clinical/cohort/disease_to_chemical_exposure"
+          FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
          WHERE icees.should_format = 1
            AND robokop.should_not_format = 0
     """)
@@ -1036,7 +1036,7 @@ def test_program (requests_mock):
     SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
     SELECT population_of_individual_organisms->drug_exposure
-      FROM "/clinical/cohort/disease_to_chemical_exposure"
+      FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
      WHERE EstResidentialDensity < '2'
        AND population_of_individual_organizms = 'x'
        AND cohort = 'all_patients'

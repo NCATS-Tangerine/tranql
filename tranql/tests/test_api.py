@@ -255,7 +255,7 @@ def test_query(client, requests_mock):
         SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
         SELECT population_of_individual_organisms->drug_exposure
-          FROM "/clinical/cohort/disease_to_chemical_exposure"
+          FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
          WHERE EstResidentialDensity < '2'
            AND population_of_individual_organizms = 'x'
            AND cohort = 'all_patients'
