@@ -167,6 +167,28 @@ class StandardAPIResource(Resource):
                     message['knowledge_graph']['nodes'].append(node)
                     nodeIds.append(node['id'])
         return message
+
+    def down_cast_message(self, message, reasoner_spec_version='2.0', down_cast_to='0.9'):
+        if reasoner_spec_version == '2.0':
+            assert 'query_graph' in message
+            assert 'knowledge_graph' in message
+            assert 'results' in message
+            if down_cast_to == '0.9':
+                converted_results = []
+                for r in message['results']:
+                    node_bindings = r['node_bindings']
+                    edge_bindings = r['edge_bindings']
+                    # Expecting
+                    # {qg_id: 'qg-id-value', kg_id: 'kg-id-value'}
+                    # tranform to {'qg-id-value': 'kg-id-value'}
+                    node_bindings = [{n['qg_id']: n['kg_id']} for n in node_bindings]
+                    edge_bindings = [{e['qg_id']: e['kg_id']} for e in edge_bindings]
+                    r['node_bindings'] = node_bindings
+                    r['edge_bindings'] = edge_bindings
+                    converted_results.append(r)
+                message['results'] = converted_results
+                return self.normalize_message(message)
+
     def normalize_message (self, message):
         if 'results' in message:
             return self.normalize_message(self.merge_results(message))
@@ -998,9 +1020,15 @@ class AutomatQuery(AutomatResource):
         self.validate (request, 'Message')
         url = self.get_kp_reasoner_api(kp_tag)
         app.logger.debug(f"Making request to {url}")
+        # question_graph should be query graph
+        question = request.json
+        question['query_graph'] = copy.deepcopy(question['question_graph'])
+        del question['question_graph']
+        del question['knowledge_graph']
+        del question['knowledge_maps']
+        app.logger.debug (json.dumps(question, indent=2))
 
-        app.logger.debug (json.dumps(request.json, indent=2))
-        response = requests.post (url, json=request.json)
+        response = requests.post(url, json=question)
         if response.status_code >= 300:
             result = {
                 "status" : "error",
@@ -1008,7 +1036,7 @@ class AutomatQuery(AutomatResource):
                 "message" : f"Bad Automat response. url: {self.url} \n request: {json.dumps(request.json, indent=2)} response: \n{response.text}."
             }
         else:
-            result = self.normalize_message (response.json ())
+            result = self.down_cast_message (response.json ())
         if app.logger.isEnabledFor(logging.DEBUG):
             app.logger.debug (json.dumps(result, indent=2))
         return self.response(result)

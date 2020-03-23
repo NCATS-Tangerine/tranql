@@ -117,7 +117,7 @@ class TranQL:
         self.name_based_merging = options.get("name_based_merging", self.config.get('NAME_BASED_MERGING', True))
         self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
         self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
-        self.use_registry = options.get("use_registry", self.config.get('USE_REGISTRY', False))
+        self.use_registry = options.get("registry", self.config.get('USE_REGISTRY', False))
         schema_factory = SchemaFactory(backplane=backplane, use_registry=self.use_registry,update_interval=20*60)
         self.schema = schema_factory.get_instance()
         self.parser = TranQLParser (self.schema)
@@ -242,7 +242,7 @@ def main ():
     arg_parser.add_argument('-x', '--asynchronous', default=True, help="Run requests asynchronously resulting in faster queries")
     arg_parser.add_argument('-n', '--name_based_merging', default=True, help="Merge nodes that have the same name properties as one another")
     arg_parser.add_argument('-r', '--resolve_names', default=False, help="(Experimental) Resolve equivalent identifiers of nodes in responses via the Bionames API. Can result in a more thoroughly merged graph.")
-    arg_parser.add_argument('-R', '--use_registry', help="Use registries to get data", default=False, action='store_true')
+    arg_parser.add_argument('-R', '--registry', help="Use registries to get data", default=False, action='store_true')
     args = arg_parser.parse_args ()
 
     global logger
@@ -263,7 +263,7 @@ def main ():
         "name_based_merging",
         "resolve_names",
         "dynamic_id_resolution",
-        "use_registry"
+        "registry"
     ]}
     tranql = TranQL (backplane = args.backplane, options = options)
     for k, v in query_args.items ():
