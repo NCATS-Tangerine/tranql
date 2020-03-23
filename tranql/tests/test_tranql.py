@@ -1035,7 +1035,7 @@ def test_program (requests_mock):
     --
     SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
-    SELECT population_of_individual_organisms->drug_exposure
+    SELECT population_of_individual_organisms->drug
       FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
      WHERE EstResidentialDensity < '2'
        AND population_of_individual_organizms = 'x'
@@ -1043,7 +1043,7 @@ def test_program (requests_mock):
        AND max_p_value = '0.1'
        SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
 
-    SELECT chemical_substance->gene->biological_process->phenotypic_feature
+    SELECT chemical_substance->gene->biological_process->anatomical_entity
       FROM "/graph/gamma/quick"
      WHERE chemical_substance = $chemical_exposures
        SET knowledge_graph
@@ -1133,7 +1133,8 @@ def test_schema_can_talk_to_automat():
     live_kps = requests.get(f'{automat_url}/registry').json()
 
     tranql = TranQL(options={
-        'registry': True
+        'registry': True,
+        'recreate_schema': True
     })
     ast = tranql.parse("""
             SELECT disease->d2:disease
@@ -1162,7 +1163,7 @@ def test_registry_disable():
         }
     }
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
-        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, update_interval=1)
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, create_new=True,  update_interval=1)
         schema = schema_factory.get_instance()
         assert len(schema.schema) == 0
 
@@ -1179,7 +1180,7 @@ def test_registry_enabled():
         }
     }
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
-        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1)
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1, create_new=True)
         schema = schema_factory.get_instance()
         assert len(schema.schema) > 1
 
@@ -1247,7 +1248,8 @@ def test_schema_should_not_change_once_initilalized():
         schema_factory = SchemaFactory(
             backplane='http://localhost:8091',
             use_registry=True,
-            update_interval=update_interval
+            update_interval=update_interval,
+            create_new=True
         )
         with requests_mock.mock() as m:
             # setup mock kps
@@ -1273,7 +1275,7 @@ def test_schema_should_not_change_once_initilalized():
             # lets wait for next updated and request a new object
             # testing to see if our new request results will affect the
             # the original schema
-            time.sleep(update_interval + .1) # sleeping to ensure update thread is working
+            time.sleep(update_interval + 1) # sleeping to ensure update thread is working
             schema2 = schema_factory.get_instance()
             # original reference to Schema should be different from second.
             assert schema1.schema != schema2.schema
