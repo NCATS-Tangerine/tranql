@@ -150,7 +150,7 @@ class SchemaFactory:
     _cached = None
     _update_thread = None
 
-    def __init__(self, backplane, use_registry, update_interval):
+    def __init__(self, backplane, use_registry, update_interval, create_new=False):
         """
         Make a new schema object if there is nothing cached
         and start update thread.
@@ -158,7 +158,7 @@ class SchemaFactory:
         :param use_registry:
         """
 
-        if not SchemaFactory._cached:
+        if not SchemaFactory._cached or create_new:
             SchemaFactory._cached = Schema(backplane, use_registry)
 
         if not SchemaFactory._update_thread:
