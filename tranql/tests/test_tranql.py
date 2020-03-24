@@ -1244,7 +1244,7 @@ def test_schema_should_not_change_once_initilalized():
 
 
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
-        update_interval = 0.5
+        update_interval = 1
         schema_factory = SchemaFactory(
             backplane='http://localhost:8091',
             use_registry=True,
@@ -1278,4 +1278,4 @@ def test_schema_should_not_change_once_initilalized():
             time.sleep(update_interval + 1) # sleeping to ensure update thread is working
             schema2 = schema_factory.get_instance()
             # original reference to Schema should be different from second.
-            assert schema1.schema != schema2.schema
+            assert schema1 != schema2
