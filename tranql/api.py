@@ -433,7 +433,9 @@ class TranQLQuery(StandardAPIResource):
         tranql = TranQL (options = {
             "dynamic_id_resolution" : dynamic_id_resolution,
             "asynchronous" : asynchronous,
-            "registry": app.config.get('registry', False)
+            "registry": app.config.get('registry', False),
+            # when testing new schema should be created as per the test case
+            "recreate_schema": app.config.get('TESTING', True)
         })
         try:
             context = tranql.execute (query) #, cache=True)

@@ -370,7 +370,9 @@ def test_ast_format_constraints (requests_mock):
             -- The syntax to pass values to reasoners in the where clause (e.g. "icees.foo = bar") functions properly
     """
     print("test_ast_format_constraints ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT population_of_individual_organisms->chemical_substance
           FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
@@ -389,7 +391,9 @@ def test_ast_format_constraints (requests_mock):
 def test_ast_backwards_arrow (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_backwards_arrow ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT gene->biological_process<-microRNA
           FROM "/schema"
@@ -408,7 +412,9 @@ def test_ast_decorate_element (requests_mock):
             -- The SelectStatement::decorate method properly decorates both nodes and edges
     """
     print("test_ast_decorate_element ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease
           FROM "/graph/gamma/quick"
@@ -495,7 +501,9 @@ def test_ast_multiple_reasoners (requests_mock):
             -- A transitions that multiple reasoners support will query each reasoner that supports it.
     """
     print("test_ast_multiple_reasoners ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease->gene
           FROM "/schema"
@@ -513,7 +521,9 @@ def test_ast_multiple_reasoners (requests_mock):
     assert statements[2].get_schema_name(tranql) == "robokop"
 def test_ast_merge_knowledge_maps (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.asynchronous = False
     tranql.resolve_names = False
     ast = tranql.parse ("""
@@ -647,7 +657,9 @@ def test_ast_merge_results (requests_mock):
             -- Results from the query plan are being merged together correctly
     """
     print("test_ast_merge_answers ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -863,7 +875,9 @@ def test_ast_merge_results (requests_mock):
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -898,7 +912,9 @@ def test_ast_plan_strategy (requests_mock):
         assert sub_schema_plan[2][0][2].nodes == []
 def test_ast_implicit_conversion (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT drug_exposure->chemical_substance
          FROM '/schema'
@@ -912,7 +928,9 @@ def test_ast_implicit_conversion (requests_mock):
 def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_plan_statements ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -962,7 +980,9 @@ def test_ast_bidirectional_query (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     print ("test_ast_bidirectional_query ()")
-    app = TranQL ()
+    app = TranQL (options={
+        'recreate_schema': True
+    })
     app.resolve_names = False
     disease_id = "MONDO:0004979"
     chemical = "PUBCHEM:2083"
@@ -996,7 +1016,9 @@ def test_interpreter_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Test set statements by executing a few and checking values after. """
     print ("test_interpreter_set ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     tranql.execute ("""
         -- Test set statements.
@@ -1018,7 +1040,8 @@ def test_program (requests_mock):
     mock_map = MockMap (requests_mock, "workflow-5")
     tranql = TranQL (options = {
         "asynchronous" : False,
-        "resolve_names" : False
+        "resolve_names" : False,
+        "recreate_schema": True
     })
     ast = tranql.execute ("""
     --
