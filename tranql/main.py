@@ -117,10 +117,10 @@ class TranQL:
         self.name_based_merging = options.get("name_based_merging", self.config.get('NAME_BASED_MERGING', True))
         self.resolve_names = options.get("resolve_names", self.config.get('RESOLVE_NAMES', False))
         self.dynamic_id_resolution = options.get("dynamic_id_resolution", self.config.get('DYNAMIC_ID_RESOLUTION', False))
-        self.use_registry = options.get("registry", self.config.get('USE_REGISTRY', False))
+        self.use_registry = options.get("registry", False) or self.config.get('USE_REGISTRY', False)
         # for testing singleton is causing problems
         self.recreate_schema = options.get('recreate_schema', False)
-        schema_factory = SchemaFactory(backplane=backplane, use_registry=self.use_registry,update_interval=20*60, create_new=self.recreate_schema)
+        schema_factory = SchemaFactory(backplane=backplane, use_registry=self.use_registry, update_interval=20*60, create_new=self.recreate_schema)
         self.schema = schema_factory.get_instance()
         self.parser = TranQLParser (self.schema)
 
