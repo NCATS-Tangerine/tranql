@@ -167,6 +167,28 @@ class StandardAPIResource(Resource):
                     message['knowledge_graph']['nodes'].append(node)
                     nodeIds.append(node['id'])
         return message
+
+    def down_cast_message(self, message, reasoner_spec_version='2.0', down_cast_to='0.9'):
+        if reasoner_spec_version == '2.0':
+            assert 'query_graph' in message
+            assert 'knowledge_graph' in message
+            assert 'results' in message
+            if down_cast_to == '0.9':
+                converted_results = []
+                for r in message['results']:
+                    node_bindings = r['node_bindings']
+                    edge_bindings = r['edge_bindings']
+                    # Expecting
+                    # {qg_id: 'qg-id-value', kg_id: 'kg-id-value'}
+                    # tranform to {'qg-id-value': 'kg-id-value'}
+                    node_bindings = [{n['qg_id']: n['kg_id']} for n in node_bindings]
+                    edge_bindings = [{e['qg_id']: e['kg_id']} for e in edge_bindings]
+                    r['node_bindings'] = node_bindings
+                    r['edge_bindings'] = edge_bindings
+                    converted_results.append(r)
+                message['results'] = converted_results
+                return self.normalize_message(message)
+
     def normalize_message (self, message):
         if 'results' in message:
             return self.normalize_message(self.merge_results(message))
@@ -955,6 +977,103 @@ class BiolinkModelWalkerService(StandardAPIResource):
             response['answers'] = []
         return self.normalize_message (response)
 
+#######################################################
+##
+## Automat - query Automat-KPs.
+##
+#######################################################
+
+class AutomatResource(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.url = 'https://automat.renci.org'
+
+    def get_kp_reasoner_api(self, kp_tag):
+        return f'{self.url}/{kp_tag}/reasonerapi'
+
+class AutomatQuery(AutomatResource):
+    """ Generic graph query to Gamma. """
+    def __init__(self):
+        super().__init__()
+    def post(self, kp_tag):
+        """
+        Automat query
+        ---
+        tags: [query]
+        description: Query the Automat KPs.
+        parameters:
+            - in: path
+              name: kp_tag
+              schema:
+                type: string
+                example: uberon
+              required: true
+              description: KP identifier to get data from.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "chemical_substance"
+                                  type: "chemical_substance"
+                                  curie: "CHEMBL:CHEMBL3"
+                                - id: "disease"
+                                  type: "disease"
+                            edges:
+                                - id: "e1"
+                                  source_id: "chemical_substance"
+                                  target_id: "disease"
+                        options: {}
+
+        responses:
+            '200':
+                description: Message
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/Error'
+        """
+        self.validate (request, 'Message')
+        url = self.get_kp_reasoner_api(kp_tag)
+        app.logger.debug(f"Making request to {url}")
+        # question_graph should be query graph
+        question = request.json
+        question['query_graph'] = copy.deepcopy(question['question_graph'])
+        del question['question_graph']
+        del question['knowledge_graph']
+        del question['knowledge_maps']
+        app.logger.debug (json.dumps(question, indent=2))
+
+        response = requests.post(url, json=question)
+        if response.status_code >= 300:
+            result = {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad Automat response. url: {self.url} \n request: {json.dumps(request.json, indent=2)} response: \n{response.text}."
+            }
+        else:
+            result = self.down_cast_message (response.json ())
+        if app.logger.isEnabledFor(logging.DEBUG):
+            app.logger.debug (json.dumps(result, indent=2))
+        return self.response(result)
+
+
 ###############################################################################################
 #
 # Define routes.
@@ -969,6 +1088,7 @@ api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
 api.add_resource(IndigoQuery, '/graph/indigo')
 api.add_resource(RtxQuery, '/graph/rtx')
+api.add_resource(AutomatQuery, '/graph/automat/<kp_tag>')
 
 # Workflow specific
 api.add_resource(ICEESClusterQuery, '/clinical/cohort/disease_to_chemical_exposure')

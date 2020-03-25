@@ -1,6 +1,7 @@
 import networkx as nx
 import json
 import yaml
+import copy
 import logging
 import requests
 import requests_cache
@@ -9,6 +10,8 @@ from tranql.concept import BiolinkModelWalker
 from collections import defaultdict
 from tranql.exception import TranQLException, InvalidTransitionException
 from tranql.redis_graph import RedisGraph
+import time
+import threading
 
 class NetworkxGraph:
     def __init__(self):
@@ -84,16 +87,110 @@ class GraphTranslator:
             "options" : {}
         }
 
+
+class RegistryAdapter:
+    def __init__(self):
+        self.__registry_adapters = {
+            'automat': lambda url: RegistryAdapter.__AutomatAdapter(url)  # Use this to refer things in the schema
+        }
+
+    def get_schemas(self, registry_name, registry_url):
+        """
+        Adds new schemas by invoking appropriate registry
+        :param registry_name:
+        :param schema:
+        :return:
+        """
+        registry_constructor = self.__registry_adapters.get(registry_name)
+        if not registry_constructor:
+            raise TranQLException(f'No constructor found for {registry_name} -- Error constructing schema.')
+        registry = registry_constructor(registry_url)
+        return registry.get_graph_schemas()
+
+
+
+    class __AutomatAdapter:
+        def __init__(self, url):
+            self.base_url = url.rstrip('/')
+
+        def __get_registry(self):
+            response = requests.get(self.base_url + '/registry')
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise Exception(f'Failed to contact automat registry request to server returned'
+                                f'{response.status_code} -- {response.text}')
+
+        def get_graph_schemas(self):
+            """
+            Looping through the registry we will grab the /graph/schema of each KP,
+            along with it's access url.
+            :return:
+            """
+            registry = self.__get_registry()
+            main_schema = {}
+            for path in registry:
+                graph_schema_path = f'{self.base_url}/{path}/graph/schema'
+                graph_schema = requests.get(graph_schema_path).json()
+                # since we have a backplane proxy that is able to query
+                # automat kps in /graph/automat/<path> we will use that pattern as url
+                kp_url = f'/graph/automat/{path}'
+                new_schema_name = f'automat_{path}'
+                main_schema[new_schema_name] = {
+                    'schema': graph_schema,
+                    'url': kp_url
+                }
+            return main_schema
+
+
+class SchemaFactory:
+    """
+    Keeps a single SchemaInstance object till next update.
+    """
+    _cached = None
+    _update_thread = None
+
+    def __init__(self, backplane, use_registry, update_interval, create_new=False):
+        """
+        Make a new schema object if there is nothing cached
+        and start update thread.
+        :param backplane:
+        :param use_registry:
+        """
+
+        if not SchemaFactory._cached or create_new:
+            SchemaFactory._cached = Schema(backplane, use_registry)
+
+        if not SchemaFactory._update_thread:
+            # avoid creating multiple threads.
+            SchemaFactory._update_thread = threading.Thread(
+                target=SchemaFactory.update_cache_loop,
+                args=(backplane, use_registry , update_interval),
+                daemon=True)
+            SchemaFactory._update_thread.start()
+
+    @staticmethod
+    def get_instance():
+        return copy.deepcopy(SchemaFactory._cached)
+
+    @staticmethod
+    def update_cache_loop(backplane, use_registry, update_interval=20*60):
+        while True:
+            SchemaFactory._cached = Schema(backplane, use_registry)
+            time.sleep(update_interval)
+
+
 class Schema:
     """ A schema for a distributed knowledge network. """
 
-    def __init__(self, backplane):
+    def __init__(self, backplane, use_registry):
         """
         Create a metadata map of the knowledge network.
         """
 
         # String[] of errors encountered during loading.
         self.loadErrors = []
+        self.registry_adapter = RegistryAdapter()
 
         """ Load the schema, a map of reasoner systems to maps of their schemas. """
         self.config = None
@@ -103,6 +200,16 @@ class Schema:
 
         """ Resolve remote schemas. """
         for schema_name, metadata in self.config['schema'].copy ().items ():
+            if 'registry' in metadata:
+                if use_registry:
+                    registry_name = metadata['registry']
+                    registry_url = metadata['registry_url']
+                    new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url)
+                    ## Extend config['schema'] with these new onces
+                    self.config['schema'].update(new_schemas)
+                    # remove registry entry
+                del self.config['schema'][schema_name]
+                continue
             schema_data = metadata['schema']
             if isinstance (schema_data, str) and schema_data.startswith ("/"):
                 schema_data = f"{backplane}{schema_data}"

@@ -3,6 +3,7 @@ import pytest
 import os
 import itertools
 import requests
+import yaml
 from pprint import pprint
 from deepdiff import DeepDiff
 from functools import reduce
@@ -12,6 +13,11 @@ from tranql.tranql_ast import SetStatement, SelectStatement
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
+from tranql.tranql_schema import SchemaFactory
+import requests_mock
+from unittest.mock import patch
+import copy, time
+
 #set_verbose ()
 
 def assert_parse_tree (code, expected):
@@ -364,7 +370,9 @@ def test_ast_format_constraints (requests_mock):
             -- The syntax to pass values to reasoners in the where clause (e.g. "icees.foo = bar") functions properly
     """
     print("test_ast_format_constraints ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT population_of_individual_organisms->chemical_substance
           FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
@@ -383,7 +391,9 @@ def test_ast_format_constraints (requests_mock):
 def test_ast_backwards_arrow (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_backwards_arrow ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT gene->biological_process<-microRNA
           FROM "/schema"
@@ -402,7 +412,9 @@ def test_ast_decorate_element (requests_mock):
             -- The SelectStatement::decorate method properly decorates both nodes and edges
     """
     print("test_ast_decorate_element ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease
           FROM "/graph/gamma/quick"
@@ -489,7 +501,9 @@ def test_ast_multiple_reasoners (requests_mock):
             -- A transitions that multiple reasoners support will query each reasoner that supports it.
     """
     print("test_ast_multiple_reasoners ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease->gene
           FROM "/schema"
@@ -507,7 +521,9 @@ def test_ast_multiple_reasoners (requests_mock):
     assert statements[2].get_schema_name(tranql) == "robokop"
 def test_ast_merge_knowledge_maps (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.asynchronous = False
     tranql.resolve_names = False
     ast = tranql.parse ("""
@@ -641,7 +657,9 @@ def test_ast_merge_results (requests_mock):
             -- Results from the query plan are being merged together correctly
     """
     print("test_ast_merge_answers ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -857,7 +875,9 @@ def test_ast_merge_results (requests_mock):
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -892,7 +912,9 @@ def test_ast_plan_strategy (requests_mock):
         assert sub_schema_plan[2][0][2].nodes == []
 def test_ast_implicit_conversion (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT drug_exposure->chemical_substance
          FROM '/schema'
@@ -906,7 +928,9 @@ def test_ast_implicit_conversion (requests_mock):
 def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_plan_statements ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -956,7 +980,9 @@ def test_ast_bidirectional_query (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     print ("test_ast_bidirectional_query ()")
-    app = TranQL ()
+    app = TranQL (options={
+        'recreate_schema': True
+    })
     app.resolve_names = False
     disease_id = "MONDO:0004979"
     chemical = "PUBCHEM:2083"
@@ -990,7 +1016,9 @@ def test_interpreter_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Test set statements by executing a few and checking values after. """
     print ("test_interpreter_set ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     tranql.execute ("""
         -- Test set statements.
@@ -1012,7 +1040,8 @@ def test_program (requests_mock):
     mock_map = MockMap (requests_mock, "workflow-5")
     tranql = TranQL (options = {
         "asynchronous" : False,
-        "resolve_names" : False
+        "resolve_names" : False,
+        "recreate_schema": True
     })
     ast = tranql.execute ("""
     --
@@ -1029,7 +1058,7 @@ def test_program (requests_mock):
     --
     SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
-    SELECT population_of_individual_organisms->drug_exposure
+    SELECT population_of_individual_organisms->drug
       FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
      WHERE EstResidentialDensity < '2'
        AND population_of_individual_organizms = 'x'
@@ -1037,7 +1066,7 @@ def test_program (requests_mock):
        AND max_p_value = '0.1'
        SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
 
-    SELECT chemical_substance->gene->biological_process->phenotypic_feature
+    SELECT chemical_substance->gene->biological_process->anatomical_entity
       FROM "/graph/gamma/quick"
      WHERE chemical_substance = $chemical_exposures
        SET knowledge_graph
@@ -1118,3 +1147,158 @@ def test_setting_values_for_repeated_concepts():
         print(e)
         assert e['source_id'] == 'g1'
         assert e['target_id'] == 'g2'
+
+def test_schema_can_talk_to_automat():
+    config_file = os.path.join(os.path.dirname(__file__),"..","conf","schema.yaml")
+    with open(config_file) as stream:
+        schema_yml = yaml.load(stream, Loader=yaml.Loader)
+    automat_url = schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
+    live_kps = requests.get(f'{automat_url}/registry').json()
+
+    tranql = TranQL(options={
+        'registry': True,
+        'recreate_schema': True
+    })
+    ast = tranql.parse("""
+            SELECT disease->d2:disease
+              FROM '/schema'             
+        """)
+
+    select = ast.statements[0]
+    tranql_schema = select.planner.schema
+    ## Test each KP is registered in schema
+    for kp in live_kps:
+        assert f'automat_{kp}' in tranql_schema.schema, f'KP Tranql schema entry not found for {kp}'
+        ## Test if URL is refering to backplane url
+        automat_kp_schema = tranql_schema.schema[f'automat_{kp}']
+        assert automat_kp_schema['url'] == f'/graph/automat/{kp}', 'Automat backplane url incorrect'
+
+def test_registry_disable():
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, create_new=True,  update_interval=1)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) == 0
+
+def test_registry_enabled():
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1, create_new=True)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) > 1
+
+
+def test_registry_adapter_automat():
+    from tranql.tranql_schema import RegistryAdapter
+
+    # let pretend automat url is automat and we will mask what we expect to be called
+    # since there is no real logic here we just have to make sure apis are called
+
+    with requests_mock.mock() as mock_server:
+        mock_server.get('http://automat/registry', json=['kp1'])
+        expected_response = ['lets pretend this was a schema']
+        mock_server.get('http://automat/kp1/graph/schema', json=expected_response)
+        ra = RegistryAdapter()
+        response = ra.get_schemas('automat', 'http://automat')
+        assert 'automat_kp1' in response
+        assert 'schema' in response['automat_kp1']
+        assert 'url' in response['automat_kp1']
+        assert response['automat_kp1']['schema'] == expected_response
+
+
+def test_schema_should_not_change_once_initilalized():
+    """
+    Scenario: In a registry aware schema,
+    UserObject initializes schema object.
+    Schema object now has entries from registry(eg. automat).
+    UserObject starts work on that schema. During this time,
+    Schema instance is updated by it's thread and some entries on
+    the schema might have changed. When UserObject looks back at the schema
+    it's different
+    """
+
+    mock_schema_yaml = {
+        'schema':{
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    mock_schema_response = {
+        'kp1': {
+            'type1': {
+                'type2':[
+                    'related_to'
+                ]
+            }
+        },
+        'kp2': {
+            'type99': {
+                'type300': [
+                    'related_to'
+                ]
+            }
+        }
+    }
+
+
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        update_interval = 1
+        schema_factory = SchemaFactory(
+            backplane='http://localhost:8091',
+            use_registry=True,
+            update_interval=update_interval,
+            create_new=True
+        )
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # say registry returns kp1 on first call
+            m.get('https://automat.renci.org/registry', json=['kp1'])
+            # here some Tranql objects have this instance.
+            schema1 = schema_factory.get_instance()
+            schema2 = schema_factory.get_instance()
+            # Doing something on second  schema instance should not affect the first.
+            schema2.schema['Lets add something'] = {'add some thing': 'dsds'}
+            assert 'Lets add something' not in schema1.schema
+
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # Now we change what registry returns and wait for update
+            m.get('https://automat.renci.org/registry', json=['kp2'])
+            # lets wait for next updated and request a new object
+            # testing to see if our new request results will affect the
+            # the original schema
+            time.sleep(update_interval + 1) # sleeping to ensure update thread is working
+            schema2 = schema_factory.get_instance()
+            # original reference to Schema should be different from second.
+            assert schema1 != schema2

@@ -432,7 +432,10 @@ class TranQLQuery(StandardAPIResource):
         logging.debug (f"--> query: {query}")
         tranql = TranQL (options = {
             "dynamic_id_resolution" : dynamic_id_resolution,
-            "asynchronous" : asynchronous
+            "asynchronous" : asynchronous,
+            "registry": app.config.get('registry', False),
+            # when testing new schema should be created as per the test case
+            "recreate_schema": app.config.get('TESTING', True)
         })
         try:
             context = tranql.execute (query) #, cache=True)
@@ -533,8 +536,10 @@ class SchemaGraph(StandardAPIResource):
                         schema:
                           $ref: '#/definitions/Error'
         """
-        tranql = TranQL ()
-        schema = Schema (backplane=tranql.context.mem.get('backplane'))
+        tranql = TranQL (options={
+            "registry": app.config.get('registry', False)
+        })
+        schema = Schema (backplane=tranql.context.mem.get('backplane'),use_registry=app.config.get('registry', False))
         schemaGraph = GraphTranslator(schema.schema_graph)
 
         # logger.info(schema.schema_graph.net.nodes)
@@ -637,7 +642,7 @@ class ReasonerURLs(StandardAPIResource):
                           type: object
         """
         tranql = TranQL ()
-        schema = Schema (backplane=tranql.context.mem.get('backplane'))
+        schema = Schema (backplane=tranql.context.mem.get('backplane'), use_registry= app.config.get('registry', False))
 
         return { schema[0] : schema[1]['url'] for schema in schema.schema.items() }
 
@@ -722,7 +727,9 @@ class ParseIncomplete(StandardAPIResource):
         else:
             query = request.json
 
-        tranql = TranQL ()
+        tranql = TranQL (options= {
+            'use_registry': app.config.get('registry', False)
+        })
         parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
 
         result = None
@@ -764,8 +771,9 @@ if __name__ == "__main__":
     parser.add_argument('--port', action="store", dest="port", default=8001, type=int)
     parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
     parser.add_argument('-r', '--reloader', help="Use reloader independent of debug.", default=False, action='store_true')
+    parser.add_argument('-R', '--registry', help="Use registries to get data", default=False, action='store_true')
     args = parser.parse_args()
-
+    app.config['registry'] = args.registry
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
     app.run(
