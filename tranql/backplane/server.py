@@ -181,8 +181,8 @@ class StandardAPIResource(Resource):
                     # Expecting
                     # {qg_id: 'qg-id-value', kg_id: 'kg-id-value'}
                     # tranform to {'qg-id-value': 'kg-id-value'}
-                    node_bindings = [{n['qg_id']: n['kg_id']} for n in node_bindings]
-                    edge_bindings = [{e['qg_id']: e['kg_id']} for e in edge_bindings]
+                    node_bindings = {n['qg_id']: n['kg_id']for n in node_bindings}
+                    edge_bindings = {e['qg_id']: e['kg_id']for e in edge_bindings}
                     r['node_bindings'] = node_bindings
                     r['edge_bindings'] = edge_bindings
                     converted_results.append(r)
