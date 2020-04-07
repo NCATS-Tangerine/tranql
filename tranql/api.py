@@ -1,7 +1,6 @@
 """
 Provide a standard protocol for asking graph oriented questions of Translator data sources.
 """
-import copy
 import argparse
 import json
 import logging
@@ -10,19 +9,15 @@ import traceback
 import yaml
 import jsonschema
 import requests
-from flask import Flask, request, abort, Response, send_file, send_from_directory, render_template
+from flask import Flask, request, abort, Response, send_from_directory
 from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
 from tranql.concept import ConceptModel
 from tranql.main import TranQL, TranQLIncompleteParser
 from tranql.tranql_ast import SelectStatement
-import networkx as nx
-from tranql.util import JSONKit
-from tranql.tranql_schema import GraphTranslator, Schema
-from tranql.concept import BiolinkModelWalker
+from tranql.tranql_schema import GraphTranslator
 from tranql.exception import TranQLException
-#import flask_monitoringdashboard as dashboard
 
 logger = logging.getLogger (__name__)
 
@@ -536,10 +531,8 @@ class SchemaGraph(StandardAPIResource):
                         schema:
                           $ref: '#/definitions/Error'
         """
-        tranql = TranQL (options={
-            "registry": app.config.get('registry', False)
-        })
-        schema = Schema (backplane=tranql.context.mem.get('backplane'),use_registry=app.config.get('registry', False))
+        tranql = TranQL ()
+        schema = tranql.schema
         schemaGraph = GraphTranslator(schema.schema_graph)
 
         # logger.info(schema.schema_graph.net.nodes)
@@ -642,8 +635,7 @@ class ReasonerURLs(StandardAPIResource):
                           type: object
         """
         tranql = TranQL ()
-        schema = Schema (backplane=tranql.context.mem.get('backplane'), use_registry= app.config.get('registry', False))
-
+        schema = tranql.schema
         return { schema[0] : schema[1]['url'] for schema in schema.schema.items() }
 
 class ParseIncomplete(StandardAPIResource):
