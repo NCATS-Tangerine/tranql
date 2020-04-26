@@ -94,7 +94,7 @@ class RegistryAdapter:
             'automat': lambda url: RegistryAdapter.__AutomatAdapter(url)  # Use this to refer things in the schema
         }
 
-    def get_schemas(self, registry_name, registry_url):
+    def get_schemas(self, registry_name, registry_url, exclusion_list = []):
         """
         Adds new schemas by invoking appropriate registry
         :param registry_name:
@@ -105,7 +105,7 @@ class RegistryAdapter:
         if not registry_constructor:
             raise TranQLException(f'No constructor found for {registry_name} -- Error constructing schema.')
         registry = registry_constructor(registry_url)
-        return registry.get_graph_schemas()
+        return registry.get_graph_schemas(exclusion_list)
 
 
 
@@ -121,7 +121,7 @@ class RegistryAdapter:
                 raise Exception(f'Failed to contact automat registry request to server returned'
                                 f'{response.status_code} -- {response.text}')
 
-        def get_graph_schemas(self):
+        def get_graph_schemas(self, exclusion_list=[]):
             """
             Looping through the registry we will grab the /graph/schema of each KP,
             along with it's access url.
@@ -129,7 +129,8 @@ class RegistryAdapter:
             """
             registry = self.__get_registry()
             main_schema = {}
-            for path in registry:
+            filtered_registry = filter(lambda x: x not in exclusion_list, registry)
+            for path in filtered_registry:
                 graph_schema_path = f'{self.base_url}/{path}/graph/schema'
                 graph_schema = requests.get(graph_schema_path).json()
                 # since we have a backplane proxy that is able to query
@@ -204,7 +205,8 @@ class Schema:
                 if use_registry:
                     registry_name = metadata['registry']
                     registry_url = metadata['registry_url']
-                    new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url)
+                    exclusion_list = metadata.get('exclude', [])
+                    new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url, exclusion_list)
                     ## Extend config['schema'] with these new onces
                     self.config['schema'].update(new_schemas)
                     # remove registry entry

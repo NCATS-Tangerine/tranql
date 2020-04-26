@@ -40,6 +40,9 @@ schema:
     registry: automat
     registry_url: https://automat.renci.org
     url: /graph/automat
+    exclude:
+      - "cord19_scibite_v2"
+      - "cord19_scigraph_v2"
   rtx :
     doc: |
       The Rtx reasoner provides an endpoint returning the transitions it supports.
