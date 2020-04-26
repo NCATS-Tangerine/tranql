@@ -1154,7 +1154,8 @@ def test_schema_can_talk_to_automat():
         schema_yml = yaml.load(stream, Loader=yaml.Loader)
     automat_url = schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
     live_kps = requests.get(f'{automat_url}/registry').json()
-
+    exclusion = schema_yml['schema']['automat']['exclude']
+    live_kps = [x for x in live_kps if x not in exclusion]
     tranql = TranQL(options={
         'registry': True,
         'recreate_schema': True
