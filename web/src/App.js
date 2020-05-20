@@ -1283,7 +1283,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 const backwards = isBackwardsPredicate (predicate);
 
                 console.log ([previousConcept, predicate, currentConcept]);
-
+                // Concepts could be named like select f1:foo->f2:bar
+                // we need to split them and grab the actual types
+                let previousConceptSplit = previousConcept.split(':');
+                let currentConceptSplit = currentConcept.split(':');
+                previousConcept = previousConceptSplit[previousConceptSplit.length - 1];
+                currentConcept = currentConceptSplit[currentConceptSplit.length - 1];
                 validConcepts = graph.edges.filter((edge) => {
                   if (backwards) {
                     return (
