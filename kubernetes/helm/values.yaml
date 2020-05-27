@@ -55,6 +55,6 @@ tranql_varnish:
 # else tranql_frontend will be the entrypoint
 # and also enable_cache false will make sure that tranql_frontend is routing
 # directly to tranql-backplane and not through backplane cache proxy
-enable_cache: false
+enable_cache: true
 loadBalancer_ip: nnn.nnn.nnn.nnn
 loadBalancer_port: xxxx
