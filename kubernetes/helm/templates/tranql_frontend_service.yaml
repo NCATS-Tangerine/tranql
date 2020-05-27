@@ -4,9 +4,10 @@ metadata:
   name: {{ .Values.tranql_frontend.service_name }}
   namespace: translator
 spec:
-#  type:	LoadBalancer
-#  loadBalancerIP: nnn.nn.nn.nnn
-  type: NodePort
+  {{ if ne .Values.enable_cache true }}
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.loadBalancer_ip }}
+  {{ end }}
   selector:
     app: {{ .Values.tranql_frontend.app_name }}
   ports:

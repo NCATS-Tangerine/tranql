@@ -32,7 +32,12 @@ spec:
           - name: APP_PORT
             value: {{ .Values.web_app_port | quote }}
           - name: BACKPLANE
-            value: http://{{ .Values.tranql_backplane.service_name }}:{{ .Values.tranql_backplane.web_app_port }}
+            value:
+            {{- if eq .Values.enable_cache true}}
+             "http://{{ .Values.tranql_varnish.backplane.service_name }}:{{ .Values.tranql_varnish.backplane.port }}"
+            {{- else }}
+             "http://{{ .Values.tranql_backplane.service_name }}:{{ .Values.tranql_backplane.web_app_port }}"
+            {{ end }}
           - name: USE_REGISTRY
             value: {{ .Values.tranql_frontend.use_kp_registry | quote }}
           - name: POD_NAME
