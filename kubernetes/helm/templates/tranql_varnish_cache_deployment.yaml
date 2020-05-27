@@ -1,0 +1,99 @@
+apiVersion: v1
+items:
+# Front end cache deployment
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: {{ .Values.tranql_varnish.frontend.deployment_name }}
+    labels:
+      service: {{ .Values.tranql_varnish.frontend.service_name }}
+      app: {{ .Values.tranql_varnish.frontend.app_name }}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: {{ .Values.tranql_varnish.frontend.app_name }}
+    template:
+      metadata:
+        labels:
+          app: {{ .Values.tranql_varnish.frontend.app_name }}
+      spec:
+        initContainers:
+          - name: wait-for-tranql-frontend
+            image: busybox
+            args:
+              - /bin/sh
+              - -c
+              - >
+                set -x;
+                echo $(wget --spider -S "http://{{ .Values.tranql_frontend.service_name }}:{{ .Values.tranql_frontend.web_app_port }}/apidocs/" 2>&1 | grep "HTTP/" | awk '{print $2}');
+                while [ $(wget --spider -S "http://{{ .Values.tranql_frontend.service_name }}:{{ .Values.tranql_frontend.web_app_port }}/apidocs/" 2>&1 | grep "HTTP/" | awk '{print $2}') -ne 200 ]; do
+                  echo "Waiting for {{ .Values.tranql_frontend.service_name }}";
+                  sleep 1;
+                done;
+                echo "Connected ... ";
+        containers:
+          - name: {{ .Values.tranql_varnish.frontend.container_name }}
+            image: {{ .Values.tranql_varnish.image }}:{{ .Values.tranql_varnish.image_tag}}
+            ports:
+            - containerPort: {{ .Values.tranql_varnish.port }}
+              name: http
+            volumeMounts:
+              - name: vcl-config
+                mountPath: /etc/varnish/default.vcl
+                subPath: default.vcl
+        volumes:
+          - name: vcl-config
+            configMap:
+              name: {{ .Values.tranql_varnish.frontend.config_name }}
+              items:
+                - key: default_vcl
+                  path: default.vcl
+# -------------- Backplane cache deployment
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: {{ .Values.tranql_varnish.backplane.deployment_name }}
+    labels:
+      service: {{ .Values.tranql_varnish.backplane.service_name }}
+      app: {{ .Values.tranql_varnish.backplane.app_name }}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: {{ .Values.tranql_varnish.backplane.app_name }}
+    template:
+      metadata:
+        labels:
+          app: {{ .Values.tranql_varnish.backplane.app_name }}
+      spec:
+        initContainers:
+          - name: wait-for-tranql-backplane
+            image: busybox
+            args:
+              - /bin/sh
+              - -c
+              - >
+                set -x;
+                while [$(wget --spider -S "http://{{ .Values.tranql_backplane.service_name }}:{{ .Values.tranql_backplane.web_app_port }}/apidocs/" 2>&1 | grep "HTTP/" | awk '{print $2}') -ne 200]; do
+                  echo "Waiting for {{ .Values.tranql_backplane.service_name}}";
+                  sleep 15;
+                done
+        containers:
+          - name: {{ .Values.tranql_varnish.backplane.container_name }}
+            image: {{ .Values.tranql_varnish.image }}:{{ .Values.tranql_varnish.image_tag}}
+            ports:
+            - containerPort: {{ .Values.tranql_varnish.port }}
+              name: http
+            volumeMounts:
+              - name: vcl-config
+                mountPath: /etc/varnish/default.vcl
+                subPath: default.vcl
+        volumes:
+          - name: vcl-config
+            configMap:
+              name: {{ .Values.tranql_varnish.backplane.config_name }}
+              items:
+                - key: default_vcl
+                  path: default.vcl
+kind: List

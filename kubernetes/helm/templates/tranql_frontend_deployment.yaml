@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tranql_frontend.deployment_name }}
+  namespace: translator
+  labels:
+    service: {{ .Values.tranql_frontend.service_name }}
+    app: {{ .Values.tranql_frontend.app_name }}
+spec:
+  replicas: {{ .Values.tranql_frontend.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.tranql_frontend.app_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.tranql_frontend.app_name }}
+    spec:
+      volumes:
+        - name: {{ .Values.tranql_logs.container_volume_name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.tranql_logs.pvc_name }}
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: tranql-app
+        image: {{ .Values.tranql_frontend.image }}:{{ .Values.tranql_frontend.image_tag }}
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "--access-logfile=$(ACCESS_LOG)", "--error-logfile=$(ERROR_LOG)", "--log-level=debug", "tranql.api:app" ]
+        ports:
+          - containerPort: {{ .Values.tranql_frontend.web_app_port }}
+            name: http
+        env:
+          - name: APP_PORT
+            value: {{ .Values.web_app_port | quote }}
+          - name: BACKPLANE
+            value: http://{{ .Values.tranql_backplane.service_name }}:{{ .Values.tranql_backplane.web_app_port }}
+          - name: USE_REGISTRY
+            value: {{ .Values.tranql_frontend.use_kp_registry | quote }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: ACCESS_LOG
+            value: "/var/nfs/tranql-frontend_access_log"
+          - name: ERROR_LOG
+            value: "/var/nfs/tranql-frontend_error_log"
+        volumeMounts:
+          - name: {{ .Values.tranql_logs.container_volume_name }}
+            mountPath: /var/nfs
+#        resources:
+#          requests:
+#            memory: 200Mi
+#          limits:
+#            memory: 1Gi
+      restartPolicy: {{ .Values.tranql_frontend.restart }}
