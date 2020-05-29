@@ -1,0 +1,31 @@
+apiVersion: v1
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: {{ .Values.tranql_varnish.frontend.service_name }}
+    spec:
+      {{ if eq .Values.enable_cache true}}
+      type: LoadBalancer
+      loadBalancerIP: {{ .Values.loadBalancer_ip }}
+      {{ end }}
+      selector:
+        app: {{ .Values.tranql_varnish.frontend.app_name }}
+      ports:
+        - protocol: TCP
+          # use tranql frontend port if load cache is enable so we don't maintain two ports for loadbalancer
+          port: {{ if .Values.enable_cache }}{{ .Values.tranql_frontend.web_app_port }}{{ else }}{{ .Values.tranql_varnish.port }}{{ end }}
+          targetPort: {{ .Values.tranql_varnish.port }}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: {{ .Values.tranql_varnish.backplane.service_name }}
+    spec:
+      type: NodePort
+      selector:
+        app: {{ .Values.tranql_varnish.backplane.app_name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.tranql_varnish.port }}
+          targetPort: {{ .Values.tranql_varnish.port }}
+kind: List

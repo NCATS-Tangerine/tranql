@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.tranql_backplane.service_name }}
+spec:
+
+#  type:	LoadBalancer
+#  loadBalancerIP: nnn.nn.nn.nnn
+  type: NodePort
+  selector:
+    app: {{ .Values.tranql_backplane.app_name }}
+  ports:
+  - protocol: TCP
+    port: {{ .Values.tranql_backplane.web_app_port }}
+    targetPort: {{ .Values.tranql_backplane.web_app_port }}
