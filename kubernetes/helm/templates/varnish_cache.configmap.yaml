@@ -18,6 +18,9 @@ items:
           .window = 5;
           .threshold = 3;
             }
+        /** Set backend timeouts **/
+        .between_bytes_timeout = 600s;
+        .first_byte_timeout = 600s;
           }
         /* set cache hit and miss indicator header */
         sub vcl_recv {
@@ -50,6 +53,9 @@ items:
             .window = 5;
             .threshold = 3;
             }
+          /** Set backend timeouts **/
+          .between_bytes_timeout = 600s;
+          .first_byte_timeout = 600s;
           }
         /* set cache hit and miss indicator header */
         sub vcl_recv {
