@@ -1,0 +1,17 @@
+config:
+  target: "{{ $processEnvironment.SERVER_ADDRESS }}"
+  phases:
+    - duration: 100
+      arrivalRate: 1
+  http:
+    timeout: 600
+  variables:
+    one_hop_query: "SELECT a:chemical_substance->g:gene
+      FROM \"/schema\"
+      WHERE a='CHEBI:9321'"
+scenarios:
+  - flow:
+      - post:
+          url: "/tranql/query"
+          body: "{{ one_hop_query }}"
+
