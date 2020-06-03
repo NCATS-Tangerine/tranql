@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-credentials-test"
+  annotations:
+    "helm.sh/hook": test
+spec:
+  template:
+    spec:
+      containers:
+        - name: tranql-artillery-container
+          image: {{ .Values.tranql_artillery.image }}:{{ .Values.tranql_artillery.image_tag }}
+          env:
+          - name: SERVER_ADDRESS
+            value: http://{{ .Values.tranql_varnish.frontend.service_name }}:{{.Values.tranql_varnish.port}}
+          command: ["/bin/bash", "-c",  "for file in test-*.yaml; do artillery run ${file} ; done"]
+          # @TODO configure tranql tests to run via helm test
+#        - name: tranql-unit-tests
+#          image: {{ .Values.tranql_frontend.image }}:{{ .Values.tranql_frontend.image_tag }}
+#          env:
+#          -
+      restartPolicy: Never
+

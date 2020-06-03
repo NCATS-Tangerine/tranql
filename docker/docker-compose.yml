@@ -1,12 +1,12 @@
 version: "3"
 services:
   backplane:
-    image: greentranslator/tranql-base
+    image: renciorg/tranql-base
     entrypoint: /usr/local/bin/gunicorn --workers=2 --bind=0.0.0.0:$BACKPLANE_PORT --name=backplane --timeout=600 tranql.backplane.server:app
     ports:
       - "${BACKPLANE_PORT}:${BACKPLANE_PORT}"
   tranql:
-    image: greentranslator/tranql-app
+    image: renciorg/tranql-app
     environment:
       - BACKPLANE=http://varnish_backplane:8080
 #      - BACKPLANE=http://backplane:8099  # Uncomment this line to avoid using cache.

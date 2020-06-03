@@ -11,5 +11,7 @@ backend default {
         .window = 5;
         .threshold = 3;
     }
+    .between_bytes_timeout = 600s;
+    .first_byte_timeout = 600s;
 }
 
