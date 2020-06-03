@@ -1,0 +1,22 @@
+config:
+  target: "{{ $processEnvironment.SERVER_ADDRESS }}"
+  phases:
+    # Send 10 requests per second total 100 requests should cover the csv values
+    - duration: 10
+      arrivalRate: 10
+  http:
+    timeout: 600
+  payload:
+    path: "./chemical_list.csv"
+    fields:
+      - "chemical_id"
+    order: "sequence"
+scenarios:
+  - flow:
+      - post:
+          url: "/tranql/query"
+          body: |
+            SELECT c1:chemical_substance-->molecular_activity-->c2:chemical_substance
+            FROM "/graph/gamma/quick"
+            WHERE molecular_activity="GO:0003677"
+            AND c1="{{chemical_id}}"

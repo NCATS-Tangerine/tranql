@@ -1,0 +1,9 @@
+config:
+  target: "{{ $processEnvironment.SERVER_ADDRESS }}"
+  phases:
+    - duration: 1
+      arrivalRate: 100
+scenarios:
+  - flow:
+      - get:
+          url: "/tranql/schema"
