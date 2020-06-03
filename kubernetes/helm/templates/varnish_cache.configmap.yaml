@@ -35,6 +35,9 @@ items:
         sub vcl_deliver {
           set req.http.x-cache-info = req.http.x-cache-info;
         }
+        sub vcl_backend_response{
+        set beresp.ttl = {{ .Values.tranql_varnish.frontend.cache_ttl }};
+        }
   - apiVersion: v1
     kind: ConfigMap
     metadata:
@@ -69,5 +72,8 @@ items:
         }
         sub vcl_deliver {
           set req.http.x-cache-info = req.http.x-cache-info;
+        }
+        sub vcl_backend_response{
+          set beresp.ttl = {{ .Values.tranql_varnish.backplane.cache_ttl }};
         }
 kind: List
