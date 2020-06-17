@@ -1,0 +1,41 @@
+config:
+  target: "{{ $processEnvironment.SERVER_ADDRESS }}"
+  phases:
+    # We will test two requests first one will take longer and we should see improvment in 2nd if
+    # cache is used
+    - duration: 1
+      arrivalRate: 2
+  http:
+    timeout: 600
+  variables:
+    icees_robokop_query: "SELECT population_of_individual_organisms->chemical_substance->gene
+        from \"/schema\"
+        WHERE icees3_and_epr.table='patient'
+        AND icees3_and_epr.cohort_features.D28D_ASTHMA_ER_VISIT_12M = 'True'
+        AND icees3_and_epr.cohort_feature.RACE='BAA'
+        AND icees3_and_epr.maximum_p_value= 0.5
+        AND icees.table = 'patient'
+        AND icees.feature.TotalEDInpatientVisits >= 2
+        AND icees.Race = 'African American'
+        AND icees.year = 2010
+        AND icees.maximum_p_value = 0.5"
+    icees_robokop_query_extra: "SELECT population_of_individual_organisms->chemical_substance->gene->gene_family
+        from \"/schema\"
+        WHERE icees3_and_epr.table='patient'
+        AND icees3_and_epr.cohort_features.D28D_ASTHMA_ER_VISIT_12M = 'True'
+        AND icees3_and_epr.cohort_feature.RACE='BAA'
+        AND icees3_and_epr.maximum_p_value= 0.5
+        AND icees.table = 'patient'
+        AND icees.feature.TotalEDInpatientVisits >= 2
+        AND icees.Race = 'African American'
+        AND icees.year = 2010
+        AND icees.maximum_p_value = 0.5
+        "
+scenarios:
+  - flow:
+      - post:
+          url: "/tranql/query"
+          body: "{{ icees_robokop_query }}"
+      - post:
+          url: "/tranql/query"
+          body: "{{ icees_robokop_query_extra }}"

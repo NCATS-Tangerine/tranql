@@ -1024,11 +1024,10 @@ class SelectStatement(Statement):
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
 
-    def __init__(self, parse_tree, backplane):
+    def __init__(self, parse_tree, schema):
         logger.debug (f"{json.dumps(parse_tree, indent=2)}")
         """ Create an abstract syntax tree from the parser token stream. """
-        self.schema = Schema (backplane=backplane)
-        self.backplane = backplane
+        self.schema = schema
         self.statements = []
         self.parse_tree = parse_tree
         logger.debug (f"{json.dumps(self.parse_tree, indent=2)}")

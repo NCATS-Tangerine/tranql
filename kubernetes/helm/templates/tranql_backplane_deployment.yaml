@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.tranql_backplane.deployment_name }}
+  labels:
+    service: {{ .Values.tranql_backplane.service_name }}
+    app: {{ .Values.tranql_backplane.app_name }}
+spec:
+  replicas: {{ .Values.tranql_backplane.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.tranql_backplane.app_name }}
+  template:
+    metadata:
+      labels:
+        app: tranql-backend
+    spec:
+      volumes:
+        - name: {{ .Values.tranql_logs.container_volume_name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.tranql_logs.pvc_name }}
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: tranql-backplane
+        image: {{ .Values.tranql_backplane.image }}:{{ .Values.tranql_backplane.image_tag }}
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "--access-logfile=$(ACCESS_LOG)", "--error-logfile=$(ERROR_LOG)", "--log-level=debug", "tranql.backplane.server:app" ]
+        ports:
+          - containerPort: {{ .Values.tranql_backplane.web_app_port }}
+            name: http
+        env:
+          - name: BACKPLANE_PORT
+            value: {{ .Values.tranql_backplane.wen_app_port | quote }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: ACCESS_LOG
+            value: "/var/nfs/tranql-backplane_access_log"
+          - name: ERROR_LOG
+            value: "/var/nfs/tranql-backplane_error_log"
+        volumeMounts:
+          - name: {{ .Values.tranql_logs.container_volume_name }}
+            mountPath: /var/nfs
+#        resources:
+#          requests:
+#            memory: 200Mi
+#          limits:
+#            memory: 1Gi
+      restartPolicy: {{ .Values.tranql_backplane.restart }}

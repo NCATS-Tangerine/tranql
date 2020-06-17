@@ -1,0 +1,14 @@
+The following sample query asks a question that spans two ICEES+ endpoints, one containing data on UNCHCS patients with asthma-like conditions and a second containing data on UNCHS patients with asthma-like conditions AND EPR participants from an 'asthma' cohort. The query asks what diseases or phenotypic features are present in African American EPR participants who reported one or more annual ED visits for asthma AND African American UNCHCS patients with asthma-like conditions who had two or more annual ED or inpatient visits for respiratory issues? 
+
+select population_of_individual_organisms->disease_or_phenotypic_feature
+  from "/schema"
+WHERE icees3_and_epr.table = 'patient' 
+AND icees3_and_epr.feature.D28D_ASTHMA_ER_VISIT_12M = 'True'
+AND icees3_and_epr.RACE = "BAA"
+AND icees3_and_epr.year = 2010
+AND icees3_and_epr.maximum_p_value = 0.5
+AND icees.table='patient'
+AND icees.feature.TotalEDInpatientVisits >=2
+AND icees.feature.Race = 'African American'
+AND icees.year= 2010
+AND icees.maximum_p_value = 0.5

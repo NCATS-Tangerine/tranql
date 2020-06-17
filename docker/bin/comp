@@ -1,18 +1,45 @@
 #!/bin/bash
 
+function get_ver () {
+    if [ ! -f "bin/.ver" ]
+    then
+        echo "The version file .ver does not exist."
+        echo "Please check for or re-create tranql/docker/bin/.ver"
+        return 255
+    fi
+
+    ver=$(< bin/.ver)
+    echo "$ver"
+    return 0
+}
 build () {
     local mod=$1
     if [ -z "$mod" ]; then
         echo module name required
     fi
-    docker build --no-cache $mod -t greentranslator/$mod
+    newversion=$(get_ver)
+    rc=$?
+    if [ $rc -eq 255 ]
+    then
+        echo "Version file .ver not found."
+        echo "Please check for or re-create tranql/docker/bin/.ver"
+    fi
+    docker build --no-cache $mod -t renciorg/$mod:latest -t renciorg/$mod:$newversion
 }
 push () {
     local mod=$1
     if [ -z "$mod" ]; then
         echo module name required
     fi
-    docker push greentranslator/$mod
+    vers=$(get_ver)
+    rc=$?
+    if [ $rc -eq 255 ]
+    then
+        echo "Version file .ver not found."
+        echo "Please check for or re-create tranql/docker/bin/.ver"
+    fi
+    docker push renciorg/$mod:latest
+    docker push renciorg/$mod:$vers
 }
 clean () {
     images () {

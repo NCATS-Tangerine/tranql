@@ -281,7 +281,13 @@ class Concept:
         return final_list
     def set_nodes (self, nodes):
         keep_nodes = {}
-        for n in nodes:
+        reduced_nodes = []
+        for node in nodes:
+            if isinstance(node, list):
+                reduced_nodes += node
+            else:
+                reduced_nodes.append(node)
+        for n in reduced_nodes:
             identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
             keep_nodes[identifier] = n
         self.nodes = self.filter_nodes (list(keep_nodes.values()))

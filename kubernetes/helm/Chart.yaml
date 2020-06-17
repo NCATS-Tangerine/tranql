@@ -1,0 +1,8 @@
+apiVersion: v2
+name: helm
+description: Helm chart for Tranql
+type: application
+# Chart Version
+version: 0.1.0
+# Using same version as the docker images at tranql/docker/bin/.ver
+appVersion: 0.26

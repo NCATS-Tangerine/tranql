@@ -1,0 +1,65 @@
+
+## Values for tranql frontend
+tranql_frontend:
+  image: renciorg/tranql-app
+  image_tag: latest
+  deployment_name: tranql-frontend-deployment
+  service_name: tranql-frontend-service
+  app_name: tranql_frontend
+  replicas: 1
+  web_app_port: "8001"
+  restart: "Always"
+  # Comment the line below to disable registry
+  use_kp_registry: true
+
+## Values for tranql backplane
+tranql_backplane:
+  image: renciorg/tranql-base
+  image_tag: latest
+  deployment_name: tranql-backend-deployment
+  service_name: tranql-backend-service
+  app_name: tranql-backend
+  replicas: 1
+  web_app_port: "8099"
+
+### Values for log persistence
+tranql_logs:
+  pv_name: tranql-logs-pv
+  pvc_name: tranql-logs-pvc
+  container_volume_name: tranql-logs-volume
+  storage_size: 1Gi
+#  storage_nfs_server: "stars-k.nfs.edc.renci.org"
+  storage_path: "/opt/tranql/logs"
+
+### Varnish cache configurations
+tranql_varnish:
+  image: renciorg/tranql-varnish
+  image_tag: latest
+  port: 8080
+  frontend:
+    deployment_name: tranql-frontend-cache-dep
+    service_name: tranql-frontend-cache-service
+    app_name: tranql-frontend-cache
+    config_name: tranql-frontend-cache-config
+    container_name: tranql-varnish-frontend-container
+    cache_ttl: 3h
+  backplane:
+    deployment_name: tranql-backplane-cache-dep
+    service_name: tranql-backplane-cache-service
+    app_name: tranql-backend-cache
+    config_name: tranql-backplane-cache-config
+    container_name: tranql-varnish-backplane-container
+    cache_ttl: 3h
+
+tranql_artillery:
+  image: renciorg/tranql-artillery
+  image_tag: latest
+
+# the following values will be used to select the entry point from a loadbalancer
+# if enable cache is true varnish frontend cache will be the entry point
+# else tranql_frontend will be the entrypoint
+# and also enable_cache false will make sure that tranql_frontend is routing
+# directly to tranql-backplane and not through backplane cache proxy
+enable_cache: true
+loadBalancer_ip: nnn.nnn.nnn.nnn
+loadBalancer_port: xxxx

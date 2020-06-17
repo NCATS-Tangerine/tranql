@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tranql-backend-deployment
+  namespace: translator
+  labels:
+    service: tranql-backend-service
+    app: tranql-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tranql-backend
+  template:
+    metadata:
+      labels:
+        app: tranql-backend
+    spec:
+      volumes:
+        - name: nfs-volume
+          nfs:
+            server: arrival.edc.renci.org
+            path: /srv/k8s-pvs/translator/logs
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: tranql-backplane
+        image: renciorg/tranql-base:latest
+        command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "--access-logfile=$(ACCESS_LOG)", "--error-logfile=$(ERROR_LOG)", "--log-level=debug", "tranql.backplane.server:app" ]
+        ports:
+          - containerPort: 8099
+            name: http
+        env:
+          - name: BACKPLANE_PORT
+            value: "8099"
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: ACCESS_LOG
+            value: "/var/nfs/tranql-backplane_access_log"
+          - name: ERROR_LOG
+            value: "/var/nfs/tranql-backplane_error_log"
+        volumeMounts:
+          - name: nfs-volume
+            mountPath: /var/nfs
+            subPathExpr: $(POD_NAME)
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 1Gi
+      restartPolicy: Always

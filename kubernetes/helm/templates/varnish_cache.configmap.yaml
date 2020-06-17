@@ -1,0 +1,79 @@
+apiVersion: v1
+items:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: {{ .Values.tranql_varnish.frontend.config_name }}
+    data:
+      default_vcl:
+        vcl 4.0;
+        include "cache_post_requests.vcl";
+        backend default {
+        .host = "{{ .Values.tranql_frontend.service_name}}";
+        .port = "{{ .Values.tranql_frontend.web_app_port }}";
+        .probe = {
+          .url = "/apidocs/";
+          .timeout = 60s;
+          .interval = 5s;
+          .window = 5;
+          .threshold = 3;
+            }
+        /** Set backend timeouts **/
+        .between_bytes_timeout = 600s;
+        .first_byte_timeout = 600s;
+          }
+        /* set cache hit and miss indicator header */
+        sub vcl_recv {
+          unset req.http.x-cache-info;
+        }
+        sub vcl_hit {
+          set req.http.x-cache-info = "hit";
+        }
+        sub vcl_miss {
+          set req.http.x-cache-info = "miss";
+        }
+        sub vcl_deliver {
+          set req.http.x-cache-info = req.http.x-cache-info;
+        }
+        sub vcl_backend_response{
+        set beresp.ttl = {{ .Values.tranql_varnish.frontend.cache_ttl }};
+        }
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: {{ .Values.tranql_varnish.backplane.config_name }}
+    data:
+      default_vcl:
+        vcl 4.0;
+        include "cache_post_requests.vcl";
+        backend default {
+          .host = "{{ .Values.tranql_backplane.service_name}}";
+          .port = "{{ .Values.tranql_backplane.web_app_port }}";
+          .probe = {
+            .url = "/apidocs/";
+            .timeout = 60s;
+            .interval = 5s;
+            .window = 5;
+            .threshold = 3;
+            }
+          /** Set backend timeouts **/
+          .between_bytes_timeout = 600s;
+          .first_byte_timeout = 600s;
+          }
+        /* set cache hit and miss indicator header */
+        sub vcl_recv {
+          unset req.http.x-cache-info;
+        }
+        sub vcl_hit {
+          set req.http.x-cache-info = "hit";
+        }
+        sub vcl_miss {
+          set req.http.x-cache-info = "miss";
+        }
+        sub vcl_deliver {
+          set req.http.x-cache-info = req.http.x-cache-info;
+        }
+        sub vcl_backend_response{
+          set beresp.ttl = {{ .Values.tranql_varnish.backplane.cache_ttl }};
+        }
+kind: List

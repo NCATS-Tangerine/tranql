@@ -6,6 +6,7 @@ from tranql.api import api, app, StandardAPIResource
 
 @pytest.fixture
 def client():
+    app.config['TESTING'] = True
     client = app.test_client()
     yield client
 
@@ -254,15 +255,15 @@ def test_query(client, requests_mock):
         --
         SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
-        SELECT population_of_individual_organisms->drug_exposure
-          FROM "/clinical/cohort/disease_to_chemical_exposure"
+        SELECT population_of_individual_organisms->drug
+          FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
          WHERE EstResidentialDensity < '2'
            AND population_of_individual_organizms = 'x'
            AND cohort = 'all_patients'
            AND max_p_value = '0.1'
            SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
 
-        SELECT chemical_substance->gene->biological_process->phenotypic_feature
+        SELECT chemical_substance->gene->biological_process->anatomical_entity
           FROM "/graph/gamma/quick"
          WHERE chemical_substance = $chemical_exposures
            SET knowledge_graph

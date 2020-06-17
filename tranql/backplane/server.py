@@ -167,6 +167,28 @@ class StandardAPIResource(Resource):
                     message['knowledge_graph']['nodes'].append(node)
                     nodeIds.append(node['id'])
         return message
+
+    def down_cast_message(self, message, reasoner_spec_version='2.0', down_cast_to='0.9'):
+        if reasoner_spec_version == '2.0':
+            assert 'query_graph' in message
+            assert 'knowledge_graph' in message
+            assert 'results' in message
+            if down_cast_to == '0.9':
+                converted_results = []
+                for r in message['results']:
+                    node_bindings = r['node_bindings']
+                    edge_bindings = r['edge_bindings']
+                    # Expecting
+                    # {qg_id: 'qg-id-value', kg_id: 'kg-id-value'}
+                    # tranform to {'qg-id-value': 'kg-id-value'}
+                    node_bindings = {n['qg_id']: n['kg_id']for n in node_bindings}
+                    edge_bindings = {e['qg_id']: e['kg_id']for e in edge_bindings}
+                    r['node_bindings'] = node_bindings
+                    r['edge_bindings'] = edge_bindings
+                    converted_results.append(r)
+                message['results'] = converted_results
+                return self.normalize_message(message)
+
     def normalize_message (self, message):
         if 'results' in message:
             return self.normalize_message(self.merge_results(message))
@@ -209,7 +231,11 @@ class StandardAPIResource(Resource):
         return (data, status_code)
 class ICEESSchema(StandardAPIResource):
     def __init__(self):
-        self.schema_url = "https://icees.renci.org/2.0.0/knowledge_graph/schema"
+        self.version_to_url_map = {
+            "icees": "https://icees.renci.org/2.0.0/knowledge_graph/schema",
+            "icees3_and_epr": "https://icees.renci.org:16339/knowledge_graph/schema"
+        }
+
     def get(self):
         """
         ICEES schema
@@ -238,6 +264,21 @@ class ICEESSchema(StandardAPIResource):
                         schema:
                             $ref: '#/definitions/Error'
         """
+        icees_version = request.args.get('provider')
+        if not icees_version:
+            self.response({
+                "status": "error",
+                "code" : "400",
+                "message": "Bad request. Need to provide version as get parameter."
+            })
+
+        self.schema_url = self.version_to_url_map.get(icees_version)
+        if not self.schema_url:
+            self.response({
+                "status": "error",
+                "code": "500",
+                "message": f"The specified ICEES version could not be found - {icees_version}"
+            })
         response = requests.get (
             self.schema_url,
             verify=False)
@@ -258,6 +299,11 @@ class ICEESSchema(StandardAPIResource):
 
 class ICEESClusterQuery(StandardAPIResource):
     """ ICEES Resource. """
+    def __init__(self):
+        self.version_to_url_map = {
+            "icees": "https://icees.renci.org/2.0.0/knowledge_graph",
+            "icees3_and_epr": "https://icees.renci.org:16339/knowledge_graph"
+        }
 
     def post(self):
         """
@@ -316,7 +362,8 @@ class ICEESClusterQuery(StandardAPIResource):
                             $ref: '#/definitions/Error'
 
         """
-        self.validate (request, 'Message')
+        self.validate(request, 'Message')
+        icees_version = request.args.get('provider', 'icees')
         #print (f"{json.dumps(request.json, indent=2)}")
         request.json['options'] = self.compile_options (request.json['options'])
 
@@ -336,15 +383,21 @@ class ICEESClusterQuery(StandardAPIResource):
         result = {}
 
         ''' Invoke ICEES '''
-        icees_kg_url = "https://icees.renci.org/2.0.0/knowledge_graph"
+        icees_kg_url = self.version_to_url_map.get(icees_version) #"https://icees.renci.org/2.0.0/knowledge_graph"
+        if not icees_version:
+            self.response({
+                "status": "error",
+                "code": "500",
+                "message": f"The specified ICEES version could not be found - {icees_version}"
+            })
         app.logger.debug (f"--request.json({icees_kg_url})--> {json.dumps(request.json, indent=2)}")
         response = requests.post (icees_kg_url,
                                   json=request.json,
                                   verify=False)
 
-        with open ('icees.out', 'w') as stream:
-            json.dump (response.json (), stream, indent=2)
-        app.logger.debug (f"-- response --> {json.dumps(response.json(), indent=2)}")
+        # with open ('icees.out', 'w') as stream:
+        #     json.dump (response.json (), stream, indent=2)
+        # app.logger.debug (f"-- response --> {json.dumps(response.json(), indent=2)}")
 
         response_json = response.json ()
         its_an_error = response_json.\
@@ -380,7 +433,8 @@ class ICEESClusterQuery(StandardAPIResource):
                 for index, level in enumerate(levels):
                     if index < len(levels) - 1:
                         last = obj
-                        obj = {}
+                        obj = obj.get(level, {}) if level != 'feature' else {} # we only allow one feature, last feature
+                                                                               # is the winner
                         last[level] = obj
                     else:
                         obj[level] = {
@@ -652,7 +706,8 @@ class GammaResource(StandardAPIResource):
         super().__init__()
         self.robokop_url = 'https://robokop.renci.org' # TODO - make a configuration setting.
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
-        self.quick_url = f'{self.robokop_url}/api/simple/quick/?max_connectivity=1000'
+        self.quick_url = f'{self.robokop_url}/api/simple/quick/?rebuild=false&output_format=MESSAGE&max_connectivity=0&max_results=300'
+        #                                                      ?rebuild=false&output_format=MESSAGE&max_connectivity=0&max_results=250
     def view_url (self, uid):
         return f'{self.robokop_url}/simple/view/{uid}'
 
@@ -710,7 +765,9 @@ class GammaQuery(GammaResource):
         del request.json['knowledge_graph']
         del request.json['knowledge_maps']
         del request.json['options']
-        response = requests.post (self.quick_url, json=request.json)
+        app.logger.debug (f"Making request to {self.quick_url}")
+        app.logger.debug (json.dumps(request.json, indent=2))
+        response = requests.post (self.quick_url, json=request.json, verify=False)
         # print (f"{json.dumps(response.json (), indent=2)}")
         if response.status_code >= 300:
             result = {
@@ -720,6 +777,8 @@ class GammaQuery(GammaResource):
             }
         else:
             result = self.normalize_message (response.json ())
+        if app.logger.isEnabledFor(logging.DEBUG):
+            app.logger.debug (json.dumps(result, indent=2))
         return self.response(result)
 
 class PublishToGamma(GammaResource):
@@ -918,6 +977,103 @@ class BiolinkModelWalkerService(StandardAPIResource):
             response['answers'] = []
         return self.normalize_message (response)
 
+#######################################################
+##
+## Automat - query Automat-KPs.
+##
+#######################################################
+
+class AutomatResource(StandardAPIResource):
+    def __init__(self):
+        super().__init__()
+        self.url = 'https://automat.renci.org'
+
+    def get_kp_reasoner_api(self, kp_tag):
+        return f'{self.url}/{kp_tag}/reasonerapi'
+
+class AutomatQuery(AutomatResource):
+    """ Generic graph query to Gamma. """
+    def __init__(self):
+        super().__init__()
+    def post(self, kp_tag):
+        """
+        Automat query
+        ---
+        tags: [query]
+        description: Query the Automat KPs.
+        parameters:
+            - in: path
+              name: kp_tag
+              schema:
+                type: string
+                example: uberon
+              required: true
+              description: KP identifier to get data from.
+        requestBody:
+            description: Input message
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/definitions/Message'
+                    example:
+                        knowledge_graph:
+                            nodes: []
+                            edges: []
+                        knowledge_maps:
+                            - {}
+                        question_graph:
+                            nodes:
+                                - id: "chemical_substance"
+                                  type: "chemical_substance"
+                                  curie: "CHEMBL:CHEMBL3"
+                                - id: "disease"
+                                  type: "disease"
+                            edges:
+                                - id: "e1"
+                                  source_id: "chemical_substance"
+                                  target_id: "disease"
+                        options: {}
+
+        responses:
+            '200':
+                description: Message
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/Message'
+            '500':
+                description: An error was encountered
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/definitions/Error'
+        """
+        self.validate (request, 'Message')
+        url = self.get_kp_reasoner_api(kp_tag)
+        app.logger.debug(f"Making request to {url}")
+        # question_graph should be query graph
+        question = request.json
+        question['query_graph'] = copy.deepcopy(question['question_graph'])
+        del question['question_graph']
+        del question['knowledge_graph']
+        del question['knowledge_maps']
+        app.logger.debug (json.dumps(question, indent=2))
+
+        response = requests.post(url, json=question)
+        if response.status_code >= 300:
+            result = {
+                "status" : "error",
+                "code"   : "service_invocation_failure",
+                "message" : f"Bad Automat response. url: {self.url} \n request: {json.dumps(request.json, indent=2)} response: \n{response.text}."
+            }
+        else:
+            result = self.down_cast_message (response.json ())
+        if app.logger.isEnabledFor(logging.DEBUG):
+            app.logger.debug (json.dumps(result, indent=2))
+        return self.response(result)
+
+
 ###############################################################################################
 #
 # Define routes.
@@ -932,6 +1088,7 @@ api.add_resource(BiolinkModelWalkerService, '/implicit_conversion')
 api.add_resource(GNBRDecorator, '/graph/gnbr/decorate')
 api.add_resource(IndigoQuery, '/graph/indigo')
 api.add_resource(RtxQuery, '/graph/rtx')
+api.add_resource(AutomatQuery, '/graph/automat/<kp_tag>')
 
 # Workflow specific
 api.add_resource(ICEESClusterQuery, '/clinical/cohort/disease_to_chemical_exposure')
@@ -941,6 +1098,11 @@ api.add_resource(ICEESSchema, '/clincial/icees/schema')
 api.add_resource(PublishToGamma, '/visualize/gamma')
 api.add_resource(PublishToNDEx, '/visualize/ndex')
 
+if __name__ != "__main__":
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='TranQL Backplane')
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')

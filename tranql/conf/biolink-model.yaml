@@ -3338,3 +3338,5 @@ classes:
       - PO
       - FAO
       
+  abstract entity:
+    is_a: named thing

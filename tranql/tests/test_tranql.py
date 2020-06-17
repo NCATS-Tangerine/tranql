@@ -3,14 +3,21 @@ import pytest
 import os
 import itertools
 import requests
+import yaml
 from pprint import pprint
 from deepdiff import DeepDiff
+from functools import reduce
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
 from tranql.tranql_ast import SetStatement, SelectStatement
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
+from tranql.tranql_schema import SchemaFactory
+import requests_mock
+from unittest.mock import patch
+import copy, time
+
 #set_verbose ()
 
 def assert_parse_tree (code, expected):
@@ -189,6 +196,22 @@ def test_ast_set_variable (requests_mock):
     statement = SetStatement (variable="variable", value="x")
     statement.execute (tranql)
     assert tranql.context.resolve_arg ("$variable") == 'x'
+
+def test_ast_set_variable_as_list ():
+    tranql = TranQL()
+    curie_list = ['chebi:16576', 'chebi:00004']
+    ast_tree = tranql.parse(f"""
+        set chemical_substance = {curie_list}
+        """)
+    set_statment_parsed = ast_tree.parse_tree[0]
+    set_statment = ast_tree.statements[0]
+    value_list = set_statment_parsed[3]
+    assert isinstance(value_list, list)
+    assert value_list[0] == curie_list[0] and value_list[-1] == curie_list[-1]
+    set_statment.execute(tranql)
+    assert tranql.context.mem.get('chemical_substance') == curie_list
+
+
 def test_ast_set_graph (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Set a variable to a graph passed as a result. """
@@ -234,16 +257,125 @@ def test_ast_generate_questions (requests_mock):
     questions = ast.statements[0].generate_questions (app)
     assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
     assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
+def test_ast_generate_questions_from_list():
+    tranql = TranQL()
+    curie_list = ['chebi:123', 'water']
+    ast = tranql.parse(
+        f"""
+            SET c = {curie_list}
+            SELECT chemical_substance->gene
+            FROM '/schema'
+            WHERE chemical_substance=$c
+            """
+    )
+    # first let's run the set statement
+    ast.statements[0].execute(tranql)
+    questions = ast.statements[1].generate_questions(tranql)
+    question_nodes = reduce(lambda x, y: x + y,
+                            list(
+                                map(lambda question: question['question_graph']['nodes'],
+                                questions)), [])
+    question_curies = list(map(lambda x: x['curie'], filter(lambda node: node['type'] == 'chemical_substance', question_nodes)))
+    assert len(set(question_curies)) == 2
+    assert len(questions) == 2
+    for curie in question_curies:
+        assert curie in curie_list
+
+
+    # Multiple variable setting
+    chemicals = curie_list
+    gene_list = ['BRAC1', 'BRAC2']
+    ast_2 = tranql.parse(
+        f"""
+        SET chemicals= {chemicals}
+        SET genes = {gene_list}
+        SELECT chemical_substance->gene
+        FROM '/schema'
+        WHERE gene=$genes
+        AND chemical_substance=$chemicals
+        """
+    )
+    # Here we should get the following  chebi:123 -> BRAC1, chebi:123 -> BRAC2 , water -> BRAC1 and water -> BRAC2
+    # run set statements
+    set_chemicals = ast_2.statements[0]
+    set_genes = ast_2.statements[1]
+    select_statement = ast_2.statements[2]
+
+    set_chemicals.execute(tranql)
+    set_genes.execute(tranql)
+
+    # generate question
+
+    questions = select_statement.generate_questions(tranql)
+    # get all chemical and genes
+
+
+    grab_ids = lambda node_type: list(
+        # using SET to select unique ids only and casting back to list
+        # grabs ids from questions based on node type
+        set(reduce(
+            lambda acc, question_graph: acc + list(map(
+                lambda node: node['curie'],
+                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
+            )),
+            map(
+                lambda question: question['question_graph'],
+                questions
+            ),
+            []
+        ))
+    )
+    chemicals_ids = grab_ids('chemical_substance')
+    gene_ids = grab_ids('gene')
+    assert len(questions) == 4
+    chemicals.sort()
+    chemicals_ids.sort()
+    gene_ids.sort()
+    gene_list.sort()
+    assert_lists_equal(chemicals_ids, chemicals)
+    assert_lists_equal(gene_list, gene_ids)
+
+def test_generate_questions_where_clause_list():
+    # Try to generate questions if values for nodes are set as lists in the where clause
+    curies = ['HGNC:3', 'HGNC:34']
+    query = f"""
+    SELECT gene->chemical_substance
+    FROM '/schema'
+    WHERE gene={curies}
+    """
+    tranql = TranQL()
+    ast = tranql.parse(query)
+    select_statememt = ast.statements[0]
+    questions = select_statememt.generate_questions(tranql)
+
+    question_nodes = reduce(
+        lambda x, y: x + y,
+        list(
+            map(
+                lambda x: x['question_graph']['nodes'],
+                questions
+            )
+        ), [])
+    # filter out gene curies from the questions
+    gene_curies = list(map(lambda node: node['curie'], filter(lambda node: node['type'] == 'gene', question_nodes)))
+    # we should have two questions
+    assert len(questions) == 2
+    gene_curies.sort()
+    curies.sort()
+    assert set(gene_curies) == set(curies)
+
 def test_ast_format_constraints (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that
             -- The syntax to pass values to reasoners in the where clause (e.g. "icees.foo = bar") functions properly
     """
     print("test_ast_format_constraints ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT population_of_individual_organisms->chemical_substance
-          FROM "/clinical/cohort/disease_to_chemical_exposure"
+          FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
          WHERE icees.should_format = 1
            AND robokop.should_not_format = 0
     """)
@@ -259,7 +391,9 @@ def test_ast_format_constraints (requests_mock):
 def test_ast_backwards_arrow (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_backwards_arrow ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT gene->biological_process<-microRNA
           FROM "/schema"
@@ -278,7 +412,9 @@ def test_ast_decorate_element (requests_mock):
             -- The SelectStatement::decorate method properly decorates both nodes and edges
     """
     print("test_ast_decorate_element ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease
           FROM "/graph/gamma/quick"
@@ -365,7 +501,9 @@ def test_ast_multiple_reasoners (requests_mock):
             -- A transitions that multiple reasoners support will query each reasoner that supports it.
     """
     print("test_ast_multiple_reasoners ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT chemical_substance->disease->gene
           FROM "/schema"
@@ -383,7 +521,9 @@ def test_ast_multiple_reasoners (requests_mock):
     assert statements[2].get_schema_name(tranql) == "robokop"
 def test_ast_merge_knowledge_maps (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.asynchronous = False
     tranql.resolve_names = False
     ast = tranql.parse ("""
@@ -517,7 +657,9 @@ def test_ast_merge_results (requests_mock):
             -- Results from the query plan are being merged together correctly
     """
     print("test_ast_merge_answers ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     ast = tranql.parse ("""
         SELECT cohort_diagnosis:disease->diagnoses:disease
@@ -733,7 +875,9 @@ def test_ast_merge_results (requests_mock):
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -768,7 +912,9 @@ def test_ast_plan_strategy (requests_mock):
         assert sub_schema_plan[2][0][2].nodes == []
 def test_ast_implicit_conversion (requests_mock):
     set_mock(requests_mock, "workflow-5")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     ast = tranql.parse ("""
         SELECT drug_exposure->chemical_substance
          FROM '/schema'
@@ -782,7 +928,9 @@ def test_ast_implicit_conversion (requests_mock):
 def test_ast_plan_statements (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print("test_ast_plan_statements ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     # QueryPlanStrategy always uses /schema regardless of the `FROM` clause.
     ast = tranql.parse ("""
@@ -832,7 +980,9 @@ def test_ast_bidirectional_query (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that we parse and generate queries correctly for bidirectional queries. """
     print ("test_ast_bidirectional_query ()")
-    app = TranQL ()
+    app = TranQL (options={
+        'recreate_schema': True
+    })
     app.resolve_names = False
     disease_id = "MONDO:0004979"
     chemical = "PUBCHEM:2083"
@@ -866,7 +1016,9 @@ def test_interpreter_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Test set statements by executing a few and checking values after. """
     print ("test_interpreter_set ()")
-    tranql = TranQL ()
+    tranql = TranQL (options={
+        'recreate_schema': True
+    })
     tranql.resolve_names = False
     tranql.execute ("""
         -- Test set statements.
@@ -888,7 +1040,8 @@ def test_program (requests_mock):
     mock_map = MockMap (requests_mock, "workflow-5")
     tranql = TranQL (options = {
         "asynchronous" : False,
-        "resolve_names" : False
+        "resolve_names" : False,
+        "recreate_schema": True
     })
     ast = tranql.execute ("""
     --
@@ -905,15 +1058,15 @@ def test_program (requests_mock):
     --
     SET id_filters = "SCTID,rxcui,CAS,SMILES,umlscui"
 
-    SELECT population_of_individual_organisms->drug_exposure
-      FROM "/clinical/cohort/disease_to_chemical_exposure"
+    SELECT population_of_individual_organisms->drug
+      FROM "/clinical/cohort/disease_to_chemical_exposure?provider=icees"
      WHERE EstResidentialDensity < '2'
        AND population_of_individual_organizms = 'x'
        AND cohort = 'all_patients'
        AND max_p_value = '0.1'
        SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
 
-    SELECT chemical_substance->gene->biological_process->phenotypic_feature
+    SELECT chemical_substance->gene->biological_process->anatomical_entity
       FROM "/graph/gamma/quick"
      WHERE chemical_substance = $chemical_exposures
        SET knowledge_graph
@@ -926,3 +1079,227 @@ def test_program (requests_mock):
     kg = tranql.context.resolve_arg("$knowledge_graph")
     assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
     assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
+
+
+def test_unique_ids_for_repeated_concepts():
+    tranql = TranQL()
+    ast = tranql.parse(
+        """
+        SELECT g1:gene->g2:gene
+        FROM '/schema'
+        """
+    )
+    select_statement = ast.statements[0]
+    question = select_statement.generate_questions(tranql)[0]
+    import json
+    print(
+        json.dumps(
+            question, indent=4
+        )
+    )
+    assert question['question_graph']['nodes'] == [
+        {
+            'id': 'g1',
+            'type': 'gene'
+        },
+        {
+            'id': 'g2',
+            'type': 'gene'
+        }
+    ]
+
+def test_setting_values_for_repeated_concepts():
+    tranql = TranQL()
+    gene_list_1 = ['BRCA1', 'BRCA2']
+    gene_list_2 = ['LTA', 'TNF']
+    ast = tranql.parse(
+        f"""
+        SET brca={gene_list_1}
+        SET tnf={gene_list_2}
+        SELECT g1:gene->g2:gene
+        FROM '/schema'
+        WHERE g1 = $brca
+        AND g2 = $tnf
+        """
+    )
+    # exec set statments
+    set_brcas = ast.statements[0]
+    set_tnfs = ast.statements[1]
+    set_brcas.execute(tranql)
+    set_tnfs.execute(tranql)
+
+    # generate questions
+    questions = ast.statements[2].generate_questions(tranql)
+    question_nodes = reduce(lambda x, y: x + y,
+                            map(lambda question: question['question_graph']['nodes'], questions),
+                            [])
+    question_edges = reduce(lambda x, y: x + y,
+                            map(lambda question: question['question_graph']['edges'], questions),
+                            [])
+    curies = list(map(lambda node: node['curie'], question_nodes))
+    for gene in gene_list_1:
+        assert gene in curies
+    for gene in gene_list_2:
+        assert gene in curies
+
+    # also test if direction is good
+    for e in question_edges:
+        print(e)
+        assert e['source_id'] == 'g1'
+        assert e['target_id'] == 'g2'
+
+def test_schema_can_talk_to_automat():
+    config_file = os.path.join(os.path.dirname(__file__),"..","conf","schema.yaml")
+    with open(config_file) as stream:
+        schema_yml = yaml.load(stream, Loader=yaml.Loader)
+    automat_url = schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
+    live_kps = requests.get(f'{automat_url}/registry').json()
+    exclusion = schema_yml['schema']['automat']['exclude']
+    live_kps = [x for x in live_kps if x not in exclusion]
+    tranql = TranQL(options={
+        'registry': True,
+        'recreate_schema': True
+    })
+    ast = tranql.parse("""
+            SELECT disease->d2:disease
+              FROM '/schema'             
+        """)
+
+    select = ast.statements[0]
+    tranql_schema = select.planner.schema
+    ## Test each KP is registered in schema
+    for kp in live_kps:
+        assert f'automat_{kp}' in tranql_schema.schema, f'KP Tranql schema entry not found for {kp}'
+        ## Test if URL is refering to backplane url
+        automat_kp_schema = tranql_schema.schema[f'automat_{kp}']
+        assert automat_kp_schema['url'] == f'/graph/automat/{kp}', 'Automat backplane url incorrect'
+
+def test_registry_disable():
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, create_new=True,  update_interval=1)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) == 0
+
+def test_registry_enabled():
+    mock_schema_yaml = {
+        'schema': {
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1, create_new=True)
+        schema = schema_factory.get_instance()
+        assert len(schema.schema) > 1
+
+
+def test_registry_adapter_automat():
+    from tranql.tranql_schema import RegistryAdapter
+
+    # let pretend automat url is automat and we will mask what we expect to be called
+    # since there is no real logic here we just have to make sure apis are called
+
+    with requests_mock.mock() as mock_server:
+        mock_server.get('http://automat/registry', json=['kp1'])
+        expected_response = ['lets pretend this was a schema']
+        mock_server.get('http://automat/kp1/graph/schema', json=expected_response)
+        ra = RegistryAdapter()
+        response = ra.get_schemas('automat', 'http://automat')
+        assert 'automat_kp1' in response
+        assert 'schema' in response['automat_kp1']
+        assert 'url' in response['automat_kp1']
+        assert response['automat_kp1']['schema'] == expected_response
+
+
+def test_schema_should_not_change_once_initilalized():
+    """
+    Scenario: In a registry aware schema,
+    UserObject initializes schema object.
+    Schema object now has entries from registry(eg. automat).
+    UserObject starts work on that schema. During this time,
+    Schema instance is updated by it's thread and some entries on
+    the schema might have changed. When UserObject looks back at the schema
+    it's different
+    """
+
+    mock_schema_yaml = {
+        'schema':{
+            'automat': {
+                'doc': 'docter docter, help me read this',
+                'registry': 'automat',
+                'registry_url': 'https://automat.renci.org',
+                'url': '/graph/automat'
+
+            }
+        }
+    }
+    mock_schema_response = {
+        'kp1': {
+            'type1': {
+                'type2':[
+                    'related_to'
+                ]
+            }
+        },
+        'kp2': {
+            'type99': {
+                'type300': [
+                    'related_to'
+                ]
+            }
+        }
+    }
+
+
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        update_interval = 1
+        schema_factory = SchemaFactory(
+            backplane='http://localhost:8091',
+            use_registry=True,
+            update_interval=update_interval,
+            create_new=True
+        )
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # say registry returns kp1 on first call
+            m.get('https://automat.renci.org/registry', json=['kp1'])
+            # here some Tranql objects have this instance.
+            schema1 = schema_factory.get_instance()
+            schema2 = schema_factory.get_instance()
+            # Doing something on second  schema instance should not affect the first.
+            schema2.schema['Lets add something'] = {'add some thing': 'dsds'}
+            assert 'Lets add something' not in schema1.schema
+
+        with requests_mock.mock() as m:
+            # setup mock kps
+            kps = ['kp1', 'kp2']
+            for kp in kps:
+                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+            # Now we change what registry returns and wait for update
+            m.get('https://automat.renci.org/registry', json=['kp2'])
+            # lets wait for next updated and request a new object
+            # testing to see if our new request results will affect the
+            # the original schema
+            time.sleep(update_interval + 1) # sleeping to ensure update thread is working
+            schema2 = schema_factory.get_instance()
+            # original reference to Schema should be different from second.
+            assert schema1 != schema2

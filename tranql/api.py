@@ -1,7 +1,6 @@
 """
 Provide a standard protocol for asking graph oriented questions of Translator data sources.
 """
-import copy
 import argparse
 import json
 import logging
@@ -17,18 +16,15 @@ from flask_cors import CORS
 from tranql.concept import ConceptModel
 from tranql.main import TranQL, TranQLIncompleteParser
 from tranql.tranql_ast import SelectStatement
-import networkx as nx
-from tranql.util import JSONKit
-from tranql.tranql_schema import GraphTranslator, Schema
-from tranql.concept import BiolinkModelWalker
+from tranql.tranql_schema import GraphTranslator
 from tranql.exception import TranQLException
-#import flask_monitoringdashboard as dashboard
 
 logger = logging.getLogger (__name__)
 
 web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
 
-app = Flask(__name__, static_folder=web_app_root)
+app = Flask(__name__)
+#app = Flask(__name__, static_folder=web_app_root)
 #dashboard.bind(app)
 
 api = Api(app)
@@ -58,6 +54,7 @@ with open(filename, 'r') as file_obj:
     }
     with open(definitions_filename, 'r') as definitions_file:
         template['definitions'].update(yaml.load(definitions_file))
+
 swagger = Swagger(app, template=template, config={
     "headers": [
     ],
@@ -136,7 +133,7 @@ class WebAppRoot(Resource):
         consumes': [ 'text/plain' ]
         """
         return send_from_directory(web_app_root, 'index.html')
-api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
+#api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
 
 class WebAppPath(Resource):
     def get(self, path):
@@ -152,14 +149,18 @@ class WebAppPath(Resource):
               required: true
               description: Resource path.
         """
-        resource_path = os.path.join (os.path.dirname (__file__), os.path.sep, path)
-        logger.debug (f"--path: {resource_path}")
+        logger.error (f"........................PATH: {path}")
         if path != "" and os.path.exists(web_app_root + "/" + path):
-            return send_from_directory(web_app_root, path)
+            return send_from_directory (web_app_root, filename=path)
         else:
             abort (404)
-api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
 
+#api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
+#api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return request.path, 404
 
 class Configuration(StandardAPIResource):
     """ Configuration """
@@ -426,7 +427,10 @@ class TranQLQuery(StandardAPIResource):
         logging.debug (f"--> query: {query}")
         tranql = TranQL (options = {
             "dynamic_id_resolution" : dynamic_id_resolution,
-            "asynchronous" : asynchronous
+            "asynchronous" : asynchronous,
+            "registry": app.config.get('registry', False),
+            # when testing new schema should be created as per the test case
+            "recreate_schema": app.config.get('TESTING', True)
         })
         try:
             context = tranql.execute (query) #, cache=True)
@@ -528,7 +532,7 @@ class SchemaGraph(StandardAPIResource):
                           $ref: '#/definitions/Error'
         """
         tranql = TranQL ()
-        schema = Schema (backplane=tranql.context.mem.get('backplane'))
+        schema = tranql.schema
         schemaGraph = GraphTranslator(schema.schema_graph)
 
         # logger.info(schema.schema_graph.net.nodes)
@@ -631,8 +635,7 @@ class ReasonerURLs(StandardAPIResource):
                           type: object
         """
         tranql = TranQL ()
-        schema = Schema (backplane=tranql.context.mem.get('backplane'))
-
+        schema = tranql.schema
         return { schema[0] : schema[1]['url'] for schema in schema.schema.items() }
 
 class ParseIncomplete(StandardAPIResource):
@@ -716,7 +719,9 @@ class ParseIncomplete(StandardAPIResource):
         else:
             query = request.json
 
-        tranql = TranQL ()
+        tranql = TranQL (options= {
+            'use_registry': app.config.get('registry', False)
+        })
         parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
 
         result = None
@@ -744,14 +749,23 @@ api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
 api.add_resource(ReasonerURLs, '/tranql/reasonerURLs')
 
+api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
+api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Short sample app')
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
     parser.add_argument('--port', action="store", dest="port", default=8001, type=int)
     parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
     parser.add_argument('-r', '--reloader', help="Use reloader independent of debug.", default=False, action='store_true')
+    parser.add_argument('-R', '--registry', help="Use registries to get data", default=False, action='store_true')
     args = parser.parse_args()
-
+    app.config['registry'] = args.registry
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
     app.run(

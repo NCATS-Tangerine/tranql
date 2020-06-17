@@ -1,27 +1,34 @@
+brew cask install minikube
+minikube version
+minikube start
+minikube status
+minikube addons enable ingress
+kubectl create -f kubernetes/
 
- brew cask install minikube
- minikube version
- minikube start
- minikube status
- minikube addons enable ingress
- kubectl get pods -n kube-system | grep nginx-ingress-controller
-  
- kubectl create -f ../tranql/kubernetes/
- kubectl replace --force -v 5 -f ../tranql/kubernetes/
- kubectl get pods -o wide
- kubectl describe pod tranql
- kubectl logs tranql -c tranql-app
- kubectl logs tranql -c tranql-backplane
+kubectl get service tranql-frontend-service
+kubectl get service tranql-backend-service
 
- kubectl create -f ../tranql/kubernetes/tranql-ingress.yaml
- kubectl describe ingress tranql-ingress
- kubectl apply -v 5 -f ../tranql/kubernetes/tranql-ingress.yaml
- kubectl get ingress
- kubectl logs ingress tranql-ingress
- kubectl get pods -n kube-services
- kubectl logs nginx-ingress-controller-586cdc477c-bfs4x -n kube-system
+kubectl get pods -o wide
 
- kubectl delete -v 5 -f ../tranql/kubernetes/ 
+# Check kubernetes logs on frontend pod
+# tranql-frontend-deployment-5465b67599-fclfn is from previous cmd.
+kubectl logs tranql-frontend-deployment-5465b67599-fclfn
+kubectl replace --force -v 5 -f kubernetes/
 
+kubectl get pods -o wide
+kubectl describe pod tranql-frontend-deployment
 
+# Get shell on pod and look up dns name of backend:
+kubectl exec -it tranql-frontend-deployment-5465b67599-fclfn sh
+nslookup tranql-backend-service
 
+kubectl get events
+
+kubectl replace --force -v 5 -f kubernetes/
+kubectl apply -v 5 -f kubernetes/
+
+kubectl get ingress
+kubectl describe ingress
+kubectl describe pods
+
+kubectl delete -v 5 -f kubernetes/
