@@ -314,9 +314,8 @@ body {
 .import-export-modal-dialog .modal-body {
   display:flex;
 }
-.import-export-modal-dialog .modal-body > * {
+.import-export-modal-dialog .modal-body .no-select {
   /* flex:1; */
-  margin:0 5px;
   background-color:rgb(245,245,245);
   border-radius:5px;
   border:1.5px solid rgb(230,230,230);
@@ -325,11 +324,21 @@ body {
   flex-direction:column;
   min-height:200px;
 }
-.import-export-modal-dialog .modal-body > * > * {
+.import-export-modal-dialog .modal-body .row > * {
+  margin:0 5px;
+}
+.import-export-modal-dialog .modal-body .no-select > * {
   padding:10px;
 }
-.import-export-modal-dialog .modal-body > * > *:not(:last-child) {
+.import-export-modal-dialog .modal-body .no-select > *:not(:last-child) {
   padding-bottom:0;
+}
+.import-export-modal-dialog .copy-url-container {
+  flex-grow: 1;
+  margin-top: 10px !important;
+}
+.import-export-modal-dialog .copy-url-container input {
+  background-color: initial;
 }
 .import-export-icon-container {
   width:100%;
@@ -412,7 +421,8 @@ body {
   flex-direction:column;
 }
 .toolbar-help-modal-dialog .modal-body > .tab-content {
-  height:calc(90% - 5px);
+  height:0; /* ?? */
+  flex-grow:1; /* ?? the height:0 is required to fix overflow for some reason */
   margin-top:10px;
   display:flex;
 }

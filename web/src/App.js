@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { css } from '@emotion/core';
 import { Button } from 'reactstrap';
-import { Modal, Form, Card, Container, Row, Col, ListGroup, Table, Tabs, Tab } from 'react-bootstrap';
+import { Modal, Form, Card, Container, Row, Col, ListGroup, Table, Tabs, Tab, InputGroup } from 'react-bootstrap';
 import { ForceGraph3D, ForceGraph2D, ForceGraphVR } from 'react-force-graph';
 import * as sizeof from 'object-sizeof';
 import JSONTree from 'react-json-tree';
@@ -16,7 +16,7 @@ import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoMdBrowse
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
   FaSpinner, FaMousePointer, FaTimes, FaFolderOpen, FaFileImport, FaFileExport,
-  FaArrowsAlt, FaTrash, FaPlayCircle, FaTable
+  FaArrowsAlt, FaTrash, FaPlayCircle, FaTable, FaCopy
 } from 'react-icons/fa';
 // import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
@@ -182,6 +182,7 @@ class App extends Component {
     this._toggleCheckbox = this._toggleCheckbox.bind (this);
     this._renderCheckboxes = this._renderCheckboxes.bind (this);
     this._hydrateState = hydrateState.bind (this);
+    this._handleQueryString = this._handleQueryString.bind (this);
 
     this._handleShowAnswerViewer = this._handleShowAnswerViewer.bind (this);
     this._handleMessageDialog = this._handleMessageDialog.bind (this);
@@ -2443,7 +2444,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       linkLabel: (l) => l.concatName,
       nodeRelSize:this.state.forceGraphOpts.nodeRelSize,
       enableNodeDrag:this.state.forceGraphOpts.enableNodeDrag,
-      onLinkClick:this._handleLinkClick,
+      onLinkClick:(node) => this._handleLinkClick(node, false),
       onLinkHover:this._handleLinkHover,
       onLinkRightClick:this._handleLinkRightClick,
       onNodeRightClick:this._handleNodeRightClick,
@@ -3017,6 +3018,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   </Card.Body>
                 </Card>
               </Col>
+            </Row>
+            <Row>
               <Col>
                 <Card>
                   <Card.Body>
@@ -3033,8 +3036,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                   </Card.Body>
                 </Card>
               </Col>
-            </Row>
-            <Row>
             </Row>
           </Container>
         </Modal.Body>
@@ -3058,136 +3059,154 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="no-select">
-            <div className="import-export-icon-container horizontal-bar">
-              <FaFileImport/>
-              <span>Import a graph</span>
-            </div>
-              <div className="import-options-container">
-                {<Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._importForm}>
-                  <Form.Check inline label="Cache the graph" name="importCacheGraph" checked={this.state.importForm.cacheGraph} onChange={(e)=>{
-                    const importForm = this.state.importForm;
-                    importForm.cacheGraph = e.target.checked;
-                    this.setState({ importForm });
-                  }}/>
-                  <FileLoader pondProps={{allowMultiple:false,maxFiles:1,acceptedFileTypes:['.json','.yaml','.yml']}}
-                              buttonProps={{type:"submit"}}
-                              filesLoadedCallback={(graph) => {
-                                graph = graph[0];
-                                if (!graph) return;
-                                const options = this.state.importForm;
-                                if (graph.hasOwnProperty('data') && graph.hasOwnProperty('key') && graph.data.hasOwnProperty('knowledge_graph')) {
-                                  this.setState({ showImportExportModal : false });
-                                  this._setSchemaViewerActive(false);
-
-                                  this._updateCode(graph.key);
-                                  this.setState({}, () => {
-                                    console.log(JSON.parse(JSON.stringify(graph)));
-                                    // this._configureMessage(graph.data);
-
-                                    let noRenderChain = false;
-                                    // If it already has a graph (save state was set to true) we should parse it so that it retains its previous state
-                                    if (graph.data.hasOwnProperty('graph')) {
-                                      noRenderChain = true;
-                                      graph.data.graph = GraphSerializer.parse(graph.data.graph);
-                                    }
-                                    this._configureMessage(graph.data,undefined,false);
-                                    this._translateGraph(graph.data, noRenderChain,false);
-                                    options.cacheGraph === true && this._cacheWrite(graph.data);
-                                  });
-
-                                }
-                                else {
-                                  this._handleMessageDialog("Graph Parsing Error", "The graph file is corrupted.", (
-                                    <div>
-                                      <p>Contains key: {graph.hasOwnProperty('key').toString()}</p>
-                                      <p>Contains knowledge_graph: {graph.hasOwnProperty('knowledge_graph').toString()}</p>
-                                      <p>Contains data: {graph.hasOwnProperty('data').toString()}</p>
-                                      <div>Object: <pre style={{display:"inline"}}>{JSON.stringify(graph,undefined,2)}</pre></div>
-                                    </div>
-                                  ));
-                                }
-                              }}
-                              loadFile={(mimeType,data) => {
-                                let message;
-                                try {
-                                  if (mimeType === "application/json") {
-                                    message = JSON.parse(data);
-                                  }
-                                  else if (mimeType === "text/yaml") {
-                                    message = YAML.safeLoad(data);
-                                  }
-                                }
-                                catch (error) {
-                                  this._handleMessageDialog("Graph Parsing Error", error.message, error.stack);
-                                }
-                                return message;
-                              }}/>
-                </Form>}
-              </div>
-          </div>
-          <div className="no-select">
-            <div className="import-export-icon-container horizontal-bar">
-              <FaFileExport/>
-              <span>Export graph{(() => {
-                if (this.state.record) {
-                  // Was lagging it so it has been removed for now
-                  // const options = this.state.exportForm;
-                  // const obj = this._getExportGraph(options.saveGraphState);
-                  // Assumes ANSI encoding
-                  // return " (" + formatBytes(this._dumpGraph(obj,options.fileFormat).graph.length,1) + ")";
-                }
-              })()}</span>
-            </div>
-              <div className="export-options-container">
-                <Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._exportForm}>
-                  <Form.Check inline label="Save graph state" name="exportSaveState" checked={this.state.exportForm.saveGraphState} onChange={(e)=>{
-                    const exportForm = this.state.exportForm;
-                    exportForm.saveGraphState = e.target.checked;
-                    this.setState({ exportForm });
-                  }}/>
-                  <Form.Check inline label="Export in readable form" name="exportReadable" checked={this.state.exportForm.readable} onChange={(e)=>{
-                    const exportForm = this.state.exportForm;
-                    exportForm.readable = e.target.checked;
-                    this.setState({ exportForm });
-                  }}/>
-                  <Form.Group className="form-inline">
-                    <Form.Label>File format:</Form.Label>
-                    <Form.Control as="select" name="exportFileFormat" value={this.state.exportForm.fileFormat} onChange={(e)=>{
-                      const exportForm = this.state.exportForm;
-                      exportForm.fileFormat = e.target.value;
-                      this.setState({ exportForm });
-                    }}>
-                      <option>JSON</option>
-                      <option>YAML</option>
-                    </Form.Control>
-                  </Form.Group>
-                  <div style={{width:"100%",flexGrow:1,display:"flex",justifyContent:"center",alignItems:"flex-end"}}>
-                    <Button color="primary"
-                            style={{width:"100%"}}
-                            onClick={() => {
-                              // Prevent exportation of graph if one has not been loaded
-                              // Also prevents exportation of schema (would be fairly simple to add but for now is not very useful)
-                              if (!this.state.record) {
-                                NotificationManager.warning('You must load a graph', 'Warning', 4000);
-                                return;
-                              }
-                              const options = this.state.exportForm;
-                              const exportType = options.fileFormat;
-                              const readable = options.readable;
-                              const graph = this._getExportGraph(options.saveGraphState);
-
-                              const {graph: data, extension} = this._dumpGraph(graph,exportType,readable);
-
-                              data && FileSaver.saveAs(new Blob([data]),'graph'+extension);
-                            }}
-                            {...(!this.state.record ? {className: 'disabled'} : {})}>
-                      Confirm
-                    </Button>
+          <Container>
+            <Row>
+                <div className="no-select">
+                  <div className="import-export-icon-container horizontal-bar">
+                    <FaFileImport/>
+                    <span>Import a graph</span>
                   </div>
-                </Form>
+                    <div className="import-options-container">
+                      {<Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._importForm}>
+                        <Form.Check inline label="Cache the graph" name="importCacheGraph" checked={this.state.importForm.cacheGraph} onChange={(e)=>{
+                          const importForm = this.state.importForm;
+                          importForm.cacheGraph = e.target.checked;
+                          this.setState({ importForm });
+                        }}/>
+                        <FileLoader pondProps={{allowMultiple:false,maxFiles:1,acceptedFileTypes:['.json','.yaml','.yml']}}
+                                    buttonProps={{type:"submit"}}
+                                    filesLoadedCallback={(graph) => {
+                                      graph = graph[0];
+                                      if (!graph) return;
+                                      const options = this.state.importForm;
+                                      if (graph.hasOwnProperty('data') && graph.hasOwnProperty('key') && graph.data.hasOwnProperty('knowledge_graph')) {
+                                        this.setState({ showImportExportModal : false });
+                                        this._setSchemaViewerActive(false);
+
+                                        this._updateCode(graph.key);
+                                        this.setState({}, () => {
+                                          console.log(JSON.parse(JSON.stringify(graph)));
+                                          // this._configureMessage(graph.data);
+
+                                          let noRenderChain = false;
+                                          // If it already has a graph (save state was set to true) we should parse it so that it retains its previous state
+                                          if (graph.data.hasOwnProperty('graph')) {
+                                            noRenderChain = true;
+                                            graph.data.graph = GraphSerializer.parse(graph.data.graph);
+                                          }
+                                          this._configureMessage(graph.data,undefined,false);
+                                          this._translateGraph(graph.data, noRenderChain,false);
+                                          options.cacheGraph === true && this._cacheWrite(graph.data);
+                                        });
+
+                                      }
+                                      else {
+                                        this._handleMessageDialog("Graph Parsing Error", "The graph file is corrupted.", (
+                                          <div>
+                                            <p>Contains key: {graph.hasOwnProperty('key').toString()}</p>
+                                            <p>Contains knowledge_graph: {graph.hasOwnProperty('knowledge_graph').toString()}</p>
+                                            <p>Contains data: {graph.hasOwnProperty('data').toString()}</p>
+                                            <div>Object: <pre style={{display:"inline"}}>{JSON.stringify(graph,undefined,2)}</pre></div>
+                                          </div>
+                                        ));
+                                      }
+                                    }}
+                                    loadFile={(mimeType,data) => {
+                                      let message;
+                                      try {
+                                        if (mimeType === "application/json") {
+                                          message = JSON.parse(data);
+                                        }
+                                        else if (mimeType === "text/yaml") {
+                                          message = YAML.safeLoad(data);
+                                        }
+                                      }
+                                      catch (error) {
+                                        this._handleMessageDialog("Graph Parsing Error", error.message, error.stack);
+                                      }
+                                      return message;
+                                    }}/>
+                      </Form>}
+                    </div>
+                </div>
+                <div className="no-select">
+                  <div className="import-export-icon-container horizontal-bar">
+                    <FaFileExport/>
+                    <span>Export graph{(() => {
+                      if (this.state.record) {
+                        // Was lagging it so it has been removed for now
+                        // const options = this.state.exportForm;
+                        // const obj = this._getExportGraph(options.saveGraphState);
+                        // Assumes ANSI encoding
+                        // return " (" + formatBytes(this._dumpGraph(obj,options.fileFormat).graph.length,1) + ")";
+                      }
+                    })()}</span>
+                  </div>
+                    <div className="export-options-container">
+                      <Form noValidate onSubmit={(e)=>{e.preventDefault();}} ref={this._exportForm}>
+                        <Form.Check inline label="Save graph state" name="exportSaveState" checked={this.state.exportForm.saveGraphState} onChange={(e)=>{
+                          const exportForm = this.state.exportForm;
+                          exportForm.saveGraphState = e.target.checked;
+                          this.setState({ exportForm });
+                        }}/>
+                        <Form.Check inline label="Export in readable form" name="exportReadable" checked={this.state.exportForm.readable} onChange={(e)=>{
+                          const exportForm = this.state.exportForm;
+                          exportForm.readable = e.target.checked;
+                          this.setState({ exportForm });
+                        }}/>
+                        <Form.Group className="form-inline">
+                          <Form.Label>File format:</Form.Label>
+                          <Form.Control as="select" name="exportFileFormat" value={this.state.exportForm.fileFormat} onChange={(e)=>{
+                            const exportForm = this.state.exportForm;
+                            exportForm.fileFormat = e.target.value;
+                            this.setState({ exportForm });
+                          }}>
+                            <option>JSON</option>
+                            <option>YAML</option>
+                          </Form.Control>
+                        </Form.Group>
+                        <div style={{width:"100%",flexGrow:1,display:"flex",justifyContent:"center",alignItems:"flex-end"}}>
+                          <Button color="primary"
+                                  style={{width:"100%"}}
+                                  onClick={() => {
+                                    // Prevent exportation of graph if one has not been loaded
+                                    // Also prevents exportation of schema (would be fairly simple to add but for now is not very useful)
+                                    if (!this.state.record) {
+                                      NotificationManager.warning('You must load a graph', 'Warning', 4000);
+                                      return;
+                                    }
+                                    const options = this.state.exportForm;
+                                    const exportType = options.fileFormat;
+                                    const readable = options.readable;
+                                    const graph = this._getExportGraph(options.saveGraphState);
+
+                                    const {graph: data, extension} = this._dumpGraph(graph,exportType,readable);
+
+                                    data && FileSaver.saveAs(new Blob([data]),'graph'+extension);
+                                  }}
+                                  {...(!this.state.record ? {className: 'disabled'} : {})}>
+                            Confirm
+                          </Button>
+                        </div>
+                      </Form>
+                    </div>
+                </div>
+            </Row>
+            <Row>
+              <div className="copy-url-container">
+                <InputGroup>
+                  <InputGroup.Prepend><InputGroup.Text>Share this query:</InputGroup.Text></InputGroup.Prepend>
+                  <Form.Control type="text" onFocus={(e) => {
+                    e.target.select();
+                  }} value={(() => {
+                    let url = window.location.href.split("?")[0];
+                    return url + "?" + qs.stringify({ q : this.state.code });
+                  })()} readOnly/>
+                  {/*<InputGroup.Append><InputGroup.Text><FaCopy/></InputGroup.Text></InputGroup.Append>*/}
+                </InputGroup>
               </div>
-          </div>
+            </Row>
+          </Container>
         </Modal.Body>
       </Modal>
     );
@@ -3561,6 +3580,19 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     );
   }
   /**
+   * Handles parameters from the query string
+   *
+   */
+  _handleQueryString() {
+    // `ignoreQueryPrefix` automatically truncates the leading question mark within a query string in order to prevent it from being interpreted as part of it
+    const params = qs.parse(window.location.search, { ignoreQueryPrefix : true });
+
+    const tranqlQuery = params.q || params.query;
+    if (tranqlQuery !== undefined) {
+      this._updateCode(tranqlQuery);
+    }
+  }
+  /**
    * Perform any necessary cleanup before being unmounted
    *
    * @private
@@ -3581,7 +3613,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     this._updateDimensionsFunc = this._updateDimensions;
     window.addEventListener('resize', this._updateDimensionsFunc);
 
+    // Hydrate persistent state from local storage
     this._hydrateState ();
+
+    // Handle query string parameters (mini-router implementation)
+    // & hydrate state accordingly
+    this._handleQueryString ();
 
     // Populate the cache viewer
     this._updateCacheViewer ();
