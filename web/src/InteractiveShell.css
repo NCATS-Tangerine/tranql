@@ -1,0 +1,58 @@
+.InteractiveShell {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: black;
+  height: 100%;
+}
+.shell-line {
+  padding: .25rem 0 !important;
+  margin-left: .25rem;
+  margin-right: .25rem;
+}
+.shell-line:last-child {
+  padding-bottom: .5rem !important; /* Makes it easier to see when typing */
+}
+.shell-line, .shell-line input {
+  color: rgb(204, 204, 204) !important;
+}
+/* .shell-line  *::selection {
+  background-color: rgb(255, 255, 255) !important;
+  color: black !important;
+} */
+.line-prefix {
+}
+.line-content {
+  flex-grow: 1;
+}
+.line-content, .line-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.shell-line input {
+  /* Bootstrap adds these rules which cause the input to take an entire line */
+  display: inline;
+}
+.shell-line input:not(:focus) {
+  /*Should add a rule here to make it easier to find input box when you deselect it - couldn't think of anything */
+}
+
+.loading::after {
+  content: '';
+  animation: loading 2s linear infinite
+}
+
+@keyframes loading {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+}

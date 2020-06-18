@@ -16,7 +16,7 @@ import { IoIosArrowDropupCircle, IoIosArrowDropdownCircle, IoIosSwap, IoMdBrowse
 import {
   FaCog, FaDatabase, FaQuestionCircle, FaSearch, FaHighlighter, FaEye,
   FaSpinner, FaMousePointer, FaTimes, FaFolderOpen, FaFileImport, FaFileExport,
-  FaArrowsAlt, FaTrash, FaPlayCircle, FaTable, FaCopy
+  FaArrowsAlt, FaTrash, FaPlayCircle, FaTable, FaCopy, FaPython
 } from 'react-icons/fa';
 // import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-confirm-alert/src/react-confirm-alert.css';
@@ -37,12 +37,14 @@ import QueriesModal from './QueriesModal.js';
 import BrowseNodeInterface from './BrowseNodeInterface.js';
 import Legend from './Legend.js';
 import TableViewer from './TableViewer.js';
+import InteractiveShell from './InteractiveShell.js';
 import confirmAlert from './confirmAlert.js';
 import highlightTypes from './highlightTypes.js';
 import { shadeColor, adjustTitle, scrollIntoView, hydrateState, formatBytes } from './Util.js';
 import { Toolbar, Tool, /*ToolGroup*/ } from './Toolbar.js';
 import LinkExaminer from './LinkExaminer.js';
-import FindTool from './FindTool.js';
+// import FindTool from './FindTool.js';
+import FindTool2 from './FindTool2.js';
 import Message from './Message.js';
 import Chain from './Chain.js';
 import ContextMenu from './ContextMenu.js';
@@ -219,6 +221,7 @@ class App extends Component {
     this._graphSplitPane = React.createRef ();
     this._tableSplitPane = React.createRef ();
     this._tableViewer = React.createRef ();
+    this._interactiveShell = React.createRef ();
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
     this._browseNodeInterface = React.createRef ();
@@ -318,6 +321,12 @@ class App extends Component {
       // Keep track of the tableView in the main state as well
       tableView : false,
       tableViewerSize : 1 - (2/7),
+
+      // Keep track of table viewer/interactive shell plugins
+      tableViewerComponents : {
+        tableViewerCompActive : false,
+        interactiveShellCompActive : false
+      },
 
       // Schema viewer
       schema : {
@@ -1479,7 +1488,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         this._fgAdjustCharge (this.state.charge);
         this._updateDimensions();
       });
-      this.setState({},()=>this._findTool.current.updateResults());
+      // this.setState({},()=>this._findTool.current.updateResults()); // old find tool
     });
   }
   /**
@@ -1912,7 +1921,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           NotificationManager.warning('The query returned no results', 'Warning', 4000);
         }
         let graphStateObj = isSchema ? { schema : message.graph } : { graph : message.graph };
-        this.setState(graphStateObj, () => this._findTool.current.updateResults());
+        // this.setState(graphStateObj, () => this._findTool.current.updateResults()); // old find tool
+        this.setState(graphStateObj);
       }
     });
   }
@@ -2537,14 +2547,16 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                        id="answerViewerToolbar"
                        className="App-control-toolbar fa"
                        onClick={this._handleShowAnswerViewer} />
-      <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.show()}/>
+      <FaSearch data-tip="Find tool - helps to quickly locate specific things in the graph" id="findTool" className="App-control-toolbar fa" onClick={() => this._findTool.current.toggleShow()}/>
       <FaQuestionCircle data-tip="Help & Information" id="helpButton" className="App-control-toolbar fa" onClick={() => this.setState({ showHelpModal : true })}/>
       <FaDatabase data-tip="Cache Viewer - search through previous queries" id="cachedQueriesButton" className="App-control-toolbar fa" onClick={() => this._cachedQueriesModal.current.show()}/>
       <FaFolderOpen data-tip="Import/Export - Import or export graphs" id="importExportButton" className="App-control-toolbar fa" onClick={() => this.setState({ showImportExportModal : true })}/>
       <FaCog data-tip="Configure application settings" id="settingsToolbar" className="App-control-toolbar fa" onClick={this._handleShowModal} />
-      <FaTable data-active={this.state.tableView} data-tip="View a tabular representation of the active graph" id="tableViewButton" className="App-control-toolbar fa" onClick={() => {
-        // We want to close the table viewer if they press the button and it is already active
-        this._tableViewer.current.toggleVisibility();
+      <FaTable data-active={this.state.tableViewerComponents.tableViewerCompActive} data-tip="View a tabular representation of the active graph" id="tableViewButton" className="App-control-toolbar fa" onClick={() => {
+        this.state.tableViewerComponents.tableViewerCompActive ? this._closeTableViewer() : this._openTableViewer("tableViewerCompActive");
+      }}/>
+      <FaPython data-active={this.state.tableViewerComponents.interactiveShellCompActive} data-tip="Use an interactive shell to modify the knowledge graph" id="interactiveShellButton" className="App-control-toolbar fa" onClick={() => {
+        this.state.tableViewerComponents.interactiveShellCompActive ? this._closeTableViewer() : this._openTableViewer("interactiveShellCompActive");
       }}/>
       {
       // Perfectly functional but does not provide enough functionality as of now to warrant its presence
@@ -2932,18 +2944,43 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       this.setState({ objectViewerSelection : object });
     }
   }
+  /**
+   * Closes the pane originally intended for just the table viewer
+   *
+   */
   _closeTableViewer() {
     let height = this._tableSplitPane.current.splitPane.offsetHeight;
     this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
     this._updateGraphSize(undefined,height);
-    this.setState({ tableView : false });
+    const { tableViewerComponents } = this.state;
+    // Hide every component
+    Object.keys(tableViewerComponents).forEach((compKey) => {
+      tableViewerComponents[compKey] = false;
+    });
+    this.setState({ tableView : false, tableViewerComponents });
   }
-  _openTableViewer() {
+  /**
+   * Opens the pane originally intended for just the table viewer
+   *
+   * @param {String} shownComponent - Refers to a boolean key of `App->state` which manages the visibility of a component rendered within the table viewer.
+   *                                   This key will be set to true.
+   *
+   * // NOTE: this entire thing is very messily written, especially the way that the state is handled--it could use a rewrite for
+   *          readability, but this works for now.
+   */
+  _openTableViewer(shownComponent) {
     const screenPortion = this.state.tableViewerSize;
     let height = this._tableSplitPane.current.splitPane.offsetHeight * screenPortion;
     this._tableSplitPane.current.setState({ draggedSize : height, pane1Size : height, position : height });
     this._updateGraphSize(undefined,height);
-    this.setState({ tableView : true });
+    const { tableViewerComponents } = this.state;
+    // Hide every component
+    Object.keys(tableViewerComponents).forEach((compKey) => {
+      tableViewerComponents[compKey] = false;
+    });
+    // Show `shownComponent`
+    tableViewerComponents[shownComponent] = true;
+    this.setState({ tableView : true, tableViewerComponents });
   }
   /**
    * Invoked on window resize
@@ -3872,7 +3909,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                           }
                                         }}/>
                         </div>
-                        <FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                        <FindTool2 graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
+                                   ref={this._findTool}/>
+                        {/*<FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                   resultMouseClick={(values)=>{
                                     const isNode = function(element) {
                                       return !element.origin.hasOwnProperty('source_id') && !element.origin.hasOwnProperty('target_id');
@@ -3896,7 +3935,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                   resultMouseLeave={(values)=>{
                                     values.forEach((element) => this._highlightType(element.id,false,false,undefined,'id'))}
                                   }
-                                  ref={this._findTool}/>
+                                  ref={this._findTool}/>*/}
+
                       </div>
                     </div>
                     <div onContextMenu={this._handleContextMenu} id="graphContainer" data-vis-mode={this.state.visMode}>
@@ -3940,8 +3980,11 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                 </SplitPane>
               }
             </div>
-            <TableViewer onOpen={this._openTableViewer}
-                         onClose={this._closeTableViewer}
+            <div className="h-100">
+            <InteractiveShell active={this.state.tableViewerComponents.interactiveShellCompActive}
+                              ref={this._interactiveShell}/>
+            <TableViewer tableView={this.state.tableViewerComponents.tableViewerCompActive}
+                         close={this._closeTableViewer}
                          ref={this._tableViewer}
                          data={(() => {
                            const graph = this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph;
@@ -3991,6 +4034,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                              };
                            }
                          }}/>
+            </div>
           </SplitPane>
         </div>
         <div id='next'/>

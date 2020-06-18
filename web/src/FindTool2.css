@@ -1,0 +1,59 @@
+.FindTool {
+  pointer-events:initial;
+  background-color:white;
+  display:flex;
+  flex-direction:column;
+  border:2px solid rgb(215,215,215);
+  max-height:calc(100% - 10px);
+  max-width:30%;
+  min-width:150px;
+  /* padding: 3px 0; */
+}
+.find-tool-input {
+  transition:background-color var(--background-hover-transition-time);
+  background-color:inherit;
+  padding:5px;
+  border:none;
+  outline:none;
+  font-size:.8rem;
+  /* flex:1; */
+  word-break:break-all;
+  /* max-height:400px; */
+  /* overflow:auto; */
+  width:100%;
+  border-radius:0;
+}
+.find-tool-result-container {
+  resize:vertical;
+  overflow-y:auto;
+  border-top:2px solid rgb(220, 220, 220);
+}
+.find-tool-result {
+  padding:5px 7.5px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  word-break: break-word;
+
+  transition:background-color var(--background-transition-time);
+
+  user-select:none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -o-user-select:none;
+  -ms-user-select:none;
+}
+.find-tool-result:not(:last-child) {
+  border-bottom:2px solid rgb(220, 220, 220);
+}
+.find-tool-result-header {
+  font-weight: 500;
+}
+
+/* Non-input placeholder rule - due to the modern css pseudo classes this probably does not work in a lot of older browsers */
+*:not(input):empty[contenteditable="true"][placeholder]::before {
+  /* Pseudo-placeholder attribute on content editable elements */
+  content:attr(placeholder);
+  color:gray;
+}
