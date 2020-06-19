@@ -17,6 +17,7 @@ from tranql.tranql_schema import SchemaFactory
 import requests_mock
 from unittest.mock import patch
 import copy, time
+from tranql.utils.merge_utils import connect_knowledge_maps, find_all_paths
 
 #set_verbose ()
 
@@ -643,7 +644,6 @@ def test_ast_merge_knowledge_maps (requests_mock):
                 "protein" : "UniProtKB:Q9NZJ5"
             },
             "edge_bindings" : {
-                "e0" : "ROOT_EDGE",
                 "e1" : "TEST_EDGE",
             }
         }
@@ -1303,3 +1303,419 @@ def test_schema_should_not_change_once_initilalized():
             schema2 = schema_factory.get_instance()
             # original reference to Schema should be different from second.
             assert schema1 != schema2
+
+# ---------------- Knowledge map merge tests ----------
+
+
+
+def test_find_paths_linear_graph():
+    edge_set_1 = ['edge1', 'edge2', 'edge3']
+    edge_set_2 =  ['edge2']
+    linear_graph = {
+        'node1': {
+            'node2': edge_set_1
+        },
+        'node2': {
+            'node3': edge_set_2
+        }
+    }
+    paths = []
+    find_all_paths(
+        graph=linear_graph,
+        start='node1',
+        edge=None, # first incoming edge
+        visited=set(),
+        stack=[],
+        paths=paths
+    )
+    assert len(paths) == 1
+    # not the structure of paths is
+    # [[node, edge], [node, edge]....]
+    # with the notion that each node is connected with the previous edge with the edge in the list it exists
+    # check if first node has no incoming edges
+    assert paths[0][0][1] == None
+    # check if each node exists
+    assert set(['node1','node2','node3']) == set(map(lambda item: item[0], paths[0]))
+    edges_from_path = list(map(lambda item: item[1], paths[0]))
+    assert edge_set_1 in edges_from_path
+    assert edge_set_2 in edges_from_path
+
+def test_find_all_paths_branching_graph():
+    # things get tricky here
+    edge_set= [
+        ['e1', 'e2'],
+        ['e3', 'e4'],
+        ['eee'],
+        ['e232'],
+        ['edge'],
+        ['edge09099']
+    ]
+
+    branching_graph_diff_terminal_nodes = {
+        'a': {'b': edge_set[0]},
+        'b': {
+            'c': edge_set[1],
+            'd': edge_set[2]
+        },
+        'c': {'e': edge_set[3]},
+        'd': {'f': edge_set[4]}
+    }
+    paths = []
+    find_all_paths(
+        graph=branching_graph_diff_terminal_nodes,
+        start='a',
+        edge=None,
+        visited=set(),
+        stack=[],
+        paths=paths
+    )
+    # we have two paths
+    # a - b - c - e, a - b - d - f
+    assert len(paths) == 2
+    nodes_paths = list(map(lambda x: set(map(lambda item: item[0], x)), paths))
+    assert set(['a','b','c','e']) in nodes_paths
+    assert set(['a','b','d', 'f']) in nodes_paths
+
+    # branching with same terminal nodes
+    # a- b- c- e , a - b - d -e
+    branching_graph_same_terminal_nodes = branching_graph_diff_terminal_nodes
+    branching_graph_same_terminal_nodes['d'] = {
+        'e': edge_set[4]
+    }
+    paths = []
+    find_all_paths(
+        graph=branching_graph_same_terminal_nodes,
+        start='a',
+        edge=None,
+        visited=set(),
+        stack=[],
+        paths=paths
+    )
+    assert len(paths) == 2
+    nodes_paths = list(map(lambda x: set(map(lambda item: item[0], x)), paths))
+    assert set(['a', 'b', 'c', 'e']) in nodes_paths
+    assert set(['a', 'b', 'd', 'e']) in nodes_paths
+
+
+def test_connect_graph_should_return_same_knowledge_map_for_single_response ():
+    q_graph = {
+        'nodes': [
+            {'id': 'n1', 'type': 'tp1'},
+            {'id': 'n2', 'type': 'tp2'},
+        ],
+        'edges': [
+            {'id': 'e1', 'source_id': 'n1', 'target_id': 'n2'},
+        ]
+    }
+    k_graph = {
+        'nodes': [{
+            'id': 'some:curie',
+            'type': ['tp1'],
+            'name': 'first node'
+        },{
+            'id': 'some:curie2',
+            'type': ['tp2'],
+            'name': 'second node'
+        }],
+        'edges': [
+            {'id': 'e1-kg-id'},
+            {'id': 'e2-kg-id'}
+        ]
+    }
+    k_map = [
+        {
+            'node_bindings': {
+                # q_graph id : kg_graph id
+                'n1': 'some:curie',
+                'n2': 'some:curie2'
+            },
+            'edge_bindings': {
+                'e1': 'e1-kg-id'
+            }
+        }
+    ]
+    full_response = {
+        'knowledge_graph': k_graph,
+        'question_graph': q_graph,
+        'knowledge_map': k_map
+    }
+    merged_k_map = connect_knowledge_maps([full_response],[])
+    assert len(merged_k_map) == len(k_map)
+    assert merged_k_map[0]['node_bindings'] == k_map[0]['node_bindings']
+    assert merged_k_map[0]['edge_bindings'] == k_map[0]['edge_bindings']
+
+def test_merge_two_responses_connected_one_after_the_other():
+    q_G_1 = {
+        'nodes': [{'id': 'n0'}, {'id': 'n1'}],
+        'edges': [{'id': 'e1', 'source_id': 'n0', 'target_id': 'n1'}]
+    }
+    q_G_2 = {
+        'nodes': [{'id': 'n1'}, {'id': 'n2'}],
+        'edges': [{'id': 'e1-1', 'source_id': 'n1', 'target_id': 'n2'}]
+    }
+    k_map_1 = [
+        {
+            'node_bindings': {'n0': 'kg_id_of_n0', 'n1': 'kg_id_of_n1'},
+            'edge_bindings': {'e1': 'kg_id_of_e1'}}
+    ]
+    k_map_2 = [
+        {
+            'node_bindings': {'n1': 'kg_id_of_n1', 'n2': 'kg_id_of_n1'},
+            'edge_bindings': {'e1-1': 'kg_id_of_e1-1'}
+        }
+    ]
+    response = connect_knowledge_maps([{
+        'question_graph': q_G_1,
+        'knowledge_map': k_map_1,
+    }, {
+        'question_graph': q_G_2,
+        'knowledge_map': k_map_2
+    }], [])
+    assert len(response) == 1
+    merged_answer_nodes = response[0]['node_bindings']
+    merged_answer_edges = response[0]['edge_bindings']
+    assert 'n0' in merged_answer_nodes and  merged_answer_nodes['n0'] == k_map_1[0]['node_bindings']['n0']
+    assert 'n1' in merged_answer_nodes and  merged_answer_nodes['n1'] == k_map_1[0]['node_bindings']['n1']
+    assert 'n2' in merged_answer_nodes and  merged_answer_nodes['n2'] == k_map_2[0]['node_bindings']['n2']
+
+    assert 'e1' in merged_answer_edges and merged_answer_edges['e1'] == k_map_1[0]['edge_bindings']['e1']
+    assert 'e1-1' in merged_answer_edges and merged_answer_edges['e1-1'] == k_map_2[0]['edge_bindings']['e1-1']
+
+
+def test_connected_q_graph_disconnected_kg_map():
+    q_G_1 = {
+        'nodes': [{'id': 'n0'}, {'id': 'n1'}],
+        'edges': [{'id': 'e1', 'source_id': 'n0', 'target_id': 'n1'}]
+    }
+    q_G_2 = {
+        'nodes': [{'id': 'n1'}, {'id': 'n2'}],
+        'edges': [{'id': 'e1-1', 'source_id': 'n1', 'target_id': 'n2'}]
+    }
+    k_map_1 = [
+        {
+            'node_bindings': {'n0': 'kg_id_of_n0', 'n1': 'kg_id_of_n1'},
+            'edge_bindings': {'e1': 'kg_id_of_e1'}
+        }
+    ]
+    k_map_2 = [
+        {
+            'node_bindings': {'n1': 'HEREISWHEREDISCONNECTIONIS', 'n2': 'kg_id_of_n1'},
+            'edge_bindings': {'e1-1': 'kg_id_of_e1-1'}
+        }
+    ]
+    response = connect_knowledge_maps([{
+        'question_graph': q_G_1,
+        'knowledge_map': k_map_1,
+    }, {
+        'question_graph': q_G_2,
+        'knowledge_map': k_map_2
+    }], [])
+    assert len(response) == 2
+    # each binding should have 2 nodes and single edge
+    for answer in response:
+        assert len(answer['node_bindings']) == 2
+        assert len(answer['edge_bindings']) == 1
+
+def test_partials_disconnected_and_connected():
+    """
+    a:A--- b:B ---- c:C ----- d:D ---- e:E  (RESP 1 & 2)
+           |                 /
+           f:C ------------g:G
+    a1:A--- b1:B              {RESP 3)
+    a2:A --- b:B   (RESP 4)(this should contain paths continued from b
+    #####
+    P1 : a->b->c->d->e
+    p2 : a->b->f->g->d->e
+    p3 : a1->b1
+    p4 : a2->b->c->d->e
+    p5: a2->b->f->g-d->e
+    """
+    q_g_1 = {
+        'nodes': [
+            {'id': 'A', 'type': 'A'},
+            {'id': 'B', 'type': 'B'},
+            {'id': 'C', 'type': 'C'},
+            {'id': 'D', 'type': 'D'},
+            {'id': 'E', 'type': 'E'}
+        ], 'edges': [
+            {'id': 'e-A-B', 'source_id': 'A', 'target_id':'B'},
+            {'id': 'e-B-C', 'source_id': 'B', 'target_id': 'C'},
+            {'id': 'e-C-D', 'source_id': 'C', 'target_id': 'D'},
+            {'id': 'e-D-E', 'source_id': 'D', 'target_id': 'E'}
+        ]
+    }
+    q_g_2 = {
+        'nodes': [
+            {'id': 'B', 'type': 'B'},
+            {'id': 'C', 'type': 'C'},
+            {'id': 'G', 'type': 'G'},
+            {'id': 'D', 'type': 'D'}
+        ],
+        'edges': [
+            {'id': 'e-B-C', 'source_id': 'B', 'target_id': 'C'},
+            {'id': 'e-C-G', 'source_id': 'C', 'target_id': 'G'},
+            {'id': 'e-G-D', 'source_id': 'G', 'target_id': 'D'}
+        ]
+    }
+    q_g_3 = {
+        'nodes': [
+            {'id': 'A', 'type': 'A'},
+            {'id': 'B', 'type': 'B'}
+        ],
+        'edges': [
+            {'id': 'e-A-B', 'source_id': 'A', 'target_id': 'B'}
+        ]
+    }
+    q_g_4 = {
+        'nodes': [
+            {'id': 'A', 'type': 'A'},
+            {'id': 'B', 'type': 'B'}
+        ],
+        'edges': [
+            {'id': 'e-A-B', 'source_id':'A', 'target_id': 'B'}
+        ]
+    }
+
+    # Lets make some graphs that look like the above ones
+
+    k_map_1 = [
+        {
+            'node_bindings': {
+                'A': 'a',
+                'B': 'b',
+                'C': 'c',
+                'D': 'd',
+                'E': 'e'
+            },
+            'edge_bindings': {
+                'e-A-B': 'e-a-b',
+                'e-B-C': 'e-b-c',
+                'e-C-D': 'e-c-d',
+                'e-D-E': 'e-d-e'
+            }
+        },
+    ]    # a - b - c - d -e
+    k_map_2 = [{
+        'node_bindings': {
+            'B': 'b',
+            'C': 'f',
+            'G': 'g',
+            'D': 'd'
+        },
+        'edge_bindings': {
+            'e-B-C': 'e-b-f',
+            'e-C-G': 'e-c-g',
+            'e-G-D': 'e-g-d'
+        }
+    }]  # b - f -  g - d
+    k_map_3 = [{
+        'node_bindings': {
+            'A': 'a1',
+            'B': 'b1'
+        },
+        'edge_bindings': {
+            'e-A-B': 'e-a1-b1'
+        }
+    }]
+    k_map_4 = [
+        {'node_bindings': {
+            'A': 'a2',
+            'B': 'b'
+        }, 'edge_bindings': {
+            'e-A-B': 'e-a2-b'
+        }
+        }
+    ]
+    responses = [
+        {'question_graph': q_g_1, 'knowledge_map': k_map_1},
+        {'question_graph': q_g_2, 'knowledge_map': k_map_2},
+        {'question_graph': q_g_3, 'knowledge_map': k_map_3},
+        {'question_graph': q_g_4, 'knowledge_map': k_map_4}
+    ]
+    merged_paths = connect_knowledge_maps(responses, [])
+    assert len(merged_paths) == 5
+    # check path a->b->c->d->e
+    p1 = {
+        'node_bindings': {
+        'A':['a'],
+        'B':['b'],
+        'C':['c'],
+        'D':['d'],
+        'E':['e']
+    }, 'edge_bindings':{
+         'e-A-B': 'e-a-b',
+         'e-B-C': 'e-b-c',
+         'e-C-D': 'e-c-d',
+         'e-D-E': 'e-d-e'
+        }
+    }
+    assert p1 in merged_paths
+    p2 = {
+        'node_bindings': {
+        #   Query_graph_id , Knowledge_graph_id
+            'A': ['a'],
+            'B': ['b'],
+            'C': ['f'],
+            'G': ['g'],
+            'D': ['d'],
+            'E': ['e']
+        }, 'edge_bindings': {
+            'e-A-B': 'e-a-b',
+            'e-B-C': 'e-b-f',
+            'e-C-G': 'e-c-g',
+            'e-G-D': 'e-g-d',
+            'e-D-E': 'e-d-e'
+        }
+    }
+    # check path p2: a:A->b:B->f:C->g:G->d:D->e:E
+    assert p2 in merged_paths
+    # Check for p3
+    # p3: a1->b1
+    p3 = {
+        'node_bindings': {
+            'A': ['a1'],
+            'B': ['b1']
+        },
+        'edge_bindings': {
+            'e-A-B': 'e-a1-b1'
+        }
+    }
+    assert  p3 in merged_paths
+
+    # check p4
+    # p4: a2->b->c->d->e
+    p4 = {
+        'node_bindings': {
+            'A': ['a2'],
+            'B': ['b'],
+            'C': ['c'],
+            'D': ['d'],
+            'E': ['e']
+        },
+        'edge_bindings': {
+            'e-A-B': 'e-a2-b',
+            'e-B-C': 'e-b-c',
+            'e-C-D': 'e-c-d',
+            'e-D-E': 'e-d-e'
+        }
+    }
+    assert  p4 in merged_paths
+    # check p5
+    # p5: a2->b->f->g - d->e
+    p5 = {
+        'node_bindings': {
+            'A': ['a2'],
+            'B': ['b'],
+            'C': ['f'],
+            'D': ['d'],
+            'E': ['e'],
+            'G': ['g']
+        }, 'edge_bindings': {
+            'e-A-B': 'e-a2-b',
+            'e-B-C': 'e-b-f',
+            'e-C-G': 'e-c-g',
+            'e-G-D': 'e-g-d',
+            'e-D-E': 'e-d-e'
+        }
+    }
+    assert p5 in merged_paths
