@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Form, Row, Col } from 'react-bootstrap';
+import { Form, Row, Col, ToggleButton, ToggleButtonGroup, Button } from 'react-bootstrap';
+import { Controlled as CodeMirror } from 'react-codemirror2';
 import * as classNames from 'classnames';
 import esToPrimitive from 'es-to-primitive';
 import './InteractiveShell.css';
@@ -77,12 +78,13 @@ class ShellMessage extends Component {
   }
   _getSanitizedOutput() {
     if (this.props.output === undefined) return null;
+    let val;
     try {
-      return JSON.stringify(this.props.output);
+      val = JSON.stringify(this.props.output);
     }
-    catch {
-      return new String(this.props.output);
-    }
+    catch {}
+    if (typeof val === "undefined") val = new String(this.props.output);
+    return val;
   }
   render() {
     const useFakePrefix = this.props.fakePrefix !== undefined;
@@ -127,10 +129,13 @@ export default class InteractiveShell extends Component {
       loading: true,
       messages: [
         {
-          message: <span className="loading">Bootstraping Python environment</span>
+          message: <span>Bootstraping Python environment.</span>
         }
       ],
-      lineBuffer: []
+      lineBuffer: [],
+
+      repl: true, // determines if in REPL mode or script mode,
+      code: ""
     };
 
     // Tracks timestamp when initialized for loading time calculation
@@ -143,6 +148,8 @@ export default class InteractiveShell extends Component {
     this._publishMessage = this._publishMessage.bind(this);
     this._getControllerData = this._getControllerData.bind(this);
     this._isLineBufferActive = this._isLineBufferActive.bind(this);
+    this._renderRepl = this._renderRepl.bind(this);
+    this._renderEditor = this._renderEditor.bind(this);
 
     this._scrollContainer = React.createRef();
     this._input = React.createRef();
@@ -172,13 +179,89 @@ export default class InteractiveShell extends Component {
   _isLineBufferActive() {
     return this.state.lineBuffer.length > 0;
   }
+  _renderRepl() {
+    return (
+      <Form onSubmit={(e) => {
+        e.preventDefault();
+
+        let input = this._input.current.value;
+        // \n indicates to use line buffer for multiline statement
+        const useBuffer = input.slice(input.length - 2, input.length) == "\\n";
+
+        if (useBuffer) {
+          // Truncate ending newline
+          input = input.slice(0, input.length - 2);
+          this._publishMessage({
+            message: input,
+            prefix: this._isLineBufferActive() ? ". . ." : undefined,
+            fakePrefix: this._isLineBufferActive() ? ">>>\u00A0" : undefined
+          });
+          this.setState({ lineBuffer : this.state.lineBuffer.concat(input) });
+        }
+        else {
+          const { messages } = this.state;
+          let result = null;
+          try {
+            const { lineBuffer } = this.state;
+            if (lineBuffer.length > 0) {
+              // Empty line buffer
+              this.setState({ lineBuffer : [] });
+              // Push input to end of line buffer and join it by newlines for pyodide
+              input = lineBuffer.concat(input).join("\n");
+            }
+            result = window.pyodide.runPython(input);
+          }
+          catch (error) {
+            result = error.message;
+          }
+          this._publishMessage({
+            message: input,
+            output: result
+          });
+        }
+
+        this._input.current.value = "";
+      }}>
+        {this.state.messages.map((message, i) => {
+          return <ShellMessage {...message} updatedContent={this._scrollToBottom} key={i}/>;
+        })}
+        {!this.state.loading && <ShellMessage prefix={this._isLineBufferActive() ? ". . ." : undefined}
+                                              fakePrefix={this._isLineBufferActive() ? ">>>\u00A0" : undefined}
+                                              message={
+                                                <Form.Control type="text"
+                                                              spellCheck={false}
+                                                              autoFocus
+                                                              plaintext
+                                                              className="p-0"
+                                                              style={{border: "none", outline: "none"}}
+                                                              ref={this._input}/>
+                                              }/>
+        }
+      </Form>
+    );
+  }
+  _renderEditor() {
+    return (
+      <div className="editor">
+        <CodeMirror value={this.state.code}
+                    options={{
+                      lineNumbers: true,
+                      mode: "python",
+                      tabSize: 4,
+                      readOnly: false
+                    }}
+                    onBeforeChange={(editor, data, value) => this.setState({ code : value })}
+                    onChange={(editor, data, value) => {}}/>
+      </div>
+    );
+  }
   componentDidUpdate() {
-    this._scrollToBottom();
+    this.state.repl && this._scrollToBottom();
     this._privateIntermediary != null && this._privateIntermediary.updateController(this._getControllerData());
   }
   componentWillUnmount() {
     window.languagePluginLoader.then(() => {
-      if ("TranQL" in window.pyodide.globals) delete window.pyodide.globals.TranQL;
+      if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
     });
   }
   componentDidMount() {
@@ -206,63 +289,27 @@ export default class InteractiveShell extends Component {
     if (!this.props.active) return null;
     return (
       <div className="InteractiveShell" ref={this._scrollContainer}>
-        <Form onSubmit={(e) => {
-          e.preventDefault();
-
-          let input = this._input.current.value;
-          // \n indicates to use line buffer for multiline statement
-          const useBuffer = input.slice(input.length - 2, input.length) == "\\n";
-
-          if (useBuffer) {
-            // Truncate ending newline
-            input = input.slice(0, input.length - 2);
-            this._publishMessage({
-              message: input,
-              prefix: this._isLineBufferActive() ? ". . ." : undefined,
-              fakePrefix: this._isLineBufferActive() ? ">>>\u00A0" : undefined
-            });
-            this.setState({ lineBuffer : this.state.lineBuffer.concat(input) });
-          }
-          else {
-            const { messages } = this.state;
-            let result = null;
+        <div className={classNames("shell-btn-container", !this.state.repl && "menu")}>
+          {!this.state.repl && <Button variant="outline-success" onClick={() => {
+            let result;
             try {
-              const { lineBuffer } = this.state;
-              if (lineBuffer.length > 0) {
-                // Empty line buffer
-                this.setState({ lineBuffer : [] });
-                // Push input to end of line buffer and join it by newlines for pyodide
-                input = lineBuffer.concat(input).join("\n");
-              }
-              result = window.pyodide.runPython(input);
+              result = window.pyodide.runPython(this.state.code);
             }
             catch (error) {
               result = error.message;
             }
+            this.setState({ repl : true });
             this._publishMessage({
-              message: input,
+              message: "Executing editor program",
               output: result
             });
-          }
-
-          this._input.current.value = "";
-        }}>
-          {this.state.messages.map((message, i) => {
-            return <ShellMessage {...message} updatedContent={this._scrollToBottom} key={i}/>;
-          })}
-          {!this.state.loading && <ShellMessage prefix={this._isLineBufferActive() ? ". . ." : undefined}
-                                                fakePrefix={this._isLineBufferActive() ? ">>>\u00A0" : undefined}
-                                                message={
-                                                  <Form.Control type="text"
-                                                                spellCheck={false}
-                                                                autoFocus
-                                                                plaintext
-                                                                className="p-0"
-                                                                style={{border: "none", outline: "none"}}
-                                                                ref={this._input}/>
-                                                }/>
-          }
-        </Form>
+          }}>Run</Button>}
+          <ToggleButtonGroup className="shell-btn-group" type="radio" name="editor-types" value={this.state.repl} onChange={(val) => this.setState({ repl : val })}>
+            <ToggleButton value={true}>Shell</ToggleButton>
+            <ToggleButton value={false}>Editor</ToggleButton>
+          </ToggleButtonGroup>
+        </div>
+        {this.state.repl ? this._renderRepl() : this._renderEditor()}
       </div>
     );
   }

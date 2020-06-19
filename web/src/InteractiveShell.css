@@ -4,7 +4,62 @@
   overflow-y: auto;
   background-color: black;
   height: 100%;
+  position: relative;
 }
+.editor {
+  height: 100%;
+  flex-grow: 1;
+  background-color: white;
+}
+.editor > .react-codemirror2 {
+  height: 100%;
+}
+.editor .CodeMirror {
+  height: 100%;
+}
+.shell-btn-container {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  z-index: 3; /* Appear over codemirror */
+}
+.shell-btn-container * {
+  font-size:12px!important;
+}
+.shell-btn-container.menu {
+  position: static;
+  background-color: rgb(247,247,247);
+  border: 1px solid #ddd;
+  padding: 2px;
+}
+.shell-btn-container.menu > .shell-btn-group {
+  float: right;
+}
+.shell-btn-group > * {
+  outline: none;
+  box-shadow: none !important;
+  color: var(--primary) !important;
+  background-color: transparent !important;
+}
+.shell-btn-group > *:hover {
+  cursor: pointer;
+}
+.shell-btn-group > *.active {
+  background-color: var(--primary) !important;
+  color: white !important;
+  cursor: default !important;
+}
+/* .shell-button {
+  background-color: transparent;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  color: var(--primary);
+  outline: none;
+  border: none;
+  box-shadow: none !important;
+  z-index: 1;
+} */
 .shell-line {
   padding: .25rem 0 !important;
   margin-left: .25rem;
