@@ -23,6 +23,7 @@ from tranql.exception import MalformedResponseError
 from tranql.exception import IllegalConceptIdentifierError
 from tranql.exception import UnknownServiceError
 from tranql.exception import InvalidTransitionException
+from tranql.utils.merge_utils import connect_knowledge_maps
 
 logger = logging.getLogger (__name__)
 
@@ -411,14 +412,16 @@ class SelectStatement(Statement):
                             edges = copy.deepcopy (question["question_graph"]['edges'])
                             edge_spec = self.query.arrows[index-1]
                             if edge_spec.direction == self.query.forward_arrow:
+                                edge_id = f'{index}_{lastnode["id"]}_{node["id"]}'
                                 edges.append (self.edge (
-                                    index = index,
+                                    index = edge_id,
                                     source=lastnode['id'],
                                     target=node['id'],
                                     type_name = edge_spec.predicate))
                             else:
+                                edge_id = f'{index}_{node["id"]}_{lastnode["id"]}'
                                 edges.append (self.edge (
-                                    index = index,
+                                    index = edge_id,
                                     source=node['id'],
                                     target=lastnode['id'],
                                     type_name = edge_spec.predicate))
@@ -433,9 +436,10 @@ class SelectStatement(Statement):
                                        type_name = concept.type_name))
                         source_id = query_nodes[-2]['id']
                         target_id = query_nodes[-1]['id']
+                        edge_id = f'{index}_{source_id}_{target_id}'
                         question['question_graph']['edges'].append (
                             self.edge (
-                                index = index,
+                                index = edge_id,
                                 source = source_id,
                                 target = target_id))
                         new_questions.append (self.message (options))
@@ -592,7 +596,7 @@ class SelectStatement(Statement):
             self.decorate_results(responses, {
                 "schema" : self.get_schema_name(interpreter)
             })
-            result = self.merge_results (responses, interpreter, root_question_graph)
+            result = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         interpreter.context.set('result', result)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
@@ -632,7 +636,7 @@ class SelectStatement(Statement):
                 if statements[index].query.order == next_statement.query.order:
                     first_concept.set_nodes (statements[index].query.concepts[name].nodes)
                 else:
-                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph))
+                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph, statements[index].query.order))
                     duplicate_statements = []
                     first_concept.set_nodes (values)
                     if len(values) == 0:
@@ -878,144 +882,150 @@ class SelectStatement(Statement):
         # an answer with `population_of_individual_organisms : "COHORT:X" -> disease : "MONDO:Y"``
         # must be connected to another answer with `disease : "MONDO:Y" -> gene : "HGNC:Z"` in order to form a complete answer.
         # We need the entire path of a query in each answer.
+        return connect_knowledge_maps(responses,root_order)
+        # result_km = []
+        #
+        # if len(responses) == 1:
+        #     result_km = responses[0]['knowledge_map']
+        #
+        # elif root_order == None:
+        #     for response in responses:
+        #         result_km.extend(response['knowledge_map'])
+        # else:
+        #     ordered_responses = {}
+        #     for first_response in responses:
+        #         if root_order[0] == first_response['question_order'][0]:
+        #             if root_order[0] in ordered_responses:
+        #                 ordered_responses[root_order[0]].append (first_response)
+        #             else:
+        #                 ordered_responses[root_order[0]] = [first_response]
+        #
+        #     while sum(len(resp) for resp in ordered_responses.values()) < len(responses):
+        #         response = list(ordered_responses.values())[-1][0]
+        #         next_response_start = response['question_order'][-1]
+        #         # print(next_response_start)
+        #         for next_response in responses:
+        #             if next_response['question_order'][0] == next_response_start:
+        #                 if next_response_start in ordered_responses:
+        #                     ordered_responses[next_response_start].append (next_response)
+        #                 else:
+        #                     ordered_responses[next_response_start] = [next_response]
+        #
+        #     # print (json.dumps(
+        #     #     ordered_responses,
+        #     #     indent=2
+        #     # ))
+        #     for enum, current_responses in enumerate(list(ordered_responses.values())):
+        #         new_answers = []
+        #         if enum + 1 < len(ordered_responses):
+        #             next_responses = list(ordered_responses.values())[enum+1]
+        #         else:
+        #             next_responses = []
+        #         # First responses, must be head answers that will be used to build off of.
+        #         if enum == 0:
+        #             for current_response in current_responses:
+        #                 for answer in current_response['knowledge_map']:
+        #                     new_answers.append (answer)
+        #         root_answers = copy.deepcopy(new_answers)
+        #         for current_response in current_responses:
+        #             for next_response in next_responses:
+        #
+        #                 current_response_end = current_response['question_order'][-1]
+        #                 next_response_start = next_response['question_order'][0]
+        #
+        #                 # print([
+        #                 #     current_response_end,
+        #                 #     next_response_start,
+        #                 #     result_km,
+        #                 #     next_response['knowledge_map']
+        #                 # ])
+        #
+        #                 for current_answer in root_answers:
+        #                     for next_answer in next_response['knowledge_map']:
+        #                         current_node_bindings = current_answer['node_bindings']
+        #                         current_edge_bindings = current_answer['edge_bindings']
+        #
+        #                         next_node_bindings = next_answer['node_bindings']
+        #                         next_edge_bindings = next_answer['edge_bindings']
+        #
+        #
+        #                         current_last_concept_id = current_node_bindings[current_response_end]
+        #                         next_first_concept_id = next_node_bindings[next_response_start]
+        #                         # convert if to list if provided as string
+        #                         next_first_concept_id = [next_first_concept_id] if isinstance(next_first_concept_id, str) \
+        #                                                 else next_first_concept_id
+        #                         if current_last_concept_id == next_first_concept_id:
+        #                             merged_answer = copy.deepcopy(current_answer)
+        #                             merged_answer['node_bindings'].update (next_node_bindings)
+        #                             merged_answer['edge_bindings'].update (next_edge_bindings)
+        #
+        #                             new_answers.append(merged_answer)
+        #
+        #         result_km = []
+        #         dump_map = {}
+        #         # Filter duplicates and set new result_km
+        #         for answer in new_answers:
+        #             dumped = json.dumps(answer)
+        #             if dumped not in dump_map:
+        #                 dump_map[dumped] = answer
+        #                 result_km.append(answer)
+        #
+        #
+        #     # for prev_response in responses:
+        #     #     detached = root_order[0] != prev_response['question_order'][0]
+        #     #     if not detached:
+        #     #         # logger.critical([prev_response['question_order'], 'detached'])
+        #     #         result_km.extend(prev_response['knowledge_map'])
+        #     #     for response in responses:
+        #     #         if prev_response == response: continue
+        #     #
+        #     #         prev_response_end = prev_response['question_order'][-1]
+        #     #         current_response_start = response['question_order'][0]
+        #     #
+        #     #         # logger.critical([prev_response_end,current_response_start])
+        #     #
+        #     #         if prev_response_end == current_response_start:
+        #     #             prev_knowledge_map = prev_response['knowledge_map']
+        #     #             current_knowledge_map = response['knowledge_map']
+        #     #             for prev_answer in prev_knowledge_map:
+        #     #                 for current_answer in current_knowledge_map:
+        #     #                     prev_node_bindings = prev_answer['node_bindings']
+        #     #                     prev_edge_bindings = prev_answer['edge_bindings']
+        #     #                     current_node_bindings = current_answer['node_bindings']
+        #     #                     current_edge_bindings = current_answer['edge_bindings']
+        #     #
+        #     #                     prev_last_concept_id = prev_node_bindings[prev_response_end]
+        #     #                     current_first_concept_id = current_node_bindings[current_response_start]
+        #     #
+        #     #                     if prev_last_concept_id == current_first_concept_id:
+        #     #                         # Merge these two answers and then add the result to the resulting knowledge map
+        #     #                         merged_answer = copy.deepcopy(prev_answer)
+        #     #                         # Merge node_bindings of current answer into the copied previous answer
+        #     #                         merged_answer['node_bindings'].update (current_node_bindings)
+        #     #                         # Same for edge_bindings
+        #     #                         merged_answer['edge_bindings'].update (current_edge_bindings)
+        #     #
+        #     #                         result_km.append(merged_answer)
+        #
+        #
+        #         # result_km.append(answer)
+        #
+        #         # logger.critical([question_graph, response['question_order']])
+        #
+        # # Filter any answers whose node_bindings aren't the complete path
+        # # if root_order != None:
+        # #     filtered_result_km = []
+        # #     for answer in result_km:
+        # #         delete = False
+        # #         node_bindings = answer["node_bindings"]
+        # #         for qg_node in root_order:
+        # #             if qg_node not in node_bindings:
+        # #                 delete = True
+        # #                 break
+        # #         if not delete:
+        # #             filtered_result_km.append (answer)
+        # #     result_km = filtered_result_km
 
-        result_km = []
-
-        if len(responses) == 1:
-            result_km = responses[0]['knowledge_map']
-
-        elif root_order == None:
-            for response in responses:
-                result_km.extend(response['knowledge_map'])
-        else:
-            ordered_responses = {}
-            for first_response in responses:
-                if root_order[0] == first_response['question_order'][0]:
-                    if root_order[0] in ordered_responses:
-                        ordered_responses[root_order[0]].append (first_response)
-                    else:
-                        ordered_responses[root_order[0]] = [first_response]
-
-            while sum(len(resp) for resp in ordered_responses.values()) < len(responses):
-                response = list(ordered_responses.values())[-1][0]
-                next_response_start = response['question_order'][-1]
-                # print(next_response_start)
-                for next_response in responses:
-                    if next_response['question_order'][0] == next_response_start:
-                        if next_response_start in ordered_responses:
-                            ordered_responses[next_response_start].append (next_response)
-                        else:
-                            ordered_responses[next_response_start] = [next_response]
-
-            # print (json.dumps(
-            #     ordered_responses,
-            #     indent=2
-            # ))
-            for enum, current_responses in enumerate(list(ordered_responses.values())[:-1]):
-                new_answers = []
-                next_responses = list(ordered_responses.values())[enum+1]
-                # First responses, must be head answers that will be used to build off of.
-                if enum == 0:
-                    for current_response in current_responses:
-                        for answer in current_response['knowledge_map']:
-                            result_km.append (answer)
-
-                for current_response in current_responses:
-                    for next_response in next_responses:
-
-                        current_response_end = current_response['question_order'][-1]
-                        next_response_start = next_response['question_order'][0]
-
-                        # print([
-                        #     current_response_end,
-                        #     next_response_start,
-                        #     result_km,
-                        #     next_response['knowledge_map']
-                        # ])
-
-                        for current_answer in result_km:
-                            for next_answer in next_response['knowledge_map']:
-                                current_node_bindings = current_answer['node_bindings']
-                                current_edge_bindings = current_answer['edge_bindings']
-
-                                next_node_bindings = next_answer['node_bindings']
-                                next_edge_bindings = next_answer['edge_bindings']
-
-
-                                current_last_concept_id = current_node_bindings[current_response_end]
-                                next_first_concept_id = next_node_bindings[next_response_start]
-
-                                if current_last_concept_id == next_first_concept_id:
-                                    merged_answer = copy.deepcopy(current_answer)
-                                    merged_answer['node_bindings'].update (next_node_bindings)
-                                    merged_answer['edge_bindings'].update (next_edge_bindings)
-
-                                    new_answers.append(merged_answer)
-
-                result_km = []
-                dump_map = {}
-                # Filter duplicates and set new result_km
-                for answer in new_answers:
-                    dumped = json.dumps(answer)
-                    if dumped not in dump_map:
-                        dump_map[dumped] = answer
-                        result_km.append(answer)
-
-
-            # for prev_response in responses:
-            #     detached = root_order[0] != prev_response['question_order'][0]
-            #     if not detached:
-            #         # logger.critical([prev_response['question_order'], 'detached'])
-            #         result_km.extend(prev_response['knowledge_map'])
-            #     for response in responses:
-            #         if prev_response == response: continue
-            #
-            #         prev_response_end = prev_response['question_order'][-1]
-            #         current_response_start = response['question_order'][0]
-            #
-            #         # logger.critical([prev_response_end,current_response_start])
-            #
-            #         if prev_response_end == current_response_start:
-            #             prev_knowledge_map = prev_response['knowledge_map']
-            #             current_knowledge_map = response['knowledge_map']
-            #             for prev_answer in prev_knowledge_map:
-            #                 for current_answer in current_knowledge_map:
-            #                     prev_node_bindings = prev_answer['node_bindings']
-            #                     prev_edge_bindings = prev_answer['edge_bindings']
-            #                     current_node_bindings = current_answer['node_bindings']
-            #                     current_edge_bindings = current_answer['edge_bindings']
-            #
-            #                     prev_last_concept_id = prev_node_bindings[prev_response_end]
-            #                     current_first_concept_id = current_node_bindings[current_response_start]
-            #
-            #                     if prev_last_concept_id == current_first_concept_id:
-            #                         # Merge these two answers and then add the result to the resulting knowledge map
-            #                         merged_answer = copy.deepcopy(prev_answer)
-            #                         # Merge node_bindings of current answer into the copied previous answer
-            #                         merged_answer['node_bindings'].update (current_node_bindings)
-            #                         # Same for edge_bindings
-            #                         merged_answer['edge_bindings'].update (current_edge_bindings)
-            #
-            #                         result_km.append(merged_answer)
-
-
-                # result_km.append(answer)
-
-                # logger.critical([question_graph, response['question_order']])
-
-        # Filter any answers whose node_bindings aren't the complete path
-        # if root_order != None:
-        #     filtered_result_km = []
-        #     for answer in result_km:
-        #         delete = False
-        #         node_bindings = answer["node_bindings"]
-        #         for qg_node in root_order:
-        #             if qg_node not in node_bindings:
-        #                 delete = True
-        #                 break
-        #         if not delete:
-        #             filtered_result_km.append (answer)
-        #     result_km = filtered_result_km
 
 
         # logger.critical(result_km)
