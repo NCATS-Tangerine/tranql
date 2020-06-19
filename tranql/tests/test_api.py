@@ -99,7 +99,11 @@ def test_merge_messages (client):
             }
           ]
         },
-        "knowledge_map": []
+        "knowledge_map": [],
+        "question_graph": {
+            "nodes": [],
+            "edges": []
+        }
       },
       {
         "knowledge_graph": {
@@ -131,7 +135,11 @@ def test_merge_messages (client):
             }
           ]
         },
-        "knowledge_map": []
+        "knowledge_map": [],
+        "question_graph": {
+            "nodes": [],
+              "edges": []
+          }
       }
     ]
     expected = {
@@ -281,7 +289,7 @@ def test_query(client, requests_mock):
     assert 'message' not in response.json
     assert 'errors' not in response.json
     assert response.json['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
-    assert response.json['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
+    assert response.json['knowledge_map'][0]['node_bindings']['chemical_substance'] == ["CHEBI:28177"]
 
     response = client.post(
         '/tranql/query',
