@@ -552,7 +552,16 @@ def test_ast_merge_knowledge_maps (requests_mock):
                     }
                 }
             ],
-            'question_order' : ['chemical_substance','disease']
+            'question_order' : ['chemical_substance','disease'],
+            'question_graph': {
+                'nodes': [
+                    {'id': 'chemical_substance', 'type': 'chemical_substance'},
+                    {'id': 'disease', 'type': 'disease'}
+                ],
+                'edges':[
+                    {'id': 'e0', 'source_id': 'chemical_substance', 'target_id': 'disease'}
+                ]
+            }
         },
         {
             'knowledge_map' : [
@@ -567,7 +576,18 @@ def test_ast_merge_knowledge_maps (requests_mock):
                     }
                 }
             ],
-            'question_order' : ['disease','gene','metabolite']
+            'question_order' : ['disease','gene','metabolite'],
+            'question_graph' : {
+                'nodes': [
+                    {'id': 'disease', 'type':'disease'},
+                    {'id': 'gene', 'type':'gene'},
+                    {'id': 'metabolite', 'type': 'metabolite'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id':'disease', 'target_id':'gene'},
+                    {'id': 'e1', 'source_id': 'gene', 'target_id': 'metabolite'}
+                ]
+            }
         },
         {
             'knowledge_map' : [
@@ -582,7 +602,18 @@ def test_ast_merge_knowledge_maps (requests_mock):
                     }
                 }
             ],
-            'question_order' : ['disease','gene','metabolite']
+            'question_order' : ['disease','gene','metabolite'],
+            'question_graph' : {
+                'nodes': [
+                    {'id': 'disease', 'type':'disease'},
+                    {'id': 'gene', 'type':'gene'},
+                    {'id': 'metabolite', 'type': 'metabolite'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id':'disease', 'target_id':'gene'},
+                    {'id': 'e1', 'source_id': 'gene', 'target_id': 'metabolite'}
+                ]
+            }
         },
         {
             'knowledge_map' : [
@@ -596,7 +627,16 @@ def test_ast_merge_knowledge_maps (requests_mock):
                     }
                 }
             ],
-            'question_order' : ['metabolite','protein']
+            'question_order' : ['metabolite','protein'],
+            'question_graph': {
+                'nodes': [
+                    {'id': 'metabolite', 'type': 'metabolite'},
+                    {'id': 'protein', 'type': 'protein'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id': 'metabolite', 'target_id': 'protein'}
+                ]
+            }
         },
         {
             'knowledge_map' : [
@@ -610,7 +650,16 @@ def test_ast_merge_knowledge_maps (requests_mock):
                     }
                 }
             ],
-            'question_order' : ['metabolite','protein']
+            'question_order' : ['metabolite','protein'],
+            'question_graph': {
+                'nodes': [
+                    {'id': 'metabolite', 'type': 'metabolite'},
+                    {'id': 'protein', 'type': 'protein'}
+                ],
+                'edges': [
+                    {'id': 'e0', 'source_id': 'metabolite', 'target_id': 'protein'}
+                ]
+            }
         }
     ]
 
@@ -621,15 +670,28 @@ def test_ast_merge_knowledge_maps (requests_mock):
         'metabolite',
         'protein'
     ])
-
+    ###
+    # The Knowledge map is only valid if it has a connection, note that it is a filler
+    # for the blanks of the question graph.
+    # If a knowledge map with no edge_bindings is returned then it's not very useful as
+    # it doesn't tell the connection that the nodes bound have.
+    # so to be merged properly it should atleast have an edge binding
+    # above responses look like the following paths
+    # Response 1: chemical_substance(CHEBI:100)-[e0:ROOTEDGE]-disease(MONDO:50)
+    # Response 2: disease (MONDO:50)   gene(HGNC:1)-[e1: TESTEDGE]-chemical(KEGG:C00017)
+    # Response 3: disease (MONDO:50)  gene(HGNC:1)   metabolite(KEGG:FOOBAR)
+    # Reponse 4: metabolite(KEGG:FOOBAR) protein(UniPRotKB:TESTING)
+    # Response 5: metabolite(KEGG:C00017) protein(UniprotKb:Q9NZJ5)
+    # not that Response 3, 4 and 5 are just nodes so we can drop them
+    # the paths to expect here are
+    # response 1's full path
+    # response 2's connected path
+    ###
     assert_lists_equal(ordered(merged), ordered([
         {
             "node_bindings" : {
-                "chemical_substance" : "CHEBI:100",
-                "disease" : "MONDO:50",
-                "gene" : "HGNC:1",
-                "metabolite" : "KEGG:FOOBAR",
-                "protein" : "UniProtKB:TESTING"
+                "chemical_substance" : ["CHEBI:100"],
+                "disease" : ["MONDO:50"],
             },
             "edge_bindings" : {
                 "e0" : "ROOT_EDGE"
@@ -637,11 +699,8 @@ def test_ast_merge_knowledge_maps (requests_mock):
         },
         {
             "node_bindings" : {
-                "chemical_substance" : "CHEBI:100",
-                "disease" : "MONDO:50",
-                "gene" : "HGNC:1",
-                "metabolite" : "KEGG:C00017",
-                "protein" : "UniProtKB:Q9NZJ5"
+                "gene" : ["HGNC:1"],
+                "metabolite" : ["KEGG:C00017"]
             },
             "edge_bindings" : {
                 "e1" : "TEST_EDGE",
@@ -671,11 +730,40 @@ def test_ast_merge_results (requests_mock):
            SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
     """)
 
+    question_graph = {
+            'edges': [
+                {
+                    'id': 'foo',
+                    'type': 'test',
+                    'source_id': 'chemical_substance',
+                    'target_id': 'gene'
+                }, {
+                    'id': 'edge_2',
+                    'type': 'other_type',
+                    'source_id': 'chemical_substance',
+                    'target_id': 'test'
+                }
+            ],
+            'nodes': [
+                {
+                    'id': 'chemical_substance',
+                    'type': 'chemical_substance',
+                }, {
+                    'id': 'gene',
+                    'type': 'gene'
+                }, {
+                    'id': 'test',
+                    'type': 'test'
+                }
+            ]
+        }
+
     select = ast.statements[0]
 
     # What is the proper format for the name of a mock file? This should be made into one
     mock_responses = [
         {
+            'question_graph': question_graph,
             'knowledge_graph': {
                 'nodes': [
                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
@@ -719,6 +807,7 @@ def test_ast_merge_results (requests_mock):
             ]
         },
         {
+            'question_graph': question_graph,
             'knowledge_graph': {
                 'nodes': [
                     {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
@@ -822,53 +911,14 @@ def test_ast_merge_results (requests_mock):
             ]
         },
         "knowledge_map": [
-            {
-                "edge_bindings": {},
-                "node_bindings": {
-                    "chemical_substance": "CHEBI:28177",
-                    "gene": "HGNC:2597"
-                }
-            },
-            {
-                "edge_bindings": {},
-                "node_bindings": {
-                    "chemical_substance": "CHEBI:28177",
-                    "test": "equivalent_identifier_merge"
-                }
-            }
+            # no edge bindings exist in response so we should expect nothing here
         ],
-        'question_graph': {
-            'edges': [
-                {
-                    'id': 'foo',
-                    'type': 'test'
-                }
-            ],
-            'nodes': [
-                {
-                    'id': 'bar',
-                    'type': 'bartest'
-                }
-            ]
-        }
+        'question_graph': question_graph
     }
     merged_results = select.merge_results (
         mock_responses,
         tranql,
-        {
-            'edges': [
-                {
-                    'id': 'foo',
-                    'type': 'test'
-                }
-            ],
-            'nodes': [
-                {
-                    'id': 'bar',
-                    'type': 'bartest'
-                }
-            ]
-        },
+        question_graph,
         root_order=None
     )
     assert ordered(merged_results) == ordered(expected_result)
@@ -1078,7 +1128,7 @@ def test_program (requests_mock):
 
     kg = tranql.context.resolve_arg("$knowledge_graph")
     assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
-    assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == "CHEBI:28177"
+    assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == ["CHEBI:28177"]
 
 
 def test_unique_ids_for_repeated_concepts():
