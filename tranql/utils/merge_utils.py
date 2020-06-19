@@ -1,47 +1,9 @@
 from functools import reduce
-import json
 import copy
-import hashlib
 
 QUESTION_GRAPH_KEY = 'question_graph'
 KNOWLEDGE_GRAPH_KEY = 'knowledge_graph'
 KNOWLEDGE_MAP_KEY = 'knowledge_map'
-
-
-def unique_edge_query_graph_ids(responses):
-    """
-    This function will ensure that for each response we have a proper unique edge id in the query graph.
-    :param responses: Responses from a SelectStatement execution
-    :return:
-    """
-    for response in responses:
-        # Dictionary to keep track of old and new edge ids
-        edge_id_map = {}
-        # query graph edges
-        question_graph_edges = response[QUESTION_GRAPH_KEY]['edges']
-        # change the ids of the query graph
-        # edge with id e1 connecting disease to gene for example would have a new id
-        # e1-hash(disease,gene)
-        for edge in question_graph_edges:
-            s_t = edge['source_id'] + edge['target_id']
-            unique_hash = hashlib.md5(s_t.encode()).hexdigest()
-            edge_new_id = f"{edge['id']}-{unique_hash}"
-            # store the original as a key and its hashed value
-            edge_id_map[edge['id']] = edge_new_id
-            edge['id'] = edge_new_id
-
-        # change corresponding edge ids in the answers
-        for answer in response[KNOWLEDGE_MAP_KEY]:
-            edge_bindings = answer['edge_bindings']
-            new_bindings = {}
-            for e in edge_bindings:
-                edge = edge_bindings[e]
-                # Try to grab edge-id mapping
-                # if it doesn't exist take the default one.
-                # this might be useful. EG ROBOKOP returns support edges that are not part of the query graph so
-                # we will keep things like those around
-                new_bindings[edge_id_map.get(e, e)] = edge
-            answer['edge_bindings'] = new_bindings
 
 
 def connect_knowledge_maps(responses, query_order):
@@ -55,9 +17,6 @@ def connect_knowledge_maps(responses, query_order):
 
     # 1.1 When SelectStatement generates question it uses same edge id for the query graph for different parts.
     # which would collisions here.
-    # So to make this connector more robust let's assume everything we get from outside is conflicting and resolve it
-    # here.
-    # unique_edge_query_graph_ids(responses)
 
     all_knowledge_maps = reduce(lambda a, b: a + b,
                                 map(lambda response: response.get(KNOWLEDGE_MAP_KEY, []), responses),
@@ -119,7 +78,8 @@ def connect_knowledge_maps(responses, query_order):
                             target_bindings_dict[target_node_key] += edges
                 knowledge_map_graph_repr[source_node_key] = target_bindings_dict
 
-
+    # Using depth first search extract possible paths
+    # from knowledge_map_graph_repr
     paths = []
     all_visits = set()
     for node in knowledge_map_graph_repr:
