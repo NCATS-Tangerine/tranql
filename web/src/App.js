@@ -3982,6 +3982,17 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
             </div>
             <div className="h-100">
             <InteractiveShell active={this.state.tableViewerComponents.interactiveShellCompActive}
+                              data={{
+                                // null || knowledge_graph
+                                message: (this.state.schemaViewerActive && this.state.schemaViewerEnabled) ? this.state.schemaMessage : this.state.message,
+                                set_knowledge_graph: ((kg) => {
+                                  const schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
+                                  const msg = (this.state.schemaViewerActive && this.state.schemaViewerEnabled) ? this.state.schemaMessage : this.state.message;
+                                  msg.knowledge_graph = kg;
+                                  this._configureMessage(msg,false,schema);
+                                  this._translateGraph(msg,false,schema);
+                                }).bind(this)
+                              }}
                               ref={this._interactiveShell}/>
             <TableViewer tableView={this.state.tableViewerComponents.tableViewerCompActive}
                          close={this._closeTableViewer}
