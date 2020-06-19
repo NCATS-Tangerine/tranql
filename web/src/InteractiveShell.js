@@ -155,6 +155,7 @@ export default class InteractiveShell extends Component {
     this._isLineBufferActive = this._isLineBufferActive.bind(this);
     this._renderRepl = this._renderRepl.bind(this);
     this._renderEditor = this._renderEditor.bind(this);
+    this._renderToggleGroup = this._renderToggleGroup.bind(this);
     this._addProgram = this._addProgram.bind(this);
 
     this._scrollContainer = React.createRef();
@@ -187,6 +188,10 @@ export default class InteractiveShell extends Component {
   }
   _renderRepl() {
     return (
+      <>
+      <div className={classNames("shell-btn-container", !this.state.repl && "menu")}>
+        {this._renderToggleGroup()}
+      </div>
       <Form onSubmit={(e) => {
         e.preventDefault();
 
@@ -244,6 +249,7 @@ export default class InteractiveShell extends Component {
                                               }/>
         }
       </Form>
+      </>
     );
   }
   _renderEditor() {
@@ -253,6 +259,58 @@ export default class InteractiveShell extends Component {
           this.state.programs.length === 0 ? (
             null
           ) : (
+            <>
+            <div className={classNames("shell-btn-container", !this.state.repl && "menu")}>
+              <div className="editor-menu-left">
+                <Tabs activeKey={this.state.activeProgram} onSelect={(key) => this.setState({ activeProgram : key })}>
+                {
+                  this.state.programs.map((program, i) => {
+                    const { programName } = program;
+                    const isActive = i == this.state.activeProgram;
+                    return (
+                      <Tab eventKey={i} key={i} title={
+                        <>
+                        <span>{programName}</span>
+                        {isActive && <FaTimes className="close-program" onClick={(e) => {
+                          // Have to call preventDefault here or else after this is done the onSelect handler in <Tabs> will get ahold of it
+                          // if the rightmost tab is being deleted, it will set `activeProgram` back to the previous value causing an error
+                          e.preventDefault();
+                          e.stopPropagation();
+                          this.setState({
+                            programs: this.state.programs.slice(0, i).concat(this.state.programs.slice(i+1)),
+                            // If you delete the rightmost program activeProgram will not point to anything, causing an error
+                            activeProgram: (this.state.activeProgram == this.state.programs.length-1 ? this.state.activeProgram - 1 : this.state.activeProgram)
+                          });
+                        }}/>}
+                        </>
+                      }></Tab>
+                    );
+                  })
+                }
+                </Tabs>
+                <FaPlus className="add-program-btn" data-tip="Create a program" onClick={() => {
+                  this._addProgram();
+                }}/>
+              </div>
+              <div className="editor-menu-right">
+                <Button className="editor-run-btn" variant="outline-success" disabled={this.state.programs.length === 0} onClick={() => {
+                  const program = this.state.programs[this.state.activeProgram];
+                  let result;
+                  try {
+                    result = window.pyodide.runPython(program.programCode);
+                  }
+                  catch (error) {
+                    result = error.message;
+                  }
+                  this.setState({ repl : true });
+                  this._publishMessage({
+                    message: `Executing editor program "${program.programName}"`,
+                    output: result
+                  });
+                }}>Run</Button>
+                {this._renderToggleGroup()}
+              </div>
+            </div>
             <CodeMirror value={this.state.programs[this.state.activeProgram].programCode}
                         options={{
                           lineNumbers: true,
@@ -266,6 +324,7 @@ export default class InteractiveShell extends Component {
                           this.setState({ programs });
                         }}
                         onChange={(editor, data, value) => {}}/>
+            </>
           )
         }
       </div>
@@ -284,6 +343,14 @@ export default class InteractiveShell extends Component {
       programs,
       activeProgram : programs.length - 1
     });
+  }
+  _renderToggleGroup() {
+    return (
+      <ToggleButtonGroup className="shell-btn-group" type="radio" name="editor-types" value={this.state.repl} onChange={(val) => this.setState({ repl : val })}>
+        <ToggleButton value={true}>Shell</ToggleButton>
+        <ToggleButton value={false}>Editor</ToggleButton>
+      </ToggleButtonGroup>
+    );
   }
   componentDidUpdate() {
     this.state.repl && this._scrollToBottom();
@@ -319,57 +386,6 @@ export default class InteractiveShell extends Component {
     if (!this.props.active) return null;
     return (
       <div className="InteractiveShell" ref={this._scrollContainer}>
-        <div className={classNames("shell-btn-container", !this.state.repl && "menu")}>
-          <ToggleButtonGroup className="shell-btn-group" type="radio" name="editor-types" value={this.state.repl} onChange={(val) => this.setState({ repl : val })}>
-            <ToggleButton value={true}>Shell</ToggleButton>
-            <ToggleButton value={false}>Editor</ToggleButton>
-          </ToggleButtonGroup>
-          {!this.state.repl && (
-            <>
-              <Tabs activeKey={this.state.activeProgram} onSelect={(key) => this.setState({ activeProgram : key })}>
-              {
-                this.state.programs.map((program, i) => {
-                  const { programName } = program;
-                  const isActive = i == this.state.activeProgram;
-                  return (
-                    <Tab eventKey={i} key={i} title={
-                      <span>{programName}{isActive && <FaTimes className="close-program" onClick={(e) => {
-                        // Have to call preventDefault here or else after this is done the onSelect handler in <Tabs> will get ahold of it
-                        // if the rightmost tab is being deleted, it will set `activeProgram` back to the previous value causing an error
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.setState({
-                          programs: this.state.programs.slice(0, i).concat(this.state.programs.slice(i+1)),
-                          // If you delete the rightmost program activeProgram will not point to anything, causing an error
-                          activeProgram: (this.state.activeProgram == this.state.programs.length-1 ? this.state.activeProgram - 1 : this.state.activeProgram)
-                        });
-                      }}/>}</span>
-                    }></Tab>
-                  );
-                })
-              }
-              </Tabs>
-              <FaPlus className="add-program-btn" data-tip="Create a program" onClick={() => {
-                this._addProgram();
-              }}/>
-              <Button className="editor-run-btn" variant="outline-success" disabled={this.state.programs.length === 0} onClick={() => {
-                const program = this.state.programs[this.state.activeProgram];
-                let result;
-                try {
-                  result = window.pyodide.runPython(program.programCode);
-                }
-                catch (error) {
-                  result = error.message;
-                }
-                this.setState({ repl : true });
-                this._publishMessage({
-                  message: `Executing editor program "${program.programName}"`,
-                  output: result
-                });
-              }}>Run</Button>
-            </>
-          )}
-        </div>
         {this.state.repl ? this._renderRepl() : this._renderEditor()}
       </div>
     );

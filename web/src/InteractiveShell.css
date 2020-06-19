@@ -13,7 +13,7 @@
   background-color: white;
 }
 .editor-run-btn {
-  float: right;
+  /* float: right; */
   margin-right: 5px;
 }
 .editor > .react-codemirror2 {
@@ -32,12 +32,23 @@
   top: 5px;
   z-index: 3; /* Appear over codemirror */
 }
-.shell-btn-container > .nav-tabs {
-  display: inline-flex;
+.shell-btn-container .nav-tabs {
   border: none;
+  flex-wrap: nowrap;
+  /* display: inline-flex; */
+  /* width: 100%; */
 }
-.shell-btn-container > .tab-content {
+.shell-btn-container .tab-content {
   display: none;
+}
+.shell-btn-container .nav-item {
+  /* width: 10%; */
+  /* width: 0; */
+  /* white-space: nowrap; */
+  /* overflow: visible; */
+  /* flex: 1; */
+  /* min-width: 0; */
+  /* width: 100%; */
 }
 .shell-btn-container .nav-item.active {
   /* display: flex; */
@@ -45,11 +56,13 @@
   padding-right: 6px;
 }
 .shell-btn-container .nav-item.active .close-program {
-  margin-left: 6px;
+  margin-left: 8px;
+  margin-bottom: 2px;
 }
-.shell-btn-container > .add-program-btn {
+.add-program-btn {
   font-size: 16px !important;
   margin-left: 8px;
+  flex-shrink: 0;
 }
 .shell-btn-container * {
   font-size:12px!important;
@@ -59,9 +72,17 @@
   background-color: rgb(247,247,247);
   border: 1px solid #ddd;
   padding: 2px;
+  display: flex;
 }
-.shell-btn-container.menu > .shell-btn-group {
-  float: right;
+.editor-menu-left {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+}
+.editor-menu-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
 }
 .shell-btn-group > * {
   outline: none;
