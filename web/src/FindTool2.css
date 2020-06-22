@@ -56,4 +56,5 @@
   /* Pseudo-placeholder attribute on content editable elements */
   content:attr(placeholder);
   color:gray;
+  pointer-events: none;
 }

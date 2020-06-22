@@ -389,7 +389,10 @@ export default class InteractiveShell extends Component {
   }
   componentWillUnmount() {
     window.languagePluginLoader.then(() => {
-      if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
+      try {
+        if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
+      }
+      catch {}
     });
   }
   componentDidMount() {
