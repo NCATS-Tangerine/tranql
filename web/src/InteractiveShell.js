@@ -4,6 +4,7 @@ import { Controlled as CodeMirror } from 'react-codemirror2';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import * as classNames from 'classnames';
 import esToPrimitive from 'es-to-primitive';
+import 'codemirror/mode/python/python';
 import './InteractiveShell.css';
 
 // Used for naming programs
@@ -23,6 +24,7 @@ function Intermediary(controller) {
       const start = Date.now();
       controller.setBlock(true);
       window.pyodide.loadPackage(module).then(() => {
+        private_intermediary.hookLibrary(module);
         controller.setBlock(false);
         controller.publishMessage({
           message: `Successfully installed ${module} in ${(Date.now() - start)/1000}s`
@@ -50,6 +52,35 @@ function Intermediary(controller) {
   const private_intermediary = {
     updateController(newController) {
       controller = newController;
+    },
+    /**
+     * Extend capability of a library for compatibility reasons
+     * (e.g.` matplotlib.pyplot.show`)
+     *
+     */
+    hookLibrary(library) {
+      switch (library) {
+        case "matplotlib":
+            /* Something like this could theoretically work, but in order for it to it has to import, which takes a lot of time,
+             * in addtion to polluting the global namespace - Note: this prototype is not functional
+            window.pyodide.runPython(`
+              from matplotlib.backends.wasm_backend import FigureCanvasWasm
+
+              unhooked_create_root_element = FigureCanvasWasm.create_root_element
+              unhooked_show = FigureCanvasWasm.show
+              def create_root_element(self):
+                canvas = unhooked_create_root_element(self)
+                self._canvas = canvas
+                return canvas
+              def show(self):
+                unhooked_show(self)
+                return self._canvas
+              FigureCanvasWasm.create_root_element = create_root_element
+              FigureCanvasWasm.show = show
+            `)
+            */
+            break;
+      }
     }
   };
   return [
