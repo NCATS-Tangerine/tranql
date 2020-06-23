@@ -67,11 +67,26 @@ class CustomFunction:
 
     @classmethod
     def resolve_function(cls, parsed_function):
-        # For every arg passed in, recurse if it is a function to resolve its value
         function_name = parsed_function["name"]
-        function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, dict) else arg for arg in parsed_function["args"]]
+        # For every arg passed in, recurse if it is a function to resolve its value
+        # function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, dict) else arg for arg in parsed_function["args"]]
+        function_args = []
+        keyword_arguments = {}
+        # Will recurse to resolve the value of a function argument
+        make_not_function = lambda argument_value: CustomFunction.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
+        # Go through and make sure every argument isn't a nested function
+        # Also handle keyword arguments
+        for argument in parsed_function["args"]:
+            # kwarg
+            if isinstance(argument, list):
+                arg_name = argument[0]
+                arg_value = argument[2]
+                keyword_arguments[arg_name] = make_not_function(arg_value)
+            # normal arg
+            else:
+                function_args.append(make_not_function(argument))
 
-        return cls._functions[function_name](*function_args)
+        return cls._functions[function_name](*function_args, **keyword_arguments)
 
 """ Prefined functions """
 @CustomFunction.custom_function

@@ -83,14 +83,6 @@ def test_parse_function (requests_mock):
     def get_asthma():
         return "asth"
 
-    # Create a function that returns a list
-    @CustomFunction.custom_function
-    def returns_list():
-        return ["asthma", "smallpox"]
-
-    tranql = TranQL ()
-    tranql.resolve_names = False
-
     # Test concat function
     code = """
         SELECT chemical_substance->gene->disease
@@ -104,12 +96,23 @@ def test_parse_function (requests_mock):
             "asthma"
         ]
     ]
+    tranql = TranQL ()
+    tranql.resolve_names = False
     result_where = tranql.parse(code).statements[0].where
 
     assert_lists_equal(
         result_where,
         expected_where
     )
+
+def test_parse_list_function (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+
+    """ Test resolving a function that returns a list """
+    # Create a function that returns a list
+    @CustomFunction.custom_function
+    def returns_list():
+        return ["asthma", "smallpox"]
 
     # Test list function
     code = """
@@ -127,6 +130,39 @@ def test_parse_function (requests_mock):
             ]
         ]
     ]
+    tranql = TranQL ()
+    tranql.resolve_names = False
+    result_where = tranql.parse(code).statements[0].where
+
+    assert_lists_equal(
+        result_where,
+        expected_where
+    )
+
+def test_parse_kwarg_function (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+
+    """ Test parsing of a function with keyword arguments """
+    # Create a function that returns a list
+    @CustomFunction.custom_function
+    def kwarg_function(str_a, str_b, prefix="_PREFIX_", suffix="_SUFFIX_"):
+        return prefix + str_a + str_b + suffix
+
+    # Test list function
+    code = """
+        SELECT chemical_substance->gene->disease
+          FROM "/graph/gamma/quick"
+         WHERE disease=kwarg_function("beginning of body", "ending of body", prefix="_CUSTOM_PREFIX_")
+    """
+    expected_where = [
+        [
+            "disease",
+            "=",
+            "_CUSTOM_PREFIX_beginning of bodyending of body_SUFFIX_"
+        ]
+    ]
+    tranql = TranQL ()
+    tranql.resolve_names = False
     result_where = tranql.parse(code).statements[0].where
 
     assert_lists_equal(

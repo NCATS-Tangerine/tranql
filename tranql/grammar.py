@@ -48,10 +48,18 @@ realNum = ppc.real()
 intNum = ppc.signed_integer()
 
 function_body = Forward()
-# Valid data types: TranQL variable, real, integer, string
-arg = ident | realNum | intNum | quotedString
+# Valid data types: nested function, TranQL variable, real, integer, string
+# For a normal arg, this is the entire argument. For a named arg, this is the actual value.
+arg_value = function_body | ident | realNum | intNum | quotedString
+# Named arguments can be in a Group, so that they are a list in the ast (e.g. `named_arg1=23` => `['named_arg1', '=', 23]`)
+# Since lists are not a supported type any list can be deduced to be a named argument
+# For some reason by adding a parse action to function_body, named_arg has to be manually converted from a Group to a list
+named_arg = Group(Word(alphanums+"_") + "=" + arg_value).setParseAction(lambda t: t.asList())
+
+function_arg = named_arg | arg_value
+
 function_body <<= Word(alphanums+"_") + (
-    Literal("(").suppress() + (delimitedList(function_body | arg) | Empty()) + Literal(")").suppress()
+    Literal("(").suppress() + (delimitedList(function_arg) | Empty()) + Literal(")").suppress()
 )
 # Since asList is called in the TranQL ast, a function ends up being structured as ["my_function_name", ["my_arg1", "my_arg"] or ["add_int", [4, 7]]
 # Accordingly, there is no way to distinguish a function from an actual list. Since asList is called, we cannot give function_body a name.
