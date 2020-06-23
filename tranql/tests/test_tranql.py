@@ -9,7 +9,7 @@ from deepdiff import DeepDiff
 from functools import reduce
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
-from tranql.tranql_ast import SetStatement, SelectStatement
+from tranql.tranql_ast import SetStatement, SelectStatement, CustomFunction
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
@@ -68,6 +68,42 @@ def test_parse_predicate (requests_mock):
              ]
             ], [ "" ]
             ]])
+
+def test_parse_function (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+
+    """ Test parsing and resolving function values (including nested) """
+    # Create a custom function that concats two strings
+    @CustomFunction.custom_function
+    def concat_strings(str_a, str_b):
+        return str_a + str_b
+
+    # Create a function that returns "asth"
+    @CustomFunction.custom_function
+    def get_asthma():
+        return "asth"
+
+    code = """
+        SELECT chemical_substance->gene->disease
+          FROM "/graph/gamma/quick"
+         WHERE disease=concat_strings(get_asthma(), "ma")
+    """
+    expected_where = [
+        [
+            "disease",
+            "=",
+            "asthma"
+        ]
+    ]
+    tranql = TranQL ()
+    tranql.resolve_names = False
+    result_where = tranql.parse(code).statements[0].where
+
+    assert_lists_equal(
+        result_where,
+        expected_where
+    )
+
 
 def test_parse_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
@@ -1162,7 +1198,7 @@ def test_schema_can_talk_to_automat():
     })
     ast = tranql.parse("""
             SELECT disease->d2:disease
-              FROM '/schema'             
+              FROM '/schema'
         """)
 
     select = ast.statements[0]

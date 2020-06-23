@@ -2,7 +2,7 @@ from pyparsing import (
     Combine, Word, White, Literal, delimitedList, Optional, Empty, Suppress,
     Group, alphas, alphanums, printables, Forward, oneOf, quotedString,
     ZeroOrMore, restOfLine, CaselessKeyword, ParserElement, LineEnd,
-    removeQuotes, Regex, pyparsing_common as ppc)
+    removeQuotes, Regex, nestedExpr, pyparsing_common as ppc)
 
 """
 A program is a list of statements.
@@ -47,12 +47,20 @@ binop = oneOf("= != =~ !=~ < > >= <= eq ne lt le gt ge", caseless=True)
 realNum = ppc.real()
 intNum = ppc.signed_integer()
 
+function_body = Forward()
+# Valid data types: real, integer, string
+arg = realNum | intNum | quotedString
+function_body <<= Group(Word(alphanums+"_") + (
+    Literal("(").suppress() + Group(Optional(delimitedList(function_body | arg))) + Literal(")").suppress()
+))
+
 # need to add support for alg expressions
-columnRval = realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_value_list
+columnRval = function_body | realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_value_list
 whereCondition = Group(
     ( columnName + binop + (columnRval | Word(printables) ) ) |
     ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
     ( columnName + in_ + "(" + statement + ")" ) |
+    # ( columnName + in_ + function) |
     ( columnName + in_ + (columnRval | Word(printables))) |
     ( "(" + whereExpression + ")" )
 )

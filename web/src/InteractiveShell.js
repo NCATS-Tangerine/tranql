@@ -41,7 +41,40 @@ function Intermediary(controller) {
     },
     export_changes() {
       controller.data.set_knowledge_graph(this.get_knowledge_graph());
-    }
+    },
+    // show_pyplot() {
+    //   const oldIodide = window.iodide;
+    //   let graphElement = null;
+    //   window.iodide = {
+    //     output: {
+    //       element: (tag) => {
+    //         const elem = document.createElement(tag);
+    //         graphElement = elem;
+    //         return elem;
+    //       }
+    //     }
+    //   };
+    //   window.pyodide.runPython(`
+    //     import matplotlib.pyplot as plt
+    //     plt.show()
+    //   `);
+    //   window.iodide = oldIodide;
+    //   class ControllerComponent extends Component {
+    //     constructor(props) {
+    //       super(props);
+    //
+    //       this._controller = React.createRef();
+    //     }
+    //     componentDidMount() {
+    //       console.log(this._controller.current, this.props.comp);
+    //       this._controller.current.appendChild(this.props.comp);
+    //     }
+    //     render() {
+    //       return <div ref={this._controller}/>
+    //     }
+    //   }
+    //   return graphElement !== null ? <ControllerComponent comp={graphElement}/> : "Failed to display graph.";
+    // }
     // get_WATCHING_OBJECTS() {
     //   return _WATCHING_OBJECTS;
     // },
@@ -188,6 +221,7 @@ export default class InteractiveShell extends Component {
     this._renderEditor = this._renderEditor.bind(this);
     this._renderToggleGroup = this._renderToggleGroup.bind(this);
     this._addProgram = this._addProgram.bind(this);
+    this._hookPyodide = this._hookPyodide.bind(this);
 
     this._scrollContainer = React.createRef();
     this._input = React.createRef();
@@ -383,6 +417,37 @@ export default class InteractiveShell extends Component {
       </ToggleButtonGroup>
     );
   }
+  _hookPyodide() {
+    const [ intermediary, privateIntermediary ] = new Intermediary(this._getControllerData());
+    this._privateIntermediary = privateIntermediary;
+    window.pyodide.globals.TranQL = intermediary;
+
+    window.iodide = {
+      output: {
+        element: (tag) => {
+          const elem = document.createElement(tag);
+          // class ControllerComponent extends Component {
+          //   constructor(props) {
+          //     super(props);
+          //
+          //     this._controller = React.createRef();
+          //   }
+          //   componentDidMount() {
+          //     console.log(this._controller.current, this.props.comp);
+          //     this._controller.current.appendChild(this.props.comp);
+          //   }
+          //   render() {
+          //     return <div ref={this._controller}/>
+          //   }
+          // }
+          // this._publishMessage({
+          //   message: <ControllerComponent comp={elem}/>
+          // });
+          return elem;
+        }
+      }
+    };
+  }
   componentDidUpdate() {
     this.state.repl && this._scrollToBottom();
     this._privateIntermediary != null && this._privateIntermediary.updateController(this._getControllerData());
@@ -398,9 +463,7 @@ export default class InteractiveShell extends Component {
   componentDidMount() {
     // Pyodide has to load the Python environment before it is usable; however, this happens so quickly that it is virtually impeceptible
     window.languagePluginLoader.then(() => {
-      const [ intermediary, privateIntermediary ] = new Intermediary(this._getControllerData());
-      this._privateIntermediary = privateIntermediary;
-      window.pyodide.globals.TranQL = intermediary;
+      this._hookPyodide();
       this.setState({
         loading : false,
         messages : []

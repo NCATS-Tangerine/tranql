@@ -51,6 +51,35 @@ class Bionames:
             raise ServiceInvocationError (response.text)
         return result
 
+class CustomFunction:
+    _functions = {}
+
+    """ Intended for use as a decorator """
+    @classmethod
+    def custom_function(cls, function):
+        cls._functions[function.__name__] = function
+
+    @classmethod
+    def add_function(cls, function_name, function):
+        cls._functions[function_name] = function
+
+    @classmethod
+    def resolve_function(cls, function):
+        function_name, function_args = function
+        # For every arg passed in, recurse if it is a function to resolve its value
+        function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, list) else arg for arg in function_args]
+
+        logger.critical([function_name, function_args])
+
+        return cls._functions[function_name](*function_args)
+
+""" Prefined functions """
+@CustomFunction.custom_function
+def mirror(x):
+    return x
+
+
+
 class Statement:
     """ The interface contract for a statement. """
     def execute (self, interpreter, context={}):
@@ -1081,8 +1110,13 @@ class TranQL_AST:
                 elif command == 'where':
                     for condition in e[1:]:
                         if isinstance(condition, list) and len(condition) == 3:
-                            select.where.append (condition)
                             var, op, val = condition
+                            if isinstance(val, list):
+                                val = CustomFunction.resolve_function(val)
+                            select.where.append ([var, op, val])
+
+                            logger.critical([var, op, val])
+
                             if var in select.query:
                                 if op == '=':
                                     select.query[var].set_nodes ([ val ])
@@ -1090,6 +1124,9 @@ class TranQL_AST:
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
                                     select.query[var].exclude_patterns.append (val)
+                                elif op == 'in':
+                                    pass
+
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':
