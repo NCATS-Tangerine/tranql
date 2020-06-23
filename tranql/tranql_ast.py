@@ -56,20 +56,20 @@ class CustomFunction:
 
     """ Intended for use as a decorator """
     @classmethod
-    def custom_function(cls, function):
-        cls._functions[function.__name__] = function
+    def custom_function(cls, function, name=None):
+        if name is None: name = function.__name__
+        cls._functions[name] = function
 
+    """ Intended for dynamic use """
     @classmethod
     def add_function(cls, function_name, function):
         cls._functions[function_name] = function
 
     @classmethod
-    def resolve_function(cls, function):
-        function_name, function_args = function
+    def resolve_function(cls, parsed_function):
         # For every arg passed in, recurse if it is a function to resolve its value
-        function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, list) else arg for arg in function_args]
-
-        logger.critical([function_name, function_args])
+        function_name = parsed_function["name"]
+        function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, dict) else arg for arg in parsed_function["args"]]
 
         return cls._functions[function_name](*function_args)
 
@@ -77,6 +77,17 @@ class CustomFunction:
 @CustomFunction.custom_function
 def mirror(x):
     return x
+
+@CustomFunction.custom_function
+def descendants(curie):
+    response = requests.get(
+        f"https://onto.renci.org/descendants/{curie}",
+        headers = {'accept': 'application/json'}
+    )
+    if response.ok:
+        return response.json()
+    else:
+        raise ServiceInvocationError(response.text)
 
 
 
@@ -1111,11 +1122,9 @@ class TranQL_AST:
                     for condition in e[1:]:
                         if isinstance(condition, list) and len(condition) == 3:
                             var, op, val = condition
-                            if isinstance(val, list):
+                            if isinstance(val, dict):
                                 val = CustomFunction.resolve_function(val)
                             select.where.append ([var, op, val])
-
-                            logger.critical([var, op, val])
 
                             if var in select.query:
                                 if op == '=':
@@ -1124,8 +1133,11 @@ class TranQL_AST:
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
                                     select.query[var].exclude_patterns.append (val)
-                                elif op == 'in':
-                                    pass
+                                # the '=' operator already fulfills the purpose of the 'in' operator because you can pass a list into it
+                                # elif op == 'in':
+                                #     if not isinstance(val, list):
+                                #         raise ValueError(f'"in" operator received invalid type {type(val)}')
+                                #     select.query[var].set_nodes ( val )
 
                             else:
                                 select.where.append ([ var, op, val ])

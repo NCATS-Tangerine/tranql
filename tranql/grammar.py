@@ -48,20 +48,25 @@ realNum = ppc.real()
 intNum = ppc.signed_integer()
 
 function_body = Forward()
-# Valid data types: real, integer, string
-arg = realNum | intNum | quotedString
-function_body <<= Group(Word(alphanums+"_") + (
-    Literal("(").suppress() + Group(Optional(delimitedList(function_body | arg))) + Literal(")").suppress()
-))
+# Valid data types: TranQL variable, real, integer, string
+arg = ident | realNum | intNum | quotedString
+function_body <<= Word(alphanums+"_") + (
+    Literal("(").suppress() + (delimitedList(function_body | arg) | Empty()) + Literal(")").suppress()
+)
+# Since asList is called in the TranQL ast, a function ends up being structured as ["my_function_name", ["my_arg1", "my_arg"] or ["add_int", [4, 7]]
+# Accordingly, there is no way to distinguish a function from an actual list. Since asList is called, we cannot give function_body a name.
+# Therefore, the most straightforward way is to set a parsing action which converts the function structure to an actual class.
+# However, classes are not easily json serializable, so a dict struct will do
+function_body.setParseAction(lambda toks: { "name" : toks[0], "args" : toks[1:] })
 
 # need to add support for alg expressions
 columnRval = function_body | realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_value_list
 whereCondition = Group(
     ( columnName + binop + (columnRval | Word(printables) ) ) |
-    ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
-    ( columnName + in_ + "(" + statement + ")" ) |
-    # ( columnName + in_ + function) |
-    ( columnName + in_ + (columnRval | Word(printables))) |
+    # ( columnName + in_ + concept_value_list) |
+    # ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
+    # ( columnName + in_ + "(" + statement + ")" ) |
+    # ( columnName + in_ + (columnRval | Word(printables))) |
     ( "(" + whereExpression + ")" )
 )
 whereExpression << whereCondition + ZeroOrMore( ( and_ | or_ ) + whereExpression )

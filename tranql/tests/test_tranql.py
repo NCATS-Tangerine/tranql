@@ -83,6 +83,15 @@ def test_parse_function (requests_mock):
     def get_asthma():
         return "asth"
 
+    # Create a function that returns a list
+    @CustomFunction.custom_function
+    def returns_list():
+        return ["asthma", "smallpox"]
+
+    tranql = TranQL ()
+    tranql.resolve_names = False
+
+    # Test concat function
     code = """
         SELECT chemical_substance->gene->disease
           FROM "/graph/gamma/quick"
@@ -93,6 +102,56 @@ def test_parse_function (requests_mock):
             "disease",
             "=",
             "asthma"
+        ]
+    ]
+    result_where = tranql.parse(code).statements[0].where
+
+    assert_lists_equal(
+        result_where,
+        expected_where
+    )
+
+    # Test list function
+    code = """
+        SELECT chemical_substance->gene->disease
+          FROM "/graph/gamma/quick"
+         WHERE disease=returns_list()
+    """
+    expected_where = [
+        [
+            "disease",
+            "=",
+            [
+                "asthma",
+                "smallpox"
+            ]
+        ]
+    ]
+    result_where = tranql.parse(code).statements[0].where
+
+    assert_lists_equal(
+        result_where,
+        expected_where
+    )
+
+def test_parse_list (requests_mock):
+    set_mock(requests_mock, "workflow-5")
+
+    """ Test parsing of lists within where statements """
+
+    code = """
+        SELECT chemical_substance->gene->disease
+          FROM "/graph/gamma/quick"
+         WHERE disease = ['asthma', 'smallpox']
+    """
+    expected_where = [
+        [
+            "disease",
+            "=",
+            [
+                "asthma",
+                "smallpox"
+            ]
         ]
     ]
     tranql = TranQL ()
