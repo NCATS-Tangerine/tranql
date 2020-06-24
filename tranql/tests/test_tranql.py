@@ -9,7 +9,7 @@ from deepdiff import DeepDiff
 from functools import reduce
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
-from tranql.tranql_ast import SetStatement, SelectStatement, CustomFunction
+from tranql.tranql_ast import SetStatement, SelectStatement, custom_functions
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
@@ -74,12 +74,12 @@ def test_parse_function (requests_mock):
 
     """ Test parsing and resolving function values (including nested) """
     # Create a custom function that concats two strings
-    @CustomFunction.custom_function
+    @custom_functions.custom_function
     def concat_strings(str_a, str_b):
         return str_a + str_b
 
     # Create a function that returns "asth"
-    @CustomFunction.custom_function
+    @custom_functions.custom_function
     def get_asthma():
         return "asth"
 
@@ -110,7 +110,7 @@ def test_parse_list_function (requests_mock):
 
     """ Test resolving a function that returns a list """
     # Create a function that returns a list
-    @CustomFunction.custom_function
+    @custom_functions.custom_function
     def returns_list():
         return ["asthma", "smallpox"]
 
@@ -144,7 +144,7 @@ def test_parse_kwarg_function (requests_mock):
 
     """ Test parsing of a function with keyword arguments """
     # Create a function that returns a list
-    @CustomFunction.custom_function
+    @custom_functions.custom_function
     def kwarg_function(str_a, str_b, prefix="_PREFIX_", suffix="_SUFFIX_"):
         return prefix + str_a + str_b + suffix
 

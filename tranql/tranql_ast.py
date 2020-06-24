@@ -6,6 +6,9 @@ import requests_cache
 import sys
 import traceback
 import time # Basic time profiling for async
+import yaml
+import importlib.machinery
+import os.path
 from collections import defaultdict
 from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
@@ -51,29 +54,39 @@ class Bionames:
             raise ServiceInvocationError (response.text)
         return result
 
-class CustomFunction:
-    _functions = {}
+class CustomFunctions:
+    def __init__(self):
+        self.functions = self.load_functions()
+
+    @staticmethod
+    def load_functions():
+        functions = {}
+        with open(os.path.join(os.path.dirname(__file__), "udfs.yaml"), "r") as f:
+            udfs = yaml.safe_load(f.read())
+            for udf_file in udfs:
+                file_functions = udfs[udf_file]
+                file_path = os.path.join(os.path.dirname(__file__), udf_file)
+
+                loader = importlib.machinery.SourceFileLoader(file_path, file_path)
+                module = loader.load_module()
+
+                for function_name in file_functions:
+                    functions[function_name] = getattr(module, function_name)
+
+        return functions
 
     """ Intended for use as a decorator """
-    @classmethod
-    def custom_function(cls, function, name=None):
+    def custom_function(self, function, name=None):
         if name is None: name = function.__name__
-        cls._functions[name] = function
+        self.functions[name] = function
 
-    """ Intended for dynamic use """
-    @classmethod
-    def add_function(cls, function_name, function):
-        cls._functions[function_name] = function
-
-    @classmethod
-    def resolve_function(cls, parsed_function):
+    def resolve_function(self, parsed_function):
         function_name = parsed_function["name"]
         # For every arg passed in, recurse if it is a function to resolve its value
-        # function_args = [CustomFunction.resolve_function(arg) if isinstance(arg, dict) else arg for arg in parsed_function["args"]]
         function_args = []
         keyword_arguments = {}
         # Will recurse to resolve the value of a function argument
-        make_not_function = lambda argument_value: CustomFunction.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
+        make_not_function = lambda argument_value: self.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
         # Go through and make sure every argument isn't a nested function
         # Also handle keyword arguments
         for argument in parsed_function["args"]:
@@ -86,14 +99,17 @@ class CustomFunction:
             else:
                 function_args.append(make_not_function(argument))
 
-        return cls._functions[function_name](*function_args, **keyword_arguments)
+        return self.functions[function_name](*function_args, **keyword_arguments)
+
+
+custom_functions = CustomFunctions()
 
 """ Prefined functions """
-@CustomFunction.custom_function
+@custom_functions.custom_function
 def mirror(x):
     return x
 
-@CustomFunction.custom_function
+@custom_functions.custom_function
 def descendants(curie):
     response = requests.get(
         f"https://onto.renci.org/descendants/{curie}",
@@ -1138,7 +1154,7 @@ class TranQL_AST:
                         if isinstance(condition, list) and len(condition) == 3:
                             var, op, val = condition
                             if isinstance(val, dict):
-                                val = CustomFunction.resolve_function(val)
+                                val = custom_functions.resolve_function(val)
                             select.where.append ([var, op, val])
 
                             if var in select.query:
