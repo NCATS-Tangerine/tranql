@@ -3993,6 +3993,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                   this._translateGraph(msg,false,schema);
                                 }).bind(this)
                               }}
+                              queryData={{
+                                useCache: this.state.useCache,
+                                _cache: this._cache,
+                                dynamicIdResolution: this.state.dynamicIdResolution,
+                                tranqlURL: this.tranqlURL
+                              }}
                               ref={this._interactiveShell}/>
             <TableViewer tableView={this.state.tableViewerComponents.tableViewerCompActive}
                          close={this._closeTableViewer}

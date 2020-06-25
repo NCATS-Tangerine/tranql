@@ -638,6 +638,28 @@ class ReasonerURLs(StandardAPIResource):
         schema = tranql.schema
         return { schema[0] : schema[1]['url'] for schema in schema.schema.items() }
 
+class PyodideModule(StandardAPIResource):
+    """ Returns TranQL Pyodide module """
+    def __init__(self):
+        super().__init__()
+
+    def get(self):
+        """
+        Get TranQL Pyodide module
+        ---
+        tags: [util]
+        description: Returns TranQL Pyodide module
+        responses:
+            '200':
+                description: Message
+                content:
+                    text/plain:
+                        schema:
+                            type: string
+        """
+        with open(os.path.join(os.path.dirname(__file__), "pyodide_module.py"), "r") as pyodide:
+            return pyodide.read()
+
 class ParseIncomplete(StandardAPIResource):
     """ Tokenizes an incomplete query and returns the result """
     def __init__(self):
@@ -748,6 +770,7 @@ api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
 api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
 api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
 api.add_resource(ReasonerURLs, '/tranql/reasonerURLs')
+api.add_resource(PyodideModule, '/tranql/pyodide_module')
 
 api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
 api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
