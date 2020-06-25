@@ -22,6 +22,15 @@ function Intermediary(controller, pyodide_module) {
   // let _WATCHING_OBJECTS = true;
 
   const public_intermediary = {
+    // Offers important Promise utilities such as `all`
+    promise: {
+      all(promises) {
+        return Promise.all(promises);
+      },
+      race(promises) {
+        return Promise.race(promises);
+      }
+    },
     install_module(module) {
       const start = Date.now();
       controller.setBlock(true);
@@ -33,11 +42,8 @@ function Intermediary(controller, pyodide_module) {
       });
       return null;
     },
-    dumps(obj) {
-      return JSON.stringify(obj);
-    },
     make_query(query, KnowledgeGraph) {
-      // Return a promise of a python KnowledgeGraph class 
+      // Return a promise of a python KnowledgeGraph class
       return new Promise((resolve) => {
         const { queryData } = controller
         // Don't bother trying to reuse how App executes a query, it is too difficult to isolate the logic from state updates
@@ -47,7 +53,7 @@ function Intermediary(controller, pyodide_module) {
           function success (result) {
             if (result.length > 0) {
               // Translate the knowledge graph given current settings.
-              resolve(KnowledgeGraph(result[0].data));
+              resolve(KnowledgeGraph(result[0].data.knowledge_graph));
             }
             else {
               const args = {
@@ -65,7 +71,7 @@ function Intermediary(controller, pyodide_module) {
               .then(
                 (result) => {
                   resolve(
-                    KnowledgeGraph(JSON5.parse(result))
+                    KnowledgeGraph(JSON5.parse(result).knowledge_graph)
                   );
                 },
                 (error) => { throw error; }
@@ -88,16 +94,17 @@ function Intermediary(controller, pyodide_module) {
     }
   };
 
+  // Inject the intermediary into Pyodide
   window.pyodide.globals.TranQL = public_intermediary;
+  // Evaluate the module for Pyodide
   window.pyodide.runPython(pyodide_module);
+  // Remove the intermediary
   try {delete window.pyodide.globals.TranQL;} catch {}
 
-  return [
-    public_intermediary,
-    function updateController(newController) {
-      controller = newController;
-    }
-  ];
+  // Return a way for the controller's state to get updated
+  return function updateController(newController) {
+    controller = newController;
+  }
 };
 
 /**
@@ -124,13 +131,15 @@ class ShellMessage extends Component {
   }
   _getSanitizedOutput() {
     if (this.props.output === undefined) return null;
-    let val;
-    try {
-      val = this.props.output.constructor.name+"<"+JSON.stringify(this.props.output)+">";
-    }
-    catch {}
-    if (typeof val === "undefined") val = new String(this.props.output);
-    return val;
+    // let val;
+    // try {
+    //   val = this.props.output.constructor.name+"<"+JSON.stringify(this.props.output)+">";
+    // }
+    // catch {}
+    // if (typeof val === "undefined") val = new String(this.props.output);
+    // return val;
+
+    return this.props.output.toString();
   }
   render() {
     const useFakePrefix = this.props.fakePrefix !== undefined;
@@ -175,7 +184,7 @@ export default class InteractiveShell extends Component {
       loading: true,
       messages: [
         {
-          message: <span>Bootstraping Python environment.</span>
+          message: <span>Bootstraping Python environment. May cause delays and temporary unresponsiveness.</span>
         }
       ],
       lineBuffer: [],
@@ -188,7 +197,12 @@ export default class InteractiveShell extends Component {
     // Tracks timestamp when initialized for loading time calculation
     this._timeOfInit = Date.now();
 
+    // Method to update data within the intermediary
     this._updateIntermediary = null;
+
+    // Module installation, scripts, etc. will not be loaded until the first time Pyodide is opened
+    // This avoids the website freezing for loading purposes unless the user intends to use the shell
+    this._loadedPyodide = false;
 
     this.setBlock = this.setBlock.bind(this);
     this._scrollToBottom = this._scrollToBottom.bind(this);
@@ -200,6 +214,7 @@ export default class InteractiveShell extends Component {
     this._renderToggleGroup = this._renderToggleGroup.bind(this);
     this._addProgram = this._addProgram.bind(this);
     this._hookPyodide = this._hookPyodide.bind(this);
+    this._loadPyodide = this._loadPyodide.bind(this);
 
     this._scrollContainer = React.createRef();
     this._input = React.createRef();
@@ -398,30 +413,19 @@ export default class InteractiveShell extends Component {
     );
   }
   _hookPyodide(pyodideModule) {
-    const [ intermediary, updateIntermediary ] = new Intermediary(this._getControllerData(), pyodideModule);
+    const updateIntermediary = new Intermediary(this._getControllerData(), pyodideModule);
     this._updateIntermediary = updateIntermediary;
     // window.pyodide.globals.TranQL = intermediary;
   }
-  componentDidUpdate() {
-    this.state.repl && this._scrollToBottom();
-    this._updateIntermediary != null && this._updateIntermediary(this._getControllerData());
-  }
-  componentWillUnmount() {
-    // window.languagePluginLoader.then(() => {
-    //   try {
-    //     if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
-    //   }
-    //   catch {}
-    // });
-  }
-  async componentDidMount() {
+  async _loadPyodide() {
+    this._loadedPyodide = true;
     // Pyodide has to load the Python environment before it is usable; however, this happens so quickly that it is virtually impeceptible
     const response = await fetch(this.props.queryData.tranqlURL + '/tranql/pyodide_module', {
       method: "GET"
     });
     const pyodideModule = JSON.parse(await response.text());
     await window.languagePluginLoader;
-    // await window.pyodide.loadPackage('networkx')
+    await window.pyodide.loadPackage(['networkx']); // the primary blockage occurs when the packages are actually imported
     this._hookPyodide(pyodideModule);
     this.setState({
       loading : false,
@@ -436,6 +440,20 @@ export default class InteractiveShell extends Component {
         ]
       })
     });
+  }
+  componentDidUpdate() {
+    this.state.repl && this._scrollToBottom();
+    // If the shell is now active and Pyodide features have not been loaded, load them
+    this.props.active && !this._loadedPyodide && this._loadPyodide();
+    this._updateIntermediary != null && this._updateIntermediary(this._getControllerData());
+  }
+  componentWillUnmount() {
+    // window.languagePluginLoader.then(() => {
+    //   try {
+    //     if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
+    //   }
+    //   catch {}
+    // });
   }
   render() {
     if (!this.props.active) return null;
