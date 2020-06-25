@@ -1,3 +1,6 @@
 ---
-  udfs.py:
-    - children
+  userDefinedFunctions:
+    modules:
+      - source: udfs.py
+        functions:
+          - children

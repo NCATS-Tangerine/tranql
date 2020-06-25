@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { Form, Row, Col, ToggleButton, ToggleButtonGroup, Button, Tabs, Tab } from 'react-bootstrap';
 import { Controlled as CodeMirror } from 'react-codemirror2';
 import { FaPlus, FaTimes } from 'react-icons/fa';
+import * as qs from 'qs';
+import * as JSON5 from 'json5';
 import * as classNames from 'classnames';
 import esToPrimitive from 'es-to-primitive';
 import 'codemirror/mode/python/python';
@@ -16,7 +18,7 @@ let PROGRAM_COUNT = 0;
  * - Also provides utility such as importing external modules
  *
  */
-function Intermediary(controller) {
+function Intermediary(controller, pyodide_module) {
   // let _WATCHING_OBJECTS = true;
 
   const public_intermediary = {
@@ -24,7 +26,6 @@ function Intermediary(controller) {
       const start = Date.now();
       controller.setBlock(true);
       window.pyodide.loadPackage(module).then(() => {
-        private_intermediary.hookLibrary(module);
         controller.setBlock(false);
         controller.publishMessage({
           message: `Successfully installed ${module} in ${(Date.now() - start)/1000}s`
@@ -35,90 +36,67 @@ function Intermediary(controller) {
     dumps(obj) {
       return JSON.stringify(obj);
     },
+    make_query(query, KnowledgeGraph) {
+      // Return a promise of a python KnowledgeGraph class 
+      return new Promise((resolve) => {
+        const { queryData } = controller
+        // Don't bother trying to reuse how App executes a query, it is too difficult to isolate the logic from state updates
+        let message = null;
+        var cachePromise = queryData.useCache ? queryData._cache.read ('cache', 'key', query) : Promise.resolve ([]);
+        cachePromise.then (
+          function success (result) {
+            if (result.length > 0) {
+              // Translate the knowledge graph given current settings.
+              resolve(KnowledgeGraph(result[0].data));
+            }
+            else {
+              const args = {
+                'dynamic_id_resolution' : queryData.dynamicIdResolution,
+                'asynchronous' : true
+              };
+              fetch(queryData.tranqlURL + '/tranql/query?'+qs.stringify(args), {
+                method: "POST",
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'text/plain',
+                },
+                body: query
+              }).then(res => res.text())
+              .then(
+                (result) => {
+                  resolve(
+                    KnowledgeGraph(JSON5.parse(result))
+                  );
+                },
+                (error) => { throw error; }
+              );
+            }
+          },
+          function error (error) {
+            throw error;
+          }
+        );
+      });
+    },
     // properties
     get_knowledge_graph() {
-      return controller.data.message ? controller.data.message.knowledge_graph : null;
+      // Deep copy knowledge_graph
+      return controller.data.message ? JSON.parse(JSON.stringify(controller.data.message.knowledge_graph)) : null;
     },
-    export_changes() {
-      controller.data.set_knowledge_graph(this.get_knowledge_graph());
-    },
-    // show_pyplot() {
-    //   const oldIodide = window.iodide;
-    //   let graphElement = null;
-    //   window.iodide = {
-    //     output: {
-    //       element: (tag) => {
-    //         const elem = document.createElement(tag);
-    //         graphElement = elem;
-    //         return elem;
-    //       }
-    //     }
-    //   };
-    //   window.pyodide.runPython(`
-    //     import matplotlib.pyplot as plt
-    //     plt.show()
-    //   `);
-    //   window.iodide = oldIodide;
-    //   class ControllerComponent extends Component {
-    //     constructor(props) {
-    //       super(props);
-    //
-    //       this._controller = React.createRef();
-    //     }
-    //     componentDidMount() {
-    //       console.log(this._controller.current, this.props.comp);
-    //       this._controller.current.appendChild(this.props.comp);
-    //     }
-    //     render() {
-    //       return <div ref={this._controller}/>
-    //     }
-    //   }
-    //   return graphElement !== null ? <ControllerComponent comp={graphElement}/> : "Failed to display graph.";
-    // }
-    // get_WATCHING_OBJECTS() {
-    //   return _WATCHING_OBJECTS;
-    // },
-    // set_WATCHING_OBJECTS(watch) {
-    //   _WATCHING_OBJECTS = watch;
-    // }
-  };
-  const private_intermediary = {
-    updateController(newController) {
-      controller = newController;
-    },
-    /**
-     * Extend capability of a library for compatibility reasons
-     * (e.g.` matplotlib.pyplot.show`)
-     *
-     */
-    hookLibrary(library) {
-      switch (library) {
-        case "matplotlib":
-            /* Something like this could theoretically work, but in order for it to it has to import, which takes a lot of time,
-             * in addtion to polluting the global namespace - Note: this prototype is not functional
-            window.pyodide.runPython(`
-              from matplotlib.backends.wasm_backend import FigureCanvasWasm
-
-              unhooked_create_root_element = FigureCanvasWasm.create_root_element
-              unhooked_show = FigureCanvasWasm.show
-              def create_root_element(self):
-                canvas = unhooked_create_root_element(self)
-                self._canvas = canvas
-                return canvas
-              def show(self):
-                unhooked_show(self)
-                return self._canvas
-              FigureCanvasWasm.create_root_element = create_root_element
-              FigureCanvasWasm.show = show
-            `)
-            */
-            break;
-      }
+    set_knowledge_graph(knowledge_graph) {
+      controller.data.set_knowledge_graph(knowledge_graph)
     }
   };
+
+  window.pyodide.globals.TranQL = public_intermediary;
+  window.pyodide.runPython(pyodide_module);
+  try {delete window.pyodide.globals.TranQL;} catch {}
+
   return [
     public_intermediary,
-    private_intermediary
+    function updateController(newController) {
+      controller = newController;
+    }
   ];
 };
 
@@ -148,7 +126,7 @@ class ShellMessage extends Component {
     if (this.props.output === undefined) return null;
     let val;
     try {
-      val = JSON.stringify(this.props.output);
+      val = this.props.output.constructor.name+"<"+JSON.stringify(this.props.output)+">";
     }
     catch {}
     if (typeof val === "undefined") val = new String(this.props.output);
@@ -210,7 +188,7 @@ export default class InteractiveShell extends Component {
     // Tracks timestamp when initialized for loading time calculation
     this._timeOfInit = Date.now();
 
-    this._privateIntermediary = null;
+    this._updateIntermediary = null;
 
     this.setBlock = this.setBlock.bind(this);
     this._scrollToBottom = this._scrollToBottom.bind(this);
@@ -245,6 +223,8 @@ export default class InteractiveShell extends Component {
     return {
       setBlock: this.setBlock,
       publishMessage: this._publishMessage,
+      // Anything from App that is explicitly required in the `make_query` method
+      queryData: this.props.queryData,
       data: this.props.data
     };
   }
@@ -417,66 +397,44 @@ export default class InteractiveShell extends Component {
       </ToggleButtonGroup>
     );
   }
-  _hookPyodide() {
-    const [ intermediary, privateIntermediary ] = new Intermediary(this._getControllerData());
-    this._privateIntermediary = privateIntermediary;
-    window.pyodide.globals.TranQL = intermediary;
-
-    window.iodide = {
-      output: {
-        element: (tag) => {
-          const elem = document.createElement(tag);
-          // class ControllerComponent extends Component {
-          //   constructor(props) {
-          //     super(props);
-          //
-          //     this._controller = React.createRef();
-          //   }
-          //   componentDidMount() {
-          //     console.log(this._controller.current, this.props.comp);
-          //     this._controller.current.appendChild(this.props.comp);
-          //   }
-          //   render() {
-          //     return <div ref={this._controller}/>
-          //   }
-          // }
-          // this._publishMessage({
-          //   message: <ControllerComponent comp={elem}/>
-          // });
-          return elem;
-        }
-      }
-    };
+  _hookPyodide(pyodideModule) {
+    const [ intermediary, updateIntermediary ] = new Intermediary(this._getControllerData(), pyodideModule);
+    this._updateIntermediary = updateIntermediary;
+    // window.pyodide.globals.TranQL = intermediary;
   }
   componentDidUpdate() {
     this.state.repl && this._scrollToBottom();
-    this._privateIntermediary != null && this._privateIntermediary.updateController(this._getControllerData());
+    this._updateIntermediary != null && this._updateIntermediary(this._getControllerData());
   }
   componentWillUnmount() {
-    window.languagePluginLoader.then(() => {
-      try {
-        if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
-      }
-      catch {}
-    });
+    // window.languagePluginLoader.then(() => {
+    //   try {
+    //     if ("TranQL" in window.pyodide.globals) window.pyodide.globals.TranQL = undefined;
+    //   }
+    //   catch {}
+    // });
   }
-  componentDidMount() {
+  async componentDidMount() {
     // Pyodide has to load the Python environment before it is usable; however, this happens so quickly that it is virtually impeceptible
-    window.languagePluginLoader.then(() => {
-      this._hookPyodide();
+    const response = await fetch(this.props.queryData.tranqlURL + '/tranql/pyodide_module', {
+      method: "GET"
+    });
+    const pyodideModule = JSON.parse(await response.text());
+    await window.languagePluginLoader;
+    // await window.pyodide.loadPackage('networkx')
+    this._hookPyodide(pyodideModule);
+    this.setState({
+      loading : false,
+      messages : []
+    }, () => {
+      // Problem with keys, React does not recognize that this message is new without removing previous because they're assigned the same key
       this.setState({
-        loading : false,
-        messages : []
-      }, () => {
-        // Problem with keys, React does not recognize that this message is new without removing previous because they're assigned the same key
-        this.setState({
-          messages : [
-            {
-              message: "Finished bootstraping Python environment. Loaded in " + (Date.now() - this._timeOfInit)/1000 + "s"
-            }
-          ]
-        })
-      });
+        messages : [
+          {
+            message: "Finished bootstraping Python environment. Loaded in " + (Date.now() - this._timeOfInit)/1000 + "s"
+          }
+        ]
+      })
     });
   }
   render() {

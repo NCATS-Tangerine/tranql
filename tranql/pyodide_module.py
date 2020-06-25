@@ -17,6 +17,10 @@ class TranQLApp:
             from tranql.main import TranQL as TranQLInterpreter
             self._pyodide = False
 
+    def install_module(self, module):
+        if self._pyodide:
+            return self._TranQLInstance.install_module(module)
+
     def query(self, query):
         if self._pyodide:
             # This WILL return a Promise<KnowledgeGraph>

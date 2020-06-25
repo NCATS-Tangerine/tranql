@@ -62,15 +62,18 @@ class CustomFunctions:
     def load_functions():
         functions = {}
         with open(os.path.join(os.path.dirname(__file__), "udfs.yaml"), "r") as f:
-            udfs = yaml.safe_load(f.read())
-            for udf_file in udfs:
-                file_functions = udfs[udf_file]
-                file_path = os.path.join(os.path.dirname(__file__), udf_file)
+            udf_data = yaml.safe_load(f.read())
+            modules = udf_data["userDefinedFunctions"]["modules"]
+            for udf_module in modules:
+                source_file = udf_module["source"]
+                udf_functions = udf_module["functions"]
+
+                file_path = os.path.join(os.path.dirname(__file__), source_file)
 
                 loader = importlib.machinery.SourceFileLoader(file_path, file_path)
                 module = loader.load_module()
 
-                for function_name in file_functions:
+                for function_name in udf_functions:
                     functions[function_name] = getattr(module, function_name)
 
         return functions
