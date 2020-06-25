@@ -43,7 +43,7 @@ class TranQLApp:
 
     def render(self, knowledge_graph):
         if self._pyodide:
-            self._TranQLInstance.set_knowledge_graph(knowledge_graph.get_graph())
+            self._TranQLInstance.set_knowledge_graph(knowledge_graph.build_kg())
         else:
             # TBD
             pass
