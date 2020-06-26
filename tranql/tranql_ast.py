@@ -338,8 +338,8 @@ class SelectStatement(Statement):
 
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
-        value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and isinstance(value, str):
+        nodes = []
+        for value in concept.nodes:
             if value.startswith ("$"):
                 varname = value
                 value = interpreter.context.resolve_arg (varname)
@@ -347,10 +347,10 @@ class SelectStatement(Statement):
                 if value == None:
                     raise UndefinedVariableError (f"Undefined variable: {varname}")
                 elif isinstance (value, str):
-                    concept.set_nodes ([ value ])
+                    nodes.append (value)
                 elif isinstance(value, list):
                     """ Binding multiple values to a node. """
-                    concept.set_nodes (value)
+                    nodes += value
                 else:
                     raise TranQLException (
                         f"Internal failure: object of unhandled type {type(value)}.")
@@ -364,11 +364,13 @@ class SelectStatement(Statement):
                     This is frowned upon. While it *may* be useful for prototyping and,
                     interactive exploration, it will probably be removed. """
                     logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    concept.set_nodes (self.resolve_name (value, concept.type_name))
+                    nodes.append (self.resolve_name (value, concept.type_name))
                     logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
                 else:
                     """ This is a single curie. Bind it to the node. """
-                    pass
+                    nodes.append (value)
+
+        concept.set_nodes (nodes)
 
     def plan (self, plan):
         """ Plan a query that may span reasoners. This uses a configured schema to determine

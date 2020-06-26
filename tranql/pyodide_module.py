@@ -134,6 +134,8 @@ class KnowledgeGraph:
     def simple_union(self, other_kg):
         # Returns a KnowledgeGraph of the simple union of self and other_kg (node sets do not have to be disjoint)
         return KnowledgeGraph(nx.compose(self.net, other_kg.net))
+    compose = simple_union # alias simple_union
+
 
     def union(self, other_kg):
         # Returns a KnowledgeGraph of the union of self and other_kg  (node sets must be disjoint)
@@ -154,6 +156,7 @@ class KnowledgeGraph:
     def symmetric_difference(self, other_kg):
         # Returns a KnowledgeGraph containing edges that exist in self or other_kg but not both
         return KnowledgeGraph(nx.symmetric_difference(self.net, other_kg.net))
+
 
     def __add__(self, other):
         return self.simple_union(other)

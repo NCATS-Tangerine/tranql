@@ -174,11 +174,11 @@ def test_parse_list (requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test parsing of lists within where statements """
-
+    """ Also make sure that vars are properly recognized """
     code = """
         SELECT chemical_substance->gene->disease
           FROM "/graph/gamma/quick"
-         WHERE disease = ['asthma', 'smallpox']
+         WHERE disease = ['asthma', 'smallpox', $my_var]
     """
     expected_where = [
         [
@@ -186,7 +186,8 @@ def test_parse_list (requests_mock):
             "=",
             [
                 "asthma",
-                "smallpox"
+                "smallpox",
+                "$my_var"
             ]
         ]
     ]
@@ -441,7 +442,7 @@ def test_ast_generate_questions_from_list():
     # get all chemical and genes
 
 
-    grab_ids = lambda node_type: list(
+    grab_ids = lambda node_type, questions: list(
         # using SET to select unique ids only and casting back to list
         # grabs ids from questions based on node type
         set(reduce(
@@ -456,8 +457,8 @@ def test_ast_generate_questions_from_list():
             []
         ))
     )
-    chemicals_ids = grab_ids('chemical_substance')
-    gene_ids = grab_ids('gene')
+    chemicals_ids = grab_ids('chemical_substance', questions)
+    gene_ids = grab_ids('gene', questions)
     assert len(questions) == 4
     chemicals.sort()
     chemicals_ids.sort()
@@ -465,6 +466,24 @@ def test_ast_generate_questions_from_list():
     gene_list.sort()
     assert_lists_equal(chemicals_ids, chemicals)
     assert_lists_equal(gene_list, gene_ids)
+
+    # now let's make sure that a list is parsed correctly with variables inside of it
+    ast_3 = tranql.parse(f"""
+        SET var_str = 'CHEBI:0'
+        SET var_list = ['CHEBI:22', 'CHEBI:33']
+        SELECT chemical_substance->gene->disease
+          FROM "/graph/gamma/quick"
+         WHERE chemical_substance = [$var_str, 'CHEBI:1', $var_list]
+    """)
+    set_var_str = ast_3.statements[0]
+    set_var_list = ast_3.statements[1]
+    select_statement = ast_3.statements[2]
+
+    set_var_str.execute (tranql)
+    set_var_list.execute (tranql)
+    questions = select_statement.generate_questions (tranql)
+    chem_ids = grab_ids('chemical_substance', questions)
+    assert_lists_equal(sorted(chem_ids), sorted(['CHEBI:0', 'CHEBI:22', 'CHEBI:33', 'CHEBI:1']))
 
 def test_generate_questions_where_clause_list():
     # Try to generate questions if values for nodes are set as lists in the where clause

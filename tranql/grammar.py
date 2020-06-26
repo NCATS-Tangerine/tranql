@@ -67,10 +67,11 @@ function_body <<= Word(alphanums+"_") + (
 # However, classes are not easily json serializable, so a dict struct will do
 function_body.setParseAction(lambda toks: { "name" : toks[0], "args" : toks[1:] })
 
+concept_or_var_list = Group(LBRACK.suppress() + delimitedList(concept_value | ident) + RBRACK.suppress())
 # need to add support for alg expressions
-columnRval = function_body | realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_value_list
+columnRval = function_body | realNum | intNum | quotedString.addParseAction(removeQuotes) | columnName | concept_or_var_list
 whereCondition = Group(
-    ( columnName + binop + (columnRval | Word(printables) ) ) |
+    ( columnName + binop + columnRval ) |
     # ( columnName + in_ + concept_value_list) |
     # ( columnName + in_ + "(" + delimitedList( columnRval ) + ")" ) |
     # ( columnName + in_ + "(" + statement + ")" ) |

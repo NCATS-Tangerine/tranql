@@ -194,9 +194,6 @@ export default class InteractiveShell extends Component {
       activeProgram: 0  // active editor program (index)
     };
 
-    // Tracks timestamp when initialized for loading time calculation
-    this._timeOfInit = Date.now();
-
     // Method to update data within the intermediary
     this._updateIntermediary = null;
 
@@ -418,6 +415,7 @@ export default class InteractiveShell extends Component {
     // window.pyodide.globals.TranQL = intermediary;
   }
   async _loadPyodide() {
+    const startingTime = Date.now()
     this._loadedPyodide = true;
     // Pyodide has to load the Python environment before it is usable; however, this happens so quickly that it is virtually impeceptible
     const response = await fetch(this.props.queryData.tranqlURL + '/tranql/pyodide_module', {
@@ -435,7 +433,7 @@ export default class InteractiveShell extends Component {
       this.setState({
         messages : [
           {
-            message: "Finished bootstraping Python environment. Loaded in " + (Date.now() - this._timeOfInit)/1000 + "s"
+            message: "Finished bootstraping Python environment. Loaded in " + (Date.now() - startingTime)/1000 + "s"
           }
         ]
       })
