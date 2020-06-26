@@ -1,12 +1,18 @@
 import networkx as nx
 
-# Any value offered by TranQLApp that MUST be a promise in the pyodide environment needs to behave the same in a normal environment
+# Used to match unavoidable promises returned in Pyodide environment
+# Thin wrapper - there is no point in actually concealing the promise's value
+# the soul purpose of the wrapper is so that scripts are compatible in both environments
 class MockPromise:
     def __init__(self, value):
         self._value = value
 
     def then(self, callback):
-        callback(self._value)
+        return MockPromise(callback(self._value))
+
+    @staticmethod
+    def all(promises):
+        return MockPromise([p._value for p in promises])
 
 # TranQLApp serves as the Python intermediary
 # TranQL, the JavaScript intermediary, is injected into Pyodide prior to this script running
@@ -23,6 +29,7 @@ class TranQLApp:
             # For now instead of making a request to the TranQL api just use the interpreter
             from tranql.main import TranQL as TranQLInterpreter
             self._pyodide = False
+            self.promise = MockPromise
 
 
     def install_module(self, module):
@@ -35,7 +42,7 @@ class TranQLApp:
             promise = self._TranQLInstance.make_query(query, KnowledgeGraph)
             return promise
         else:
-            # This will return a KnowledgeGraph
+            # This will return a MockPromise<KnowledgeGraph>
             return KnowledgeGraph(TranQLInterpreter(options={
                     "dynamic_id_resolution" : True,
                     "asynchronous" : True

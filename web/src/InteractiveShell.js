@@ -26,9 +26,6 @@ function Intermediary(controller, pyodide_module) {
     promise: {
       all(promises) {
         return Promise.all(promises);
-      },
-      race(promises) {
-        return Promise.race(promises);
       }
     },
     install_module(module) {
