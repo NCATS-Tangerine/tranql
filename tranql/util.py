@@ -264,16 +264,16 @@ class Concept:
         for n in nodes:
             exclude = False
             for pat in self.exclude_patterns:
-                identifier = self.get_node_identifier (n)
-                matches = re.search (pat, identifier, re.IGNORECASE) if not isinstance(identifier, CustomFunction) else None
+                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
+                matches = re.search (pat, identifier, re.IGNORECASE)
                 if matches is not None:
                     exclude = True
                     break
             include = not len(self.include_patterns) > 0
             for pat in self.include_patterns:
-                identifier = self.get_node_identifier (n)
-                matches = re.search (pat, identifier, re.IGNORECASE) if not isinstance(identifier, CustomFunction) else None
-                if matches is not None or isinstance(identifier, CustomFunction):
+                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
+                matches = re.search (pat, identifier, re.IGNORECASE)
+                if matches is not None:
                     include = True
                     break
             if include and not exclude:
@@ -288,90 +288,12 @@ class Concept:
             else:
                 reduced_nodes.append(node)
         for n in reduced_nodes:
-            identifier = self.get_node_identifier (n)
-            # identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
+            identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
             keep_nodes[identifier] = n
         self.nodes = self.filter_nodes (list(keep_nodes.values()))
     def apply_filters (self):
         nodes = self.filter_nodes (self.nodes)
         self.nodes = nodes
-    def get_node_identifier(self, node):
-        if isinstance(node, str): identifier = node
-        # If a UDF, we can't identify its actual value until it has been resolved
-        # Duplicates won't make it through because of this though -- once its value is resolved
-        # it will get caught when set_nodes is called again
-        elif isinstance(node, CustomFunction): identifier = node
-        elif "curie" in node: identifier = node["curie"]
-        else: identifier = node["id"]
-
-        return identifier
-
-class CustomFunction:
-    def __init__(self, dict_repr):
-        self.name = dict_repr["name"]
-        self.args = dict_repr["args"]
-
-    def __repr__(self):
-        return f"CustomFunction: {self.name}({self.args})"
-class CustomFunctions:
-    def __init__(self, udfs=[]):
-        self.functions = self.load_functions(udfs)
-
-    @staticmethod
-    def load_functions(udfs):
-        # Can pass in a string for a single file
-        udfs = [udfs] if isinstance(udfs, str) else udfs
-        functions = {}
-        for udf_file in udfs:
-            with open(udf_file, "r") as f:
-                udf_data = yaml.safe_load(f.read())
-                modules = udf_data["userDefinedFunctions"]["modules"]
-                for udf_module in modules:
-                    source_file = udf_module["source"]
-                    udf_functions = udf_module["functions"]
-
-                    file_path = os.path.join(os.path.dirname(__file__), source_file)
-
-                    loader = importlib.machinery.SourceFileLoader(file_path, file_path)
-                    module = loader.load_module()
-
-                    for function_name in udf_functions:
-                        functions[function_name] = getattr(module, function_name)
-
-        return functions
-
-    """ Intended for use as a decorator """
-    def custom_function(self, function, name=None):
-        if name is None: name = function.__name__
-        self.functions[name] = function
-
-    def resolve_function(self, parsed_function, get_var_arg):
-        function_name = parsed_function.name
-        # For every arg passed in, recurse if it is a function to resolve its value
-        function_args = []
-        keyword_arguments = {}
-        # Will recurse to resolve the value of a function argument
-        def make_not_function(argument_value):
-            if isinstance(argument_value, dict):
-                return self.resolve_function(CustomFunction(argument_value), get_var_arg)
-            else:
-                return argument_value
-        # Go through and make sure every argument isn't a nested function
-        # Also handle keyword arguments
-        for argument in parsed_function.args:
-            # kwarg
-            if isinstance(argument, list):
-                arg_name = argument[0]
-                arg_value = argument[2]
-                keyword_arguments[arg_name] = make_not_function(arg_value)
-            # just a normal arg
-            else:
-                # Resolve var if is var
-                if isinstance(argument, str) and argument.startswith("$"):
-                    argument = get_var_arg(argument)
-                function_args.append(make_not_function(argument))
-
-        return self.functions[function_name](*function_args, **keyword_arguments)
 
 class Text:
     """ Utilities for processing text. """
