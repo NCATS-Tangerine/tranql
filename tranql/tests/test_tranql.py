@@ -80,30 +80,25 @@ def test_parse_function (requests_mock):
 
     # Create a function that returns "asth"
     @custom_functions.custom_function
-    def get_asthma():
-        return "asth"
+    def get_ontology():
+        return "CHEBI:"
 
     # Test concat function
     code = """
         SELECT chemical_substance->gene->disease
           FROM "/graph/gamma/quick"
-         WHERE disease=concat_strings(get_asthma(), "ma")
+         WHERE disease=concat_strings(get_ontology(), "43523")
     """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            "asthma"
-        ]
-    ]
+
     tranql = TranQL ()
     tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
+    questions = tranql.parse(code).statements[0].generate_questions(tranql)
 
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
+    disease_node = [node for node in questions[0]["question_graph"]["nodes"] if node.get("id") == "disease"][0]
+
+    assert disease_node.get("curie") == "CHEBI:43523"
+
+
 
 def test_parse_list_function (requests_mock):
     set_mock(requests_mock, "workflow-5")
@@ -112,7 +107,7 @@ def test_parse_list_function (requests_mock):
     # Create a function that returns a list
     @custom_functions.custom_function
     def returns_list():
-        return ["asthma", "smallpox"]
+        return ["MONDO:01", "MONDO:02"]
 
     # Test list function
     code = """
@@ -120,23 +115,20 @@ def test_parse_list_function (requests_mock):
           FROM "/graph/gamma/quick"
          WHERE disease=returns_list()
     """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            [
-                "asthma",
-                "smallpox"
-            ]
-        ]
-    ]
+
     tranql = TranQL ()
     tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
+    questions = tranql.parse(code).statements[0].generate_questions(tranql)
 
-    assert_lists_equal(
-        result_where,
-        expected_where
+    disease_node1 = [node for node in questions[0]["question_graph"]["nodes"] if node.get("id") == "disease"][0]
+    disease_node2 = [node for node in questions[1]["question_graph"]["nodes"] if node.get("id") == "disease"][0]
+
+    assert (
+        disease_node1.get("curie") == "MONDO:01" and
+        disease_node2.get("curie") == "MONDO:02"
+    ) ^ (
+        disease_node1.get("curie") == "MONDO:02" and
+        disease_node2.get("curie") == "MONDO:01"
     )
 
 def test_parse_kwarg_function (requests_mock):
@@ -145,30 +137,22 @@ def test_parse_kwarg_function (requests_mock):
     """ Test parsing of a function with keyword arguments """
     # Create a function that returns a list
     @custom_functions.custom_function
-    def kwarg_function(str_a, str_b, prefix="_PREFIX_", suffix="_SUFFIX_"):
+    def kwarg_function(str_a, str_b, prefix="PREFIX", suffix=""):
         return prefix + str_a + str_b + suffix
 
     # Test list function
     code = """
         SELECT chemical_substance->gene->disease
           FROM "/graph/gamma/quick"
-         WHERE disease=kwarg_function("beginning of body", "ending of body", prefix="_CUSTOM_PREFIX_")
+         WHERE disease=kwarg_function(":", "1234", prefix="MONDO")
     """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            "_CUSTOM_PREFIX_beginning of bodyending of body_SUFFIX_"
-        ]
-    ]
+
     tranql = TranQL ()
     tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
+    questions = tranql.parse(code).statements[0].generate_questions(tranql)
 
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
+    disease_node = [node for node in questions[0]["question_graph"]["nodes"] if node.get("id") == "disease"][0]
+    assert disease_node.get("curie") == "MONDO:1234"
 
 def test_parse_list (requests_mock):
     set_mock(requests_mock, "workflow-5")

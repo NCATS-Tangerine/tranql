@@ -14,6 +14,7 @@ from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
 from tranql.tranql_schema import Schema
 from tranql.util import Concept
+from tranql.util import CustomFunctions, CustomFunction
 from tranql.util import JSONKit
 from tranql.util import deep_merge, light_merge
 from tranql.request_util import async_make_requests
@@ -54,59 +55,8 @@ class Bionames:
             raise ServiceInvocationError (response.text)
         return result
 
-class CustomFunctions:
-    def __init__(self):
-        self.functions = self.load_functions()
 
-    @staticmethod
-    def load_functions():
-        functions = {}
-        with open(os.path.join(os.path.dirname(__file__), "udfs.yaml"), "r") as f:
-            udf_data = yaml.safe_load(f.read())
-            modules = udf_data["userDefinedFunctions"]["modules"]
-            for udf_module in modules:
-                source_file = udf_module["source"]
-                udf_functions = udf_module["functions"]
-
-                file_path = os.path.join(os.path.dirname(__file__), source_file)
-
-                loader = importlib.machinery.SourceFileLoader(file_path, file_path)
-                module = loader.load_module()
-
-                for function_name in udf_functions:
-                    functions[function_name] = getattr(module, function_name)
-
-        return functions
-
-    """ Intended for use as a decorator """
-    def custom_function(self, function, name=None):
-        if name is None: name = function.__name__
-        self.functions[name] = function
-
-    def resolve_function(self, parsed_function):
-        function_name = parsed_function["name"]
-        # For every arg passed in, recurse if it is a function to resolve its value
-        function_args = []
-        keyword_arguments = {}
-        # Will recurse to resolve the value of a function argument
-        make_not_function = lambda argument_value: self.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
-        # Go through and make sure every argument isn't a nested function
-        # Also handle keyword arguments
-        for argument in parsed_function["args"]:
-            # kwarg
-            if isinstance(argument, list):
-                arg_name = argument[0]
-                arg_value = argument[2]
-                keyword_arguments[arg_name] = make_not_function(arg_value)
-            # normal arg
-            else:
-                function_args.append(make_not_function(argument))
-
-        return self.functions[function_name](*function_args, **keyword_arguments)
-
-
-custom_functions = CustomFunctions()
-
+custom_functions = CustomFunctions(os.path.join(os.path.dirname(__file__), "udfs.yaml"))
 """ Prefined functions """
 @custom_functions.custom_function
 def mirror(x):
@@ -122,7 +72,6 @@ def descendants(curie):
         return response.json()
     else:
         raise ServiceInvocationError(response.text)
-
 
 
 class Statement:
@@ -336,11 +285,33 @@ class SelectStatement(Statement):
         logger.debug (f"name resolution result: {name} => {result}")
         return result
 
+
+    def resolve_custom_function(self, function, interpreter):
+        """ Invoked in two places: once for query concepts, once for self.where """
+        # Used to resolve the values of CustomFunction - this has to be deferred all the way
+        # to these two instances so that $vars are defined
+        def resolve_var_arg(arg):
+            resolved_value = interpreter.context.resolve_arg (arg)
+            if resolved_value == None:
+                raise UndefinedVariableError (f"Undefined variable: {varname}")
+
+            return resolved_value
+
+        value = custom_functions.resolve_function(function, resolve_var_arg)
+        return value
+
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
+
         nodes = []
         for value in concept.nodes:
-            if value.startswith ("$"):
+            # Make sure to resolve the values of functions here now that variables are defined
+            if isinstance(value, CustomFunction):
+                value = self.resolve_custom_function(value, interpreter)
+                # It's actually fine if the function returns a list here - there's no need to handle it
+                # set_nodes will automatically flatten nested lists for us
+                nodes.append (value)
+            elif value.startswith ("$"):
                 varname = value
                 value = interpreter.context.resolve_arg (varname)
                 logger.debug (f"resolved {varname} to {value}")
@@ -445,6 +416,9 @@ class SelectStatement(Statement):
             logger.debug (f"manage constraint: {constraint}")
             name, op, value = constraint
             value = interpreter.context.resolve_arg (value)
+            if isinstance(value, CustomFunction):
+                # Make sure to resolve function value here
+                value = self.resolve_custom_function(value, interpreter)
             if not name in self.query:
                 """
                 This is not constraining a concept name in the graph query.
@@ -1159,7 +1133,9 @@ class TranQL_AST:
                         if isinstance(condition, list) and len(condition) == 3:
                             var, op, val = condition
                             if isinstance(val, dict):
-                                val = custom_functions.resolve_function(val)
+                                val = CustomFunction(val)
+                            # if isinstance(val, dict):
+                            #     val = custom_functions.resolve_function(val)
                             select.where.append ([var, op, val])
 
                             if var in select.query:
