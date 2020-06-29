@@ -826,7 +826,8 @@ def test_ast_merge_results (requests_mock):
                         'target_id' : 'also_test_array_type_and_string_type_merge',
                         'type': ['merge_this'],
                         'merge_this_list' : ['edge_2'],
-                        'unique_attr_e_2' : 'e_2'
+                        'unique_attr_e_2' : 'e_2',
+                        'id': 'other_edge_id'
                     }
                 ]
             },
@@ -1769,3 +1770,65 @@ def test_partials_disconnected_and_connected():
         }
     }
     assert p5 in merged_paths
+
+
+def test_merge_preserves_edge_ids():
+    kg = {
+        'question_graph': {
+            'nodes': [
+                {'id': 'n0', 'type': 'type1', 'curie': 'CURIE:1'},
+                {'id': 'n1', 'type': 'type2'}
+            ],
+            'edges': [
+                {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
+            ]
+        },
+        'knowledge_graph': {
+            'nodes': [
+                {'id': 'CURIE:1', 'name': 'Node 1'},
+                {'id': 'curie:2', 'name': 'another node'},
+                {'id': 'curie:3', 'name': 'third node'}
+            ],
+            'edges': [
+                {'id': 'curie1:curie2', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:2'},
+                {'id': 'curie1:curie2Duplicate', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:2'},
+                {'id': 'curie1:curie3', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:3'}
+            ]
+        },
+        'knowledge_map': [
+            {
+                'node_bindings': {
+                    'n0': 'CURIE:1',
+                    'n1': 'curie:2'
+                }, 'edge_bindings': {
+                'e0': ['curie1:curie2']
+            }
+            }, {
+                'node_bindings': {
+                    'n0': 'CURIE:1',
+                    'n1': 'curie:2'
+                }, 'edge_bindings': {
+                    'e0': ['curie1:curie2Duplicate']
+                }
+            }, {
+                'node_bindings': {
+                    'n0': 'CURIE:1',
+                    'n1': 'curie:3'
+                }, 'edge_bindings': {
+                    'e0': ['curie1:curie3']
+                }
+            }
+        ]
+    }
+    tranql = TranQL()
+    responses = [kg]
+    select_statement = SelectStatement(tranql)
+    result = select_statement.merge_results(
+        responses, tranql, responses[0]['question_graph'])
+    edges = result['knowledge_graph']['edges']
+    all_edge_ids = set(e["id"] for e in edges)
+    for answer_binding in result['knowledge_map']:
+        e_b = answer_binding['edge_bindings']
+        edge_ids = reduce(lambda x, y : x + y, map(lambda x: e_b[x], e_b), [])
+        for i in edge_ids:
+            assert i in all_edge_ids, print(edge_ids)
