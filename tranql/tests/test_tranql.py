@@ -695,7 +695,8 @@ def test_ast_merge_knowledge_maps (requests_mock):
             },
             "edge_bindings" : {
                 "e0" : "ROOT_EDGE"
-            }
+            },
+            "score": 0
         },
         {
             "node_bindings" : {
@@ -704,7 +705,8 @@ def test_ast_merge_knowledge_maps (requests_mock):
             },
             "edge_bindings" : {
                 "e1" : "TEST_EDGE",
-            }
+            },
+            "score": 0
         }
     ]))
 
@@ -1698,7 +1700,8 @@ def test_partials_disconnected_and_connected():
          'e-B-C': 'e-b-c',
          'e-C-D': 'e-c-d',
          'e-D-E': 'e-d-e'
-        }
+        },
+        'score': 0
     }
     assert p1 in merged_paths
     p2 = {
@@ -1716,7 +1719,8 @@ def test_partials_disconnected_and_connected():
             'e-C-G': 'e-c-g',
             'e-G-D': 'e-g-d',
             'e-D-E': 'e-d-e'
-        }
+        },
+        'score': 0
     }
     # check path p2: a:A->b:B->f:C->g:G->d:D->e:E
     assert p2 in merged_paths
@@ -1729,7 +1733,8 @@ def test_partials_disconnected_and_connected():
         },
         'edge_bindings': {
             'e-A-B': 'e-a1-b1'
-        }
+        },
+        'score': 0
     }
     assert  p3 in merged_paths
 
@@ -1748,7 +1753,7 @@ def test_partials_disconnected_and_connected():
             'e-B-C': 'e-b-c',
             'e-C-D': 'e-c-d',
             'e-D-E': 'e-d-e'
-        }
+        }, 'score': 0
     }
     assert  p4 in merged_paths
     # check p5
@@ -1767,7 +1772,7 @@ def test_partials_disconnected_and_connected():
             'e-C-G': 'e-c-g',
             'e-G-D': 'e-g-d',
             'e-D-E': 'e-d-e'
-        }
+        }, 'score': 0
     }
     assert p5 in merged_paths
 
@@ -1832,3 +1837,52 @@ def test_merge_preserves_edge_ids():
         edge_ids = reduce(lambda x, y : x + y, map(lambda x: e_b[x], e_b), [])
         for i in edge_ids:
             assert i in all_edge_ids, print(edge_ids)
+
+def test_merge_should_preserve_score():
+    """
+    Once  a knowledge response is merged
+    :return:
+    """
+    query_graph = {
+        'nodes': [
+            {'id': 'A', 'type': 'A'},
+            {'id': 'B', 'type': 'B'}
+        ], 'edges': [
+            {'id': 'e-A-B', 'source_id': 'A', 'target_id':'B'}
+        ]
+    }
+    knowledge_graph = {
+        'nodes': [
+            {'id': 'KG_ID_A', 'name': 'node A from kg'},
+            {'id': 'KG_ID_B', 'name': 'node B from kg'},
+            {'id': 'KG_ID_AA', 'name': 'node AA from kg'},
+            {'id': 'KG_ID_BB', 'name': 'node BB from kg'},
+                  ],
+        'edges': [
+            {'id': 'KG_ID_A_B', 'type': 'related_to', 'source_id': 'KG_ID_A', 'target_id': 'KG_ID_B'},
+            {'id': 'KG_ID_AA_BB', 'type': 'related_to', 'source_id': 'KG_ID_AA', 'target_id': 'KG_ID_BB'},
+        ]
+    }
+    knowledge_map = [
+        {
+            'node_bindings': {'A': ['KG_ID_A'],'B': ['KG_ID_B']},
+            'edge_bindings': {'e-A-B': ['KG_ID_A_B']},
+            'score': 1
+        },
+        {
+            'node_bindings': {'A': ['KG_ID_AA'], 'B': ['KG_ID_BB']},
+            'edge_bindings': {'e-A-B': ['KG_ID_AA_BB']},
+            'score': 2
+        }
+    ]
+    tranql = TranQL()
+    responses = [{
+        'question_graph': query_graph,
+        'knowledge_map': knowledge_map,
+        'knowledge_graph': knowledge_graph
+    }]
+    select_statement = SelectStatement(tranql)
+    result = select_statement.merge_results(responses, tranql, query_graph, ['A','B'])
+    for answer in result['knowledge_map']:
+        assert 'score' in answer
+        assert answer['score'] == 1 or answer['score'] == 2
