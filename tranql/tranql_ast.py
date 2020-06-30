@@ -839,9 +839,10 @@ class SelectStatement(Statement):
                             exists = True
                             break
                     if exists:
+                        id_1, id_2 = edge['id'], e['id']
                         light_merge(edge,e)
                         light_merge(e,edge)
-                        killed_edges.append ([e['id'], edge['id']])
+                        killed_edges.append ([id_2, id_1])
                     else:
                         merged_edges.append (e)
 
