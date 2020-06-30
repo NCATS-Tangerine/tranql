@@ -30,13 +30,24 @@ def connect_knowledge_maps(responses, query_order):
         transformed_q_graph_edges[edge['source_id']][edge['target_id']] = transformed_q_graph_edges[edge['source_id']]\
             .get(edge['target_id'], set())
         transformed_q_graph_edges[edge['source_id']][edge['target_id']].add(edge['id'])
-    # convert node ids into list
+    # convert node ids into list, collect score aswell
+    score_table = {}
     for bindings in all_knowledge_maps:
+        score_key = set()
         nodes = bindings.get('node_bindings', {})
+        edges = bindings.get('edge_bindings', {})
+        score = bindings.get('score', 0)
+        # convert nodes to list
         for concept in nodes:
             curie = nodes[concept]
             curie = curie if isinstance(curie, list) else [curie]
             nodes[concept] = curie
+            score_key.add(curie[0])
+        for edge_id in edges:
+            score_key.add(edges[edge_id][0])
+        score_key = frozenset(score_key)
+        score_table[score_key] = score
+
 
     # Step 2
     # make a transformed graph in a structure that makes it easier to extract the parts for final merged kG graph.
@@ -107,9 +118,27 @@ def connect_knowledge_maps(responses, query_order):
             if edge_data:
                 for e in edge_data:
                     answer['edge_bindings'].update(e)
+            answer['score'] = 0 # default score is 0
         merged_answers.append(answer)
     # answer_sets
+    overlay_score(merged_answers, score_table)
     return merged_answers
+
+def overlay_score(merged_answers, score_table):
+    for score_key in score_table:
+        for answer in merged_answers:
+            node_bindings = list(map(lambda x: answer['node_bindings'][x][0], answer['node_bindings']))
+            edge_bindings = list(map(lambda x: answer['edge_bindings'][x][0], answer['edge_bindings']))
+            # make sure score key contains all nodes
+            filterd = list(filter(lambda x: x not in node_bindings, score_key))
+            # make sure edges are also contained
+            filterd = list(filter(lambda x: x not in edge_bindings, filterd))
+            # if 'filterd' is empty means this answer contains all the edges and nodes so will give it that score
+            # @TODO maybe have score be a asscoiated with sets of nodes, so it perseves origninal meaning that the
+            # @TODO kp intented
+            if len(filterd) == 0:
+                answer['score'] = score_table[score_key]
+
 
 
 def find_all_paths(graph, start, edge, visited = set(),stack= [], paths=[]):
