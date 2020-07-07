@@ -1886,3 +1886,100 @@ def test_merge_should_preserve_score():
     for answer in result['knowledge_map']:
         assert 'score' in answer
         assert answer['score'] == 1 or answer['score'] == 2
+
+def test_merged_node_ids_should_be_updated_in_knowledge_map():
+    tranql = TranQL()
+    select_statement = SelectStatement(tranql)
+    q_graph = {
+        'nodes': [{'id': 'n0', 'type': 'type1'}, {'id': 'n1', 'type': 'type2'}],
+        'edges': [{'id': 'e0', 'type':'related_to', 'source_id':'n0', 'target_id': 'n1'}]
+    }
+    kg_1 = {
+        'nodes': [
+            {'id': 'kg_id_1', 'equivalent_identifiers': ['kg_id_1', 'curie1'], 'name': 'kg 1 node'},
+            {'id': 'kg_id_2', 'equivalent_identifiers': ['kg_id_2', 'curie2'], 'name': 'kg 2 node'},
+            {'id': 'kg_id_3', 'equivalent_identifiers': ['kg_id_3', 'curie3'], 'name': 'kg 3 node'}
+        ],
+        'edges': [
+            {'id': 'e_kg_id_1', 'source_id': 'kg_id_1', 'target_id': 'kg_id_2', 'type': 'related_to'},
+            {'id': 'e_kg_id_2', 'source_id': 'kg_id_1', 'target_id': 'kg_id_3', 'type': 'related_to'}
+        ]
+    }
+    kg_2 = {
+        'nodes': [
+            {'id': 'kg_id_22', 'equivalent_identifiers': ['kg_id_22', 'curie2'], 'name': 'kg 2 node'},
+            {'id': 'kg_id_3', 'equivalent_identifiers': ['kg_id_3', 'curie3'], 'name': 'kg 3 node'}
+        ],
+        'edges': [
+            # links 22 with 3 so we exepect 22 to convert to 1 then 1 liked with 3
+            {'id': 'e_kg_id_22', 'source_id': 'kg_id_22', 'target_id': 'kg_id_3', 'type': 'related_to'}
+        ]
+    }
+    knowledge_map_1  = [
+        {'node_bindings': {'n0': 'kg_id_1', 'n1': 'kg_id_2'}, 'edge_bindings': {'e0': 'e_kg_id_1'}},
+        {'node_bindings': {'n0': 'kg_id_1', 'n1': 'kg_id_3'}, 'edge_bindings': {'e0': 'e_kg_id_2'}}
+    ]
+    knowledge_map_2 = [
+        {'node_bindings': {'n0': 'kg_id_1', 'n1': 'kg_id_2'}, 'edge_bindings': {'e0': 'e_kg_id_11'}},
+        {'node_bindings': {'n0': 'kg_id_22', 'n1': 'kg_id_3'}, 'edge_bindings': {'e0': 'e_kg_id_22'}}
+    ]
+
+    responses = [
+        {'question_graph': q_graph, 'knowledge_map': knowledge_map_1, 'knowledge_graph': kg_1},
+        {'question_graph': q_graph, 'knowledge_map': knowledge_map_2, 'knowledge_graph': kg_2},
+    ]
+    # paths we expect are
+    # kg_id_1 -> kg_id_2 -> kg_id3
+    # kg_id_1 -> kg_id_3
+
+    merged_response = select_statement.merge_results(responses, tranql, q_graph, ['n0','n1'])
+    assert len(merged_response['knowledge_graph']['nodes']) == 3 #
+    assert len(merged_response['knowledge_graph']['edges']) == 3
+
+    # check if ids are all goood and that equivalnt ids are merged (this would be like testing properties are merged)
+
+    nodes_by_id = {node['id'] : node for node in merged_response['knowledge_graph']['nodes']}
+    edges_by_id = {edge['id']: edge for edge in merged_response['knowledge_graph']['edges']}
+
+    assert 'kg_id_1' in nodes_by_id
+    assert 'kg_id_3' in nodes_by_id
+    assert 'kg_id_2' in nodes_by_id
+    # things get interesting here , need to check if all eq ids are being merged for kg_id_2
+    assert set(nodes_by_id['kg_id_2']['equivalent_identifiers']) == set(['kg_id_2', 'curie2', 'kg_id_22'])
+
+    # edges test
+    assert 'e_kg_id_1' in edges_by_id
+    assert 'e_kg_id_2' in edges_by_id
+    assert 'e_kg_id_22' in edges_by_id
+    # assert if e_kg_id_22 source id is updated
+    assert edges_by_id['e_kg_id_22']['source_id'] == 'kg_id_2'
+
+    # check knowledge map  updates
+    # we exepect 3 answers kg_id_1:n0 -> kg_id_2:n1
+    # and kg_id_1:n0 -> kg_id_3:n1
+    # and kg_id_2:n0 -> kg_id_3:n1
+    assert len(merged_response['knowledge_map']) == 3
+    # make sure our edge_bindings are sane
+    answers = merged_response['knowledge_map']
+    edge_bindings_all = map(lambda answer: answer['edge_bindings']['e0'], answers)
+    expected_edges = ['e_kg_id_11', 'e_kg_id_2', 'e_kg_id_22']
+    for i in edge_bindings_all:
+        index = expected_edges.index(i)
+        expected_edges.pop(index)
+    assert expected_edges == []
+
+    # last test is to see if node bindings are also updated,
+    # note that in the second response we made up we had a node binding pointing to kg_id_22 we ensure that
+    # its matching edge edge_id_22 is present along side and the node binding is pointing to kg_id_2
+    node_bindings_by_edge_kg_id = {
+        a['edge_bindings']['e0']: a['node_bindings']
+        for a in answers
+    }
+    # note merging converts curies to lists
+    assert node_bindings_by_edge_kg_id['e_kg_id_11']['n0'] == ['kg_id_1']
+    assert node_bindings_by_edge_kg_id['e_kg_id_11']['n1'] == ['kg_id_2']
+    # this was kg_id_22
+    assert node_bindings_by_edge_kg_id['e_kg_id_22']['n0'] == ['kg_id_2']
+    assert node_bindings_by_edge_kg_id['e_kg_id_22']['n1'] == ['kg_id_3']
+    assert node_bindings_by_edge_kg_id['e_kg_id_2']['n0'] == ['kg_id_1']
+    assert node_bindings_by_edge_kg_id['e_kg_id_2']['n1'] == ['kg_id_3']
