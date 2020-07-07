@@ -820,14 +820,19 @@ class SelectStatement(Statement):
                     edge['target_id'] = new_id
             # We also need to replace these old identifiers within the knowledge map or bad things will happen.
             for response in responses:
+                old_id_as_list = [old_id] if isinstance(old_id, str) else old_id
+                new_id_as_list = [new_id] if isinstance(new_id, str) else new_id
                 for answer in response['knowledge_map']:
                     node_bindings = answer.get('node_bindings',{})
 
                     for concept in node_bindings:
                         identifier = node_bindings[concept]
-                        if identifier == old_id:
-                            identifier = new_id
+                        # convert identifier to list
+                        identifier = [identifier] if isinstance(identifier, str) else identifier
+                        if identifier == old_id_as_list:
+                            identifier = new_id_as_list
                         node_bindings[concept] = identifier
+                    answer['node_bindings'] = node_bindings
 
 
         # Kill all duplicate edges. Merge them into the winning edge.
