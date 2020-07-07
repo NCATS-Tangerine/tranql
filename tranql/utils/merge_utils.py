@@ -126,6 +126,8 @@ def connect_knowledge_maps(responses, query_order):
 
 def overlay_score(merged_answers, score_table):
     for score_key in score_table:
+        if score_table[score_key] == 0:
+            continue
         for answer in merged_answers:
             node_bindings = list(map(lambda x: answer['node_bindings'][x][0], answer['node_bindings']))
             edge_bindings = list(map(lambda x: answer['edge_bindings'][x][0], answer['edge_bindings']))

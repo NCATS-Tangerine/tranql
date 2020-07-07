@@ -765,6 +765,14 @@ class SelectStatement(Statement):
                 all_equivalent_identifiers = list(set(all_equivalent_identifiers))
                 for node in nodes:
                     node['equivalent_identifiers'] = all_equivalent_identifiers
+        # Uses more space but less cpu
+        # Using a reverse lookup for equivalent to map
+        eq_ids_to_node_ids_map = {}
+        for r in responses:
+            for nodes in r['knowledge_graph']['nodes']:
+                for i in nodes['equivalent_identifiers']:
+                    if i not in eq_ids_to_node_ids_map:
+                        eq_ids_to_node_ids_map[i] = nodes['id']
 
 
         for response in responses:
@@ -789,11 +797,11 @@ class SelectStatement(Statement):
                     ids = n['equivalent_identifiers']
                     exists = False
                     for id in ids:
-                        for node_id in node_map:
-                            node = node_map[node_id]
-                            if id == node_id or id in node['equivalent_identifiers']:
+                        if id in eq_ids_to_node_ids_map:
+                            main_id = eq_ids_to_node_ids_map[id]
+                            node = node_map.get(main_id, None)
+                            if node:
                                 exists = True
-                                break
                         if exists:
                             replace_edge_ids.append([n["id"], node["id"]])
                             # Ensure that both nodes' properties are represented in the new node.
@@ -812,19 +820,24 @@ class SelectStatement(Statement):
                     edge['target_id'] = new_id
             # We also need to replace these old identifiers within the knowledge map or bad things will happen.
             for response in responses:
+                old_id_as_list = [old_id] if isinstance(old_id, str) else old_id
+                new_id_as_list = [new_id] if isinstance(new_id, str) else new_id
                 for answer in response['knowledge_map']:
                     node_bindings = answer.get('node_bindings',{})
 
                     for concept in node_bindings:
                         identifier = node_bindings[concept]
-                        if identifier == old_id:
-                            identifier = new_id
+                        # convert identifier to list
+                        identifier = [identifier] if isinstance(identifier, str) else identifier
+                        if identifier == old_id_as_list:
+                            identifier = new_id_as_list
                         node_bindings[concept] = identifier
+                    answer['node_bindings'] = node_bindings
 
 
         # Kill all duplicate edges. Merge them into the winning edge.
         # This has to occur after edge ids are replaced so that we can more succesfully detect duplicate edges, since nodes will have been merged into one another.
-        merged_edges = []
+        merged_edges = {}
         killed_edges = []
         for response in responses:
             if 'knowledge_graph' in response:
@@ -833,18 +846,17 @@ class SelectStatement(Statement):
                 for e in other_edges:
                     exists = False
                     e_type = e.get('type',None)
-                    for edge in merged_edges:
-                        edge_type = edge.get('type',None)
-                        if sorted(edge_type) == sorted(e_type) and edge['source_id'] == e['source_id'] and edge['target_id'] == e['target_id']:
-                            exists = True
-                            break
+                    edge_key = '#'.join(sorted(e_type)) + e['source_id'] + e['target_id']
+                    if edge_key in merged_edges:
+                        exists = True
+                        edge = merged_edges[edge_key]
                     if exists:
                         id_1, id_2 = edge['id'], e['id']
                         light_merge(edge,e)
                         light_merge(e,edge)
                         killed_edges.append ([id_2, id_1])
                     else:
-                        merged_edges.append (e)
+                        merged_edges[edge_key] = e
 
         # For each killed edge, go through the knowledge_map and replace the dead edge's id with the new edge's id.
         for old_edge_id, new_edge_id in killed_edges:
@@ -866,7 +878,7 @@ class SelectStatement(Statement):
                                 identifier = new_edge_id
                             edge_bindings[concept] = identifier
 
-        kg['edges'] = merged_edges
+        kg['edges'] = [merged_edges[edge_key] for edge_key in merged_edges]
 
 
         result['knowledge_map'] = SelectStatement.connect_knowledge_maps(responses, root_order)
