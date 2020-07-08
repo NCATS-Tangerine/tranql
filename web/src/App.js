@@ -34,7 +34,6 @@ import QueriesModal from './QueriesModal.js';
 import BrowseNodeInterface from './BrowseNodeInterface.js';
 import Legend from './Legend.js';
 import TableViewer from './TableViewer.js';
-import InteractiveShell from './InteractiveShell.js';
 import HelpModal, { ToolbarHelpModal } from './HelpModal.js';
 import ImportExportModal from './ImportExportModal.js';
 import confirmAlert from './confirmAlert.js';
@@ -210,7 +209,6 @@ class App extends Component {
     this._graphSplitPane = React.createRef ();
     this._tableSplitPane = React.createRef ();
     this._tableViewer = React.createRef ();
-    this._interactiveShell = React.createRef ();
     this._toolbar = React.createRef ();
     this._findTool = React.createRef ();
     this._browseNodeInterface = React.createRef ();
@@ -314,7 +312,6 @@ class App extends Component {
       // Keep track of table viewer/interactive shell plugins
       tableViewerComponents : {
         tableViewerCompActive : false,
-        interactiveShellCompActive : false
       },
 
       // Schema viewer
@@ -2222,9 +2219,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       <FaTable data-active={this.state.tableViewerComponents.tableViewerCompActive} data-tip="View a tabular representation of the active graph" id="tableViewButton" className="App-control-toolbar fa" onClick={() => {
         this.state.tableViewerComponents.tableViewerCompActive ? this._closeTableViewer() : this._openTableViewer("tableViewerCompActive");
       }}/>
-      <FaPython data-active={this.state.tableViewerComponents.interactiveShellCompActive} data-tip="Use an interactive shell to modify the knowledge graph" id="interactiveShellButton" className="App-control-toolbar fa" onClick={() => {
-        this.state.tableViewerComponents.interactiveShellCompActive ? this._closeTableViewer() : this._openTableViewer("interactiveShellCompActive");
-      }}/>
       {
       // Perfectly functional but does not provide enough functionality as of now to warrant its presence
       /*<FaBarChart data-tip="Type Bar Chart - see all the types contained within the graph distributed in a bar chart"
@@ -3351,25 +3345,6 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               }
             </div>
             <div className="h-100">
-            <InteractiveShell active={this.state.tableViewerComponents.interactiveShellCompActive}
-                              data={{
-                                // null || knowledge_graph
-                                message: (this.state.schemaViewerActive && this.state.schemaViewerEnabled) ? this.state.schemaMessage : this.state.message,
-                                set_knowledge_graph: ((kg) => {
-                                  const schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
-                                  const msg = (this.state.schemaViewerActive && this.state.schemaViewerEnabled) ? this.state.schemaMessage : this.state.message;
-                                  msg.knowledge_graph = kg;
-                                  this._configureMessage(msg,false,schema);
-                                  this._translateGraph(msg,false,schema);
-                                }).bind(this)
-                              }}
-                              queryData={{
-                                useCache: this.state.useCache,
-                                _cache: this._cache,
-                                dynamicIdResolution: this.state.dynamicIdResolution,
-                                tranqlURL: this.tranqlURL
-                              }}
-                              ref={this._interactiveShell}/>
             <TableViewer tableView={this.state.tableViewerComponents.tableViewerCompActive}
                          close={this._closeTableViewer}
                          ref={this._tableViewer}
