@@ -22,7 +22,7 @@ export default class FindTool2 extends Component {
     const searchIndex = elasticlunr(function() {
       // Nodes
       this.addField("name");
-      // this.addField("equivalent_identifiers");
+      this.addField("equivalent_identifiers");
 
       // Edges
       this.addField("predicate_id");
@@ -31,13 +31,15 @@ export default class FindTool2 extends Component {
       // Neutral
       this.addField("id");
       // Type field breaks elasticlunr in schema view for whatever reason
-      // this.addField("type");
+      this.addField("type");
 
       this.setRef("id");
     });
     this.props.graph.nodes.forEach((node) => searchIndex.addDoc(node.origin));
     this.props.graph.links.forEach((link) => searchIndex.addDoc(link.origin));
-    const results = searchIndex.search(input, {});
+    const results = searchIndex.search(input, {
+      expand: true
+    });
     // console.log(results);
     // const results = this.props.graph.nodes.filter((node) => node.id.includes(input));
     return (
