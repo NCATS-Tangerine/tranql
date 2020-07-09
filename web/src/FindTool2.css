@@ -10,7 +10,6 @@
   /* padding: 3px 0; */
 }
 .find-tool-input {
-  transition:background-color var(--background-hover-transition-time);
   background-color:inherit;
   padding:5px;
   border:none;
@@ -37,7 +36,7 @@
   text-align:center;
   word-break: break-word;
 
-  transition:background-color var(--background-transition-time);
+  transition:background-color .85s;
 
   user-select:none;
   -webkit-user-select:none;
@@ -50,6 +49,12 @@
 }
 .find-tool-result-header {
   font-weight: 500;
+}
+.find-tool-result:hover {
+  background-color:rgb(235, 235, 235);
+}
+.find-tool-result-header:hover {
+  background-color:inherit;
 }
 
 /* Non-input placeholder rule - due to the modern css pseudo classes this probably does not work in a lot of older browsers */

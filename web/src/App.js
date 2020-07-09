@@ -2946,6 +2946,9 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     const tranqlQuery = params.q || params.query;
     if (tranqlQuery !== undefined) {
       this._updateCode(tranqlQuery);
+      this.setState({}, () => {
+        this._executeQuery();
+      });
     }
   }
   /**
@@ -3309,7 +3312,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
                       </div>
                     </div>
-                    <div onContextMenu={this._handleContextMenu} id="graphContainer" data-vis-mode={this.state.visMode}>
+                    {/*<div onContextMenu={this._handleContextMenu} id="graphContainer" data-vis-mode={this.state.visMode}>*/}
+                    <div id="graphContainer" data-vis-mode={this.state.visMode}>
                       {this.state.schemaViewerActive && this.state.schemaViewerEnabled ?
                         (
                           this._renderForceGraph (
@@ -3326,7 +3330,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                           })
                         )
                       }
-                      <ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>
+                      {/*<ContextMenu id={this._contextMenuId} ref={this._contextMenu}/>*/}
                     </div>
                   </div>
                   <div id="info" style={!this.state.objectViewerEnabled ? {display:"none"} : {}}>
