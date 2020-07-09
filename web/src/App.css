@@ -88,6 +88,7 @@ body {
   /* color:black; */
 }
 #graphOverlayContainer {
+  position:relative;
   flex-grow:1;
   height:100%;
   display:flex;
@@ -122,8 +123,10 @@ body {
   max-height:400px;
 }
 .FindTool {
+  position: absolute;
+  width: calc(100% - 16px);
   margin: 8px;
-  margin-left:0;
+  /* margin-left:0; */
   /* 16px for margin */
   max-height:calc(100% - 16px);
   /* position:absolute;

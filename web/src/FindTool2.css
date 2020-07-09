@@ -5,7 +5,7 @@
   flex-direction:column;
   border:2px solid rgb(215,215,215);
   max-height:calc(100% - 10px);
-  max-width:30%;
+  /* max-width:30%; */
   min-width:150px;
   /* padding: 3px 0; */
 }
@@ -25,6 +25,7 @@
 }
 .find-tool-result-container {
   resize:vertical;
+  max-height: min-content;
   overflow-y:auto;
   border-top:2px solid rgb(220, 220, 220);
 }
