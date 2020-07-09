@@ -3274,7 +3274,13 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                                         }}/>
                         </div>
                         <FindTool2 graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
-                                   ref={this._findTool}/>
+                                   ref={this._findTool}
+                                   resultMouseEnter={(result) => {
+                                     this._highlightType(result.id, 0xff0000, false, undefined, "id")
+                                   }}
+                                   resultMouseLeave={(result) => {
+                                     this._highlightType(result.id, false, false, undefined, "id")
+                                   }}/>
                         {/*<FindTool graph={this.state.schemaViewerActive && this.state.schemaViewerEnabled ? this.state.schema : this.state.graph}
                                   resultMouseClick={(values)=>{
                                     const isNode = function(element) {

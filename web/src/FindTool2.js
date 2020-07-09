@@ -48,7 +48,7 @@ export default class FindTool2 extends Component {
     function addToDoc(nodeOrLink, type) {
       // Get current identifier and post-inc identifier
       const currentId = identifier++;
-      identifierIndex[currentId] = {type: type, element: nodeOrLink.origin};
+      identifierIndex[currentId] = {type: type, element: nodeOrLink};
       searchIndex.addDoc({
         index_identifier: currentId,
         ...nodeOrLink.origin
@@ -59,10 +59,9 @@ export default class FindTool2 extends Component {
     const results = searchIndex.search(input, {
       expand: true
     });
-    window.elastic = elasticlunr;
     // console.log(results);
     // const results = this.props.graph.nodes.filter((node) => node.id.includes(input));
-    function Results() {
+    const Results = () => {
       const resultsPerPage = 10;
       const [pages, setPages] = useState(1);
       const getNumResults = () => Math.min(results.length, pages * resultsPerPage);
@@ -71,18 +70,20 @@ export default class FindTool2 extends Component {
           <div className="find-tool-result find-tool-result-header">Showing {getNumResults()} of {results.length} results</div>
           {
             results.slice(0, getNumResults()).map((match, i) => {
+              const { type, element } = identifierIndex[match.ref];
+              const origin = element.origin;
+
               return (
-                <div className="find-tool-result" key={i}>
+                <div className="find-tool-result"
+                     key={i}
+                     onMouseEnter={() => this.props.resultMouseEnter(element)}
+                     onMouseLeave={() => this.props.resultMouseLeave(element)}>
                   {
-                    (function() {
-                      const { type, element } = identifierIndex[match.ref];
-                      if (type === NODE) {
-                        return element.hasOwnProperty("name") ? `${element.name} (${element.id})` : element.id;
-                      } else {
-                        const type = Array.isArray(element.type) ? element.type : [element.type];
-                        return element.source_id + "-[" + type.join(", ") + "]->" + element.target_id;
-                      }
-                    })()
+                    type === NODE ? (
+                      origin.hasOwnProperty("name") ? `${origin.name} (${origin.id})` : origin.id
+                    ) : (
+                      origin.source_id + "-[" + (Array.isArray(type) ? type : [type]).join(", ") + "]->" + origin.target_id
+                    )
                   }
                 </div>
               );
