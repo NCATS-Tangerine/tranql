@@ -2,6 +2,7 @@
 layout: default
 title: TranQL Jupyter
 nav_order: 4
+has_children: true
 repo: https://github.com/frostyfan109/tranql-jupyter
 ---
 # About
