@@ -136,7 +136,7 @@ def test_icees_synonymzation():
             'nodes': [
                 {'id': 'curie:1', 'name': 'some_name', 'type': 'unsupported_type'},
                 {'id': 'curie:2', 'name': 'some_name', 'type': 'supported_type_1'},
-                {'id': 'curie:3', 'name': 'some_name', 'type': 'supported_type_1'},
+                {'id': 'curie:3', 'name': 'some_name', 'type': 'supported_type_1_subtype_1'},
                 {'id': 'curie:4', 'name': 'curie_4_name', 'type': 'supported_type_2'},
                 {'id': 'curie:5', 'name': 'curie_4_name', 'type': 'supported_type_2'}
             ],
@@ -225,6 +225,19 @@ def test_icees_synonymzation():
         mock_server.get(
             f'https://nodenormalization-sri.renci.org/get_normalized_nodes',
             json=get_normalized_curies_response
+        )
+
+        mock_server.get(
+            f'https://bl-lookup-sri.renci.org/bl/supported_type_1/descendants?version=latest',
+            json = [
+                'supported_type_1_subtype_1'
+            ]
+        )
+        mock_server.get(
+            f'https://bl-lookup-sri.renci.org/bl/supported_type_2/descendants?version=latest',
+            json=[
+                'supported_type_2'
+            ]
         )
 
         icees_cluster_class = ICEESClusterQuery()

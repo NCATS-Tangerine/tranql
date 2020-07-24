@@ -304,6 +304,7 @@ class ICEESClusterQuery(StandardAPIResource):
             "icees": "https://icees.renci.org/2.0.0/knowledge_graph",
             "icees3_and_epr": "https://icees.renci.org:16339/knowledge_graph"
         }
+        self.synonymization_supported_types = []
 
     def post(self):
         """
@@ -421,6 +422,20 @@ class ICEESClusterQuery(StandardAPIResource):
         result = self.synonymize(result)
         return self.response(result)
 
+    def get_supported_type(self):
+        if not self.synonymization_supported_types:
+            base_url = 'https://nodenormalization-sri.renci.org'
+            supported_semantic_types = requests.get(
+                f'{base_url}/get_semantic_types'
+            ).json()['semantic_types']['types']
+            supported_descendants = []
+            for tp in supported_semantic_types:
+                response = requests.get(f'https://bl-lookup-sri.renci.org/bl/{tp}/descendants?version=latest')
+                if response.status_code == 200:
+                    supported_descendants += response.json()
+            self.synonymization_supported_types =  set(supported_semantic_types + supported_descendants)
+        return self.synonymization_supported_types
+
     def synonymize(self, response):
         knowledge_map_key = 'knowledge_map'
         knowledge_graph_key = 'knowledge_graph'
@@ -429,9 +444,7 @@ class ICEESClusterQuery(StandardAPIResource):
         knowledge_map = response[knowledge_map_key]
         query_graph = response[query_graph_key]
         base_url = 'https://nodenormalization-sri.renci.org'
-        supported_semantic_types = requests.get(
-            f'{base_url}/get_semantic_types'
-        ).json()['semantic_types']['types']
+        supported_semantic_types = self.get_supported_type()
         supported_q_ids = [x['id'] for x in query_graph['nodes'] if x['type'] in supported_semantic_types]
         node_ids = set([x['id'] for x in knowledge_graph['nodes'] if x['type'] in supported_semantic_types])
         chunk_size = 2000
