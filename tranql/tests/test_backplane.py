@@ -226,6 +226,7 @@ def test_icees_synonymzation():
             f'https://nodenormalization-sri.renci.org/get_normalized_nodes',
             json=get_normalized_curies_response
         )
+
         mock_server.get(
             f'https://bl-lookup-sri.renci.org/bl/supported_type_1/descendants?version=latest',
             json = [
