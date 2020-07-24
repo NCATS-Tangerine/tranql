@@ -423,11 +423,13 @@ class ICEESClusterQuery(StandardAPIResource):
         return self.response(result)
 
     def get_supported_type(self):
+        # list of entities that are too high level
+        exclusion_list = ['named_thing', 'organismal_entity', 'organism_taxon', 'biological_entity', 'genomic_entity']
         if not self.synonymization_supported_types:
             base_url = 'https://nodenormalization-sri.renci.org'
-            supported_semantic_types = requests.get(
+            supported_semantic_types = list(filter(lambda x: x not in exclusion_list, requests.get(
                 f'{base_url}/get_semantic_types'
-            ).json()['semantic_types']['types']
+            ).json()['semantic_types']['types']))
             supported_descendants = []
             for tp in supported_semantic_types:
                 response = requests.get(f'https://bl-lookup-sri.renci.org/bl/{tp}/descendants?version=latest')
