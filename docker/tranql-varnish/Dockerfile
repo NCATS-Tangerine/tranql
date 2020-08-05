@@ -41,7 +41,8 @@ RUN chown varnish:varnish /var/lib/varnish
 USER varnish
 
 # add entrypoint
-COPY docker-varnish-entrypoint.sh /
+COPY --chown=varnish:varnish  docker-varnish-entrypoint.sh /
+RUN chmod 700 docker-varnish-entrypoint.sh
 
 ENTRYPOINT ["/docker-varnish-entrypoint.sh"]
 

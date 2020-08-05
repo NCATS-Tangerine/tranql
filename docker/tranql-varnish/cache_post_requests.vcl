@@ -37,3 +37,10 @@ sub vcl_backend_fetch {
     }
 }
 
+sub vcl_backend_response {
+    // Make sure backend 500 errors are not cached
+    if (beresp.status == 500 || beresp.status == 502 || beresp.status == 503 || beresp.status == 504) {
+            return (pass);
+    }
+}
+

@@ -32,7 +32,14 @@ CORS(app)
 
 app.config['SWAGGER'] = {
     'title': 'TranQL API',
-    'description': 'Translator Query Language (TranQL) API',
+    'description': 'Translator Query Language (TranQL) API.' 
+                   '<div><a href="https://github.com/NCATS-Tangerine/tranql">'
+                   'TranQL Source Code and Documentation.'
+                   '</a></div>'
+                   '<div><a href="https://researchsoftwareinstitute.github.io/data-translator/apps/tranql">'
+                   'TranQL Web Page'
+                   '</a></div>'
+    ,
     'uiversion': 3,
     'openapi': '3.0.1'
 }

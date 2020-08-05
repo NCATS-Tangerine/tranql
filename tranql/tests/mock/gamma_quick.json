@@ -1,4 +1,23 @@
 {
+  "question_graph": {
+    "nodes": [
+      {
+      "type": "chemical_substance",
+      "id": "chemical_substance"
+      },
+      {
+        "type": "gene",
+        "id": "gene"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source_id": "chemical_substance",
+        "target_id": "gene"
+      }
+    ]
+  },
   "knowledge_graph" : {
     "nodes" : [ {
       "id" : "CHEBI:28177",

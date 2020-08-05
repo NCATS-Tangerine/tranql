@@ -12,7 +12,9 @@ logger = logging.getLogger (__name__)
 async def make_request_async (semaphore, **kwargs):
     response = {}
     errors = []
-    async with aiohttp.ClientSession () as session:
+    timeout = aiohttp.ClientTimeout(total=60*60, connect=None,
+                      sock_connect=None, sock_read=None)
+    async with aiohttp.ClientSession (timeout=timeout) as session:
         try:
             async with session.request (**kwargs) as http_response:
                 # print(f"[{kwargs['method'].upper()}] requesting at url: {kwargs['url']}")
