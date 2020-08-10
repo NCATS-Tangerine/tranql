@@ -108,22 +108,10 @@ class CustomFunctions:
 
 custom_functions = CustomFunctions()
 
-""" Prefined functions """
+""" How to define a function directly using decorator. Can also refer to unit tests for more examples """
 @custom_functions.custom_function
 def mirror(x):
     return x
-
-@custom_functions.custom_function
-def descendants(curie):
-    response = requests.get(
-        f"https://onto.renci.org/descendants/{curie}",
-        headers = {'accept': 'application/json'}
-    )
-    if response.ok:
-        return response.json()
-    else:
-        raise ServiceInvocationError(response.text)
-
 
 
 class Statement:

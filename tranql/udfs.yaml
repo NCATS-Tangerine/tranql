@@ -4,3 +4,12 @@
       - source: udfs.py
         functions:
           - children
+          - descendants
+          - ancestors
+          - parents
+          - close_match
+          - exact_match
+
+          - AND
+          - OR
+          - XOR
