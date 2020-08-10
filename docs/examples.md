@@ -54,3 +54,29 @@ select chemical_substance->gene->anatomical_entity->phenotypic_feature<-disease
  where chemical_substance = $drug
    and disease = $disease
 ```
+
+## Functions
+Within a where clause, one of various functions can be used in place of an exact value. Most of these are ontological functions
+offered by the [ONTO API](http://onto.renci.org). The whole list can be found in [udfs.yaml](https://github.com/frostyfan109/tranql/blob/master/tranql/udfs.yaml)
+and the source is located in [udfs.py](https://github.com/frostyfan109/tranql/blob/master/tranql/udfs.py). Some useful functions to be aware of are:
+- `descendants(curie)`
+- `children(curie)`
+- `parents(curie)`
+
+The following query demonstrates how to use a function. Some function's arguments may vary, but most will just take a curie.
+```
+select chemical_substance->gene->disease
+  from "/graph/gamma/quick"
+ where disease=children("MONDO:0004979")
+```
+In this query, we select chemical_substance->gene->disease, where disease is the children of asthma (MONDO:0004979).
+
+If we perform a query to the ONTO service ourselves:
+```
+curl -X GET "https://onto.renci.org/children/MONDO%3A0004979" -H "accept: application/json"
+```
+we can find out that `children("MONDO:0004979")` actually resolves to:
+```
+["MONDO:0001491","MONDO:0004765","MONDO:0004766","MONDO:0004784","MONDO:0005405","MONDO:0022742"]
+```
+These curies are all variants of asthma. For example, the first curie, "MONDO:0001491" is "cough variant asthma".
