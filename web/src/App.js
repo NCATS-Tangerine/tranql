@@ -2331,7 +2331,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
         Otherwise, message should be an array of objects containing the properties "message" and "details".`);
     }
 
-    this.setActiveModal("ErrorModal");
+    this._setActiveModal("ErrorModal");
     this._messageDialog.current.handleShow (title, message);
   }
   /**
