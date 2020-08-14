@@ -58,6 +58,8 @@ def ancestors(curie):
     return filter_onto(make_onto_request(f"https://onto.renci.org/ancestors/{curie}"))
 def parents(curie):
     return filter_onto(make_onto_request(f"https://onto.renci.org/parents/{curie}")).get("parents", [])
+def siblings(curie):
+    return filter_onto(make_onto_request(f"https://onto.renci.org/siblings/{curie}")).get("siblings", [])
 def close_match(curie):
     return filter_onto(make_onto_request(f"https://onto.renci.org/closeMatch/{curie}").get("close matches", []))
 def exact_match(curie):
