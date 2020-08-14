@@ -31,6 +31,7 @@ import SplitPane from 'react-split-pane';
 import Cache from './Cache.js';
 import AnswerViewer from './AnswerViewer.js';
 import QueriesModal from './QueriesModal.js';
+import HistoryViewer from './HistoryViewer.js';
 import BrowseNodeInterface from './BrowseNodeInterface.js';
 import Legend from './Legend.js';
 import TableViewer from './TableViewer.js';
@@ -1419,6 +1420,12 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
           this._configureMessage (result[0].data);
           this._translateGraph (result[0].data);
           this.setState({ loading : false });
+          // If the query is run through the cache, then update it.
+          // this._cache.read doesn't allow us to modify it, because
+          // it converts the Dexie results into an array. Could probably?
+          // also use cacheWrite before modifying the cache result above,
+          // but this method is less prone to mysterious breakage.
+          this._cache.db["cache"].where("key").equals(result[0].key).modify({ timestamp : Date.now() });
         } else {
           // We didn't find it in the cache. Run the query.
           // Create a new controller so that the query may be aborted if desired. Abort the old one just in case.
@@ -1491,7 +1498,8 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
 
     var obj = {
       'key' : this.state.code,
-      'data' : cacheMessage
+      'data' : cacheMessage,
+      'timestamp' : Date.now()
     };
     // if (this.state.record) {
     //   obj.id = this.state.record.id;
@@ -3139,6 +3147,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     this.setState({ showCodeMirror : false });
                     localStorage.setItem('showCodeMirror', false);
                   }} className="editor-vis-control legend-vis-control"/>
+                  <HistoryViewer activeModal={this.state.activeModal}
+                                 setActiveModal={this._setActiveModal}
+                                 cache={this._cache}
+                                 setCode={this._updateCode}/>
                   <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;}}
                   className="query-code"
                   value={this.state.code}
