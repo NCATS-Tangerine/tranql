@@ -468,7 +468,31 @@ def test_ast_generate_questions_from_list():
     assert_lists_equal(chemicals_ids, chemicals)
     assert_lists_equal(gene_list, gene_ids)
 
-    # now let's make sure that a list is parsed correctly with variables inside of it
+def test_ast_generate_questions_list_variable():
+    # make sure that a list is parsed correctly when it contains variables
+
+    """ currently this test doesn't pass due to a bug in expand_nodes. the interpreter
+    will only call expand_nodes on the first node concept. so, if a variable is not
+    the first element in a list, it won't be resolved. if a variable is the first element
+    in a list, the entire list will be set to just that variable.
+
+    ex: set $var = "HGNC:X"
+        where gene=[$var, "HGNC:Y", "HGNC:Z"]
+    becomes:
+        ["HGNC:X"]
+    should be:
+        ["HGNC:X", "HGNC:Y", "HGNC:Z"]
+
+    ex2: set $var = "HGNC:X"
+         where gene=["HGNC:Y", $var, "HGNC:Z"]
+    becomes:
+         ["HGNC:Y", "$var", "HGNC:Z"]
+    should be:
+         ["HGNC:Y", "HGNC:X", "HGNC:Z"]
+    """
+
+
+    tranql = TranQL()
     ast_3 = tranql.parse(f"""
         SET var_str = 'CHEBI:0'
         SET var_list = ['CHEBI:22', 'CHEBI:33']
@@ -483,6 +507,23 @@ def test_ast_generate_questions_from_list():
     set_var_str.execute (tranql)
     set_var_list.execute (tranql)
     questions = select_statement.generate_questions (tranql)
+
+    grab_ids = lambda node_type, questions: list(
+        # using SET to select unique ids only and casting back to list
+        # grabs ids from questions based on node type
+        set(reduce(
+            lambda acc, question_graph: acc + list(map(
+                lambda node: node['curie'],
+                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
+            )),
+            map(
+                lambda question: question['question_graph'],
+                questions
+            ),
+            []
+        ))
+    )
+
     chem_ids = grab_ids('chemical_substance', questions)
     assert_lists_equal(sorted(chem_ids), sorted(['CHEBI:0', 'CHEBI:22', 'CHEBI:33', 'CHEBI:1']))
 
