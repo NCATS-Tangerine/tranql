@@ -1,6 +1,19 @@
 import requests
 from tranql.exception import ServiceInvocationError
 
+""" How do I add a function?
+Adding a function requires two simple steps:
+    1) Create said function in a python module (this one is suggested, although not required)
+    2) In ufds.yaml, add the name of the function to the `functions` list under the module with
+       source "udfs.yaml"
+
+    2.5) If you created the function in a different python module, then here is how to add it to udfs.yaml:
+         - Under userDefinedFunctions you should see the `modules` key.
+         - Add a new object under modules with keys:
+           - source (the file path to the python file, relative to this directory)
+           - functions (the functions that should be included from said python module)
+"""
+
 """ What can go in and out of UDFs?
 Arguments:
     Only supports parsing of any primitive type:
