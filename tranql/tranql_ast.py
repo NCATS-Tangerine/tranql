@@ -327,37 +327,43 @@ class SelectStatement(Statement):
 
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
-        value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and isinstance(value, str):
-            if value.startswith ("$"):
-                varname = value
-                value = interpreter.context.resolve_arg (varname)
-                logger.debug (f"resolved {varname} to {value}")
-                if value == None:
-                    raise UndefinedVariableError (f"Undefined variable: {varname}")
-                elif isinstance (value, str):
-                    concept.set_nodes ([ value ])
-                elif isinstance(value, list):
-                    """ Binding multiple values to a node. """
-                    concept.set_nodes (value)
+        new_nodes = []
+        # value = concept.nodes[0] if len(concept.nodes) > 0 else None
+        for value in concept.nodes:
+            if value and isinstance(value, str):
+                if value.startswith ("$"):
+                    varname = value
+                    value = interpreter.context.resolve_arg (varname)
+                    logger.debug (f"resolved {varname} to {value}")
+                    if value == None:
+                        raise UndefinedVariableError (f"Undefined variable: {varname}")
+                    elif isinstance (value, str):
+                        new_nodes.append(value)
+                        # concept.set_nodes ([ value ])
+                    elif isinstance(value, list):
+                        """ Binding multiple values to a node. """
+                        new_nodes += value
+                        # concept.set_nodes (value)
+                    else:
+                        raise TranQLException (
+                            f"Internal failure: object of unhandled type {type(value)}.")
                 else:
-                    raise TranQLException (
-                        f"Internal failure: object of unhandled type {type(value)}.")
-            else:
-                """ Bind a single value to a node. """
-                if not ':' in value:
-                    if not interpreter.dynamic_id_resolution:
-                        raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
-                    """ Deprecated. """
-                    """ Bind something that's not a curie. Dynamic id lookup.
-                    This is frowned upon. While it *may* be useful for prototyping and,
-                    interactive exploration, it will probably be removed. """
-                    logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    concept.set_nodes (self.resolve_name (value, concept.type_name))
-                    logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
-                else:
-                    """ This is a single curie. Bind it to the node. """
-                    pass
+                    """ Bind a single value to a node. """
+                    if not ':' in value:
+                        if not interpreter.dynamic_id_resolution:
+                            raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
+                        """ Deprecated. """
+                        """ Bind something that's not a curie. Dynamic id lookup.
+                        This is frowned upon. While it *may* be useful for prototyping and,
+                        interactive exploration, it will probably be removed. """
+                        logger.debug (f"performing dynamic lookup resolving {concept}={value}")
+                        new_nodes.append(self.resolve_name (value, concept.type_name))
+                        # concept.set_nodes (self.resolve_name (value, concept.type_name))
+                        logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
+                    else:
+                        """ This is a single curie. Bind it to the node. """
+                        new_nodes.append(value)
+        concept.set_nodes(new_nodes)
 
     def plan (self, plan):
         """ Plan a query that may span reasoners. This uses a configured schema to determine
