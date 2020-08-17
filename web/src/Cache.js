@@ -17,18 +17,6 @@ class Cache extends Component {
       cache: '++id, name, &key, graph',
       schema: '&id, graph'
     });
-    // New version stores timestamp
-    // Dexie docs advise leaving old version declarations to support Dexie < 3.0.
-    // In order to ship new db version without breaking the current version, we need
-    // to upgrade old versions to the new architecture.
-    this.db.version(2).stores({
-      cache: '++id, name, &key, graph, timestamp',
-      schema: '&id, graph'
-    }).upgrade((transaction) => {
-      return transaction.table("cache").toCollection().modify((entry) => {
-        entry.timestamp = Date.now();
-      })
-    });
 
     // Dexie-observable adds some tracking tables to the database which we don't want to delete.
     this._trackingTables = ["_changes", "_syncNodes", "_intercomm", "_uncommittedChanges"];
