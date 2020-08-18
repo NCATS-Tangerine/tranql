@@ -3147,10 +3147,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
                     this.setState({ showCodeMirror : false });
                     localStorage.setItem('showCodeMirror', false);
                   }} className="editor-vis-control legend-vis-control"/>
-                  <HistoryViewer activeModal={this.state.activeModal}
+                  {/*<HistoryViewer activeModal={this.state.activeModal}
                                  setActiveModal={this._setActiveModal}
                                  cache={this._cache}
-                                 setCode={this._updateCode}/>
+                                 setCode={this._updateCode}/>*/}
                   <CodeMirror editorDidMount={(editor)=>{this._codemirror = editor;}}
                   className="query-code"
                   value={this.state.code}

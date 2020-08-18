@@ -27,6 +27,8 @@
   max-height: min-content;
   overflow-y:auto;
   border-top:2px solid rgb(220, 220, 220);
+  display: flex;
+  flex-direction: column;
 }
 .find-tool-result {
   padding:5px 7.5px;
@@ -35,6 +37,7 @@
   align-items:center;
   text-align:center;
   word-break: break-word;
+  flex-grow: 1;
 
   transition:background-color .85s;
 

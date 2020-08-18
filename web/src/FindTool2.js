@@ -74,18 +74,17 @@ export default class FindTool2 extends Component {
               const origin = element.origin;
 
               return (
-                <div className="find-tool-result"
-                     key={i}
-                     onMouseEnter={() => this.props.resultMouseEnter(element)}
-                     onMouseLeave={() => this.props.resultMouseLeave(element)}>
+                <Result resultMouseEnter={() => this.props.resultMouseEnter(element)}
+                        resultMouseLeave={() => this.props.resultMouseLeave(element)}
+                        key={i}>
                   {
                     type === NODE ? (
                       origin.hasOwnProperty("name") ? `${origin.name} (${origin.id})` : origin.id
                     ) : (
-                      origin.source_id + "-[" + (Array.isArray(type) ? type : [type]).join(", ") + "]->" + origin.target_id
+                      origin.source_id + "-[" + (Array.isArray(origin.type) ? origin.type : [origin.type]).join(", ") + "]->" + origin.target_id
                     )
                   }
-                </div>
+                </Result>
               );
             })
           }
@@ -120,6 +119,27 @@ export default class FindTool2 extends Component {
       <div className="FindTool">
         <input className="find-tool-input" autoFocus placeholder="Search:" ref={this._input} type="text" onInput={this._setInput}/>
         {this._results()}
+      </div>
+    );
+  }
+}
+
+/* This class is basically just a glorified div element.
+   It had to be turned into a class in order to use componentWillUnmount
+   which is necessary to make sure  a highlighted element gets unhighlighted  */
+class Result extends Component {
+  constructor(props) {
+    super(props);
+  }
+  componentWillUnmount() {
+    this.props.resultMouseLeave();
+  }
+  render() {
+    return (
+      <div className="find-tool-result"
+           onMouseEnter={this.props.resultMouseEnter}
+           onMouseLeave={this.props.resultMouseLeave}>
+        {this.props.children}
       </div>
     );
   }
