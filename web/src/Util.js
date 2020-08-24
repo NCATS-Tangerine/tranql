@@ -192,13 +192,12 @@ export function lerp(a, b, u) {
  *
  * @param {function} func - Debounced function
  * @param {number} time - Amount of time in ms since the function's last attempted invocation required to pass for the function to actually be invoked
- * @param {...<T>} varargs - Any additional arguments to pass to the function
  * @private
  * @returns {function} - Debounced function that should be invoked rather than the actual one.
  */
-export function debounce(func, time, ...args) {
+export function debounce(func, time) {
   let timer;
-  return function() {
+  return function(...args) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(()=>func(...args), time);
   }

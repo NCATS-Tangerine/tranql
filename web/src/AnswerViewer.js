@@ -8,24 +8,20 @@ class AnswerViewer extends Component {
     super(props, context);
 
     this.state = {
-      show: false,
       answerUrl : null,
       loaded : false
-    };
-    this.handleHide = () => {
-      this.setState({ show: false });
     };
     this.handleShow = this.handleShow.bind (this);
   }
   handleShow (url) {
-    this.setState({ show: true, answerUrl : url, loaded : false });
+    this.setState({ answerUrl : url, loaded : false });
   }
   render() {
     return (
       <>
         <Modal
-          show={this.state.show}
-          onHide={this.handleHide}
+          show={this.props.activeModal==="AnswerViewerModal"}
+          onHide={() => this.props.setActiveModal(null)}
           dialogClassName="answerNavigator"
           aria-labelledby="example-custom-modal-styling-title"
         >

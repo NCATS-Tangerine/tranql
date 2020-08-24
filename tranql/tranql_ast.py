@@ -6,6 +6,9 @@ import requests_cache
 import sys
 import traceback
 import time # Basic time profiling for async
+import yaml
+import importlib.machinery
+import os.path
 from collections import defaultdict
 from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
@@ -51,6 +54,65 @@ class Bionames:
         else:
             raise ServiceInvocationError (response.text)
         return result
+
+class CustomFunctions:
+    def __init__(self):
+        self.functions = self.load_functions()
+
+    @staticmethod
+    def load_functions():
+        functions = {}
+        with open(os.path.join(os.path.dirname(__file__), "udfs.yaml"), "r") as f:
+            udf_data = yaml.safe_load(f.read())
+            modules = udf_data["userDefinedFunctions"]["modules"]
+            for udf_module in modules:
+                source_file = udf_module["source"]
+                udf_functions = udf_module["functions"]
+
+                file_path = os.path.join(os.path.dirname(__file__), source_file)
+
+                loader = importlib.machinery.SourceFileLoader(file_path, file_path)
+                module = loader.load_module()
+
+                for function_name in udf_functions:
+                    functions[function_name] = getattr(module, function_name)
+
+        return functions
+
+    """ Intended for use as a decorator """
+    def custom_function(self, function, name=None):
+        if name is None: name = function.__name__
+        self.functions[name] = function
+
+    def resolve_function(self, parsed_function):
+        function_name = parsed_function["name"]
+        # For every arg passed in, recurse if it is a function to resolve its value
+        function_args = []
+        keyword_arguments = {}
+        # Will recurse to resolve the value of a function argument
+        make_not_function = lambda argument_value: self.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
+        # Go through and make sure every argument isn't a nested function
+        # Also handle keyword arguments
+        for argument in parsed_function["args"]:
+            # kwarg
+            if isinstance(argument, list):
+                arg_name = argument[0]
+                arg_value = argument[2]
+                keyword_arguments[arg_name] = make_not_function(arg_value)
+            # normal arg
+            else:
+                function_args.append(make_not_function(argument))
+
+        return self.functions[function_name](*function_args, **keyword_arguments)
+
+
+custom_functions = CustomFunctions()
+
+""" How to define a function directly using decorator. Can also refer to unit tests for more examples """
+@custom_functions.custom_function
+def mirror(x):
+    return x
+
 
 class Statement:
     """ The interface contract for a statement. """
@@ -265,37 +327,43 @@ class SelectStatement(Statement):
 
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
-        value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and isinstance(value, str):
-            if value.startswith ("$"):
-                varname = value
-                value = interpreter.context.resolve_arg (varname)
-                logger.debug (f"resolved {varname} to {value}")
-                if value == None:
-                    raise UndefinedVariableError (f"Undefined variable: {varname}")
-                elif isinstance (value, str):
-                    concept.set_nodes ([ value ])
-                elif isinstance(value, list):
-                    """ Binding multiple values to a node. """
-                    concept.set_nodes (value)
+        new_nodes = []
+        # value = concept.nodes[0] if len(concept.nodes) > 0 else None
+        for value in concept.nodes:
+            if value and isinstance(value, str):
+                if value.startswith ("$"):
+                    varname = value
+                    value = interpreter.context.resolve_arg (varname)
+                    logger.debug (f"resolved {varname} to {value}")
+                    if value == None:
+                        raise UndefinedVariableError (f"Undefined variable: {varname}")
+                    elif isinstance (value, str):
+                        new_nodes.append(value)
+                        # concept.set_nodes ([ value ])
+                    elif isinstance(value, list):
+                        """ Binding multiple values to a node. """
+                        new_nodes += value
+                        # concept.set_nodes (value)
+                    else:
+                        raise TranQLException (
+                            f"Internal failure: object of unhandled type {type(value)}.")
                 else:
-                    raise TranQLException (
-                        f"Internal failure: object of unhandled type {type(value)}.")
-            else:
-                """ Bind a single value to a node. """
-                if not ':' in value:
-                    if not interpreter.dynamic_id_resolution:
-                        raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
-                    """ Deprecated. """
-                    """ Bind something that's not a curie. Dynamic id lookup.
-                    This is frowned upon. While it *may* be useful for prototyping and,
-                    interactive exploration, it will probably be removed. """
-                    logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    concept.set_nodes (self.resolve_name (value, concept.type_name))
-                    logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
-                else:
-                    """ This is a single curie. Bind it to the node. """
-                    pass
+                    """ Bind a single value to a node. """
+                    if not ':' in value:
+                        if not interpreter.dynamic_id_resolution:
+                            raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
+                        """ Deprecated. """
+                        """ Bind something that's not a curie. Dynamic id lookup.
+                        This is frowned upon. While it *may* be useful for prototyping and,
+                        interactive exploration, it will probably be removed. """
+                        logger.debug (f"performing dynamic lookup resolving {concept}={value}")
+                        new_nodes.append(self.resolve_name (value, concept.type_name))
+                        # concept.set_nodes (self.resolve_name (value, concept.type_name))
+                        logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
+                    else:
+                        """ This is a single curie. Bind it to the node. """
+                        new_nodes.append(value)
+        concept.set_nodes(new_nodes)
 
     def plan (self, plan):
         """ Plan a query that may span reasoners. This uses a configured schema to determine
@@ -1104,8 +1172,11 @@ class TranQL_AST:
                 elif command == 'where':
                     for condition in e[1:]:
                         if isinstance(condition, list) and len(condition) == 3:
-                            select.where.append (condition)
                             var, op, val = condition
+                            if isinstance(val, dict):
+                                val = custom_functions.resolve_function(val)
+                            select.where.append ([var, op, val])
+
                             if var in select.query:
                                 if op == '=':
                                     select.query[var].set_nodes ([ val ])
@@ -1113,6 +1184,12 @@ class TranQL_AST:
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
                                     select.query[var].exclude_patterns.append (val)
+                                # the '=' operator already fulfills the purpose of the 'in' operator because you can pass a list into it
+                                # elif op == 'in':
+                                #     if not isinstance(val, list):
+                                #         raise ValueError(f'"in" operator received invalid type {type(val)}')
+                                #     select.query[var].set_nodes ( val )
+
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':
