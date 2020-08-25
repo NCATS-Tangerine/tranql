@@ -330,6 +330,10 @@ class SelectStatement(Statement):
         new_nodes = []
         # value = concept.nodes[0] if len(concept.nodes) > 0 else None
         for value in concept.nodes:
+            if value and isinstance(value, dict):
+                """ This is a concept already set
+                """
+                new_nodes.append(value)
             if value and isinstance(value, str):
                 if value.startswith ("$"):
                     varname = value
@@ -463,7 +467,7 @@ class SelectStatement(Statement):
                             options = options))
                 else:
                     """ No nodes specified for the first concept. """
-                    questions.append (self.message (options))
+                    questions.append (self.message (options=options))
             else:
                 """ Not the first concept - permute relative to previous. """
                 new_questions = []
@@ -510,7 +514,7 @@ class SelectStatement(Statement):
                                 index = edge_id,
                                 source = source_id,
                                 target = target_id))
-                        new_questions.append (self.message (options))
+                        new_questions.append (self.message (options=options))
                 questions = new_questions
         return questions
 
@@ -706,14 +710,15 @@ class SelectStatement(Statement):
                 else:
                     values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph, statements[index].query.order))
                     duplicate_statements = []
-                    first_concept.set_nodes (values)
                     if len(values) == 0:
                         print (f"---> {json.dumps(response, indent=2)}")
                         message = f"No valid results from service {statement.service} executing " + \
                                   f"query {statement.query}. Unable to continue query. Exiting."
-                        raise ServiceInvocationError (
-                            message = message,
-                            details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+                        # raise ServiceInvocationError (
+                        #     message = message,
+                        #     details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+                        continue
+                    first_concept.set_nodes(values)
         merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         questions = self.generate_questions (interpreter)
         # merged['question_graph'] = questions[0]['question_graph']
