@@ -11,9 +11,10 @@ class Message extends Component {
       title: "",
       errors: [],
     };
-    this.handleShow = this.handleShow.bind (this);
+    // this.handleShow = this.handleShow.bind (this);
   }
-  handleShow (title, errors) {
+  handleShow (title, errors, setActiveModal) {
+    this.setActiveModal = setActiveModal;
     if (typeof errors !== 'undefined') {
       errors.forEach((error) => {
         let { message, details } = error;
@@ -44,7 +45,7 @@ class Message extends Component {
       <>
         <Modal
           show={this.props.activeModal==="ErrorModal"}
-          onHide={() => this.props.setActiveModal(null)}
+          onHide={() => this.setActiveModal(null)}
           dialogClassName="messageDialog"
           aria-labelledby="example-custom-modal-styling-title"
         >
