@@ -651,22 +651,23 @@ class SelectStatement(Statement):
                     if index >= maximumQueryRequests:
                         break
 
-            logger.setLevel (logging.DEBUG)
-            logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
-            logger.setLevel (logging.INFO)
+            logger.info (f"Making requests to {self.service} took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
+            logger.info (f"Got { len(responses)} responses")
 
             for response in responses:
                 response['question_order'] = self.query.order
+                logger.info(f"Response for --- {self.query.order} --- with { response['question_graph']['nodes']} "
+                            f" has {len(response['knowledge_map']) } answers")
 
             if len(responses) == 0:
-                # interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
-                #     f"No valid results from {self.service} with query {self.query}"
-                # ))
-                raise ServiceInvocationError (
-                    f"No valid results from service {self.service} executing " +
-                    f"query {self.query}. Unable to continue query. Exiting.")
+                interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
+                    f"No valid results from {self.service} with query {self.query}"
+                ))
+                # raise ServiceInvocationError (
+                #     f"No valid results from service {self.service} executing " +
+                #     f"query {self.query}. Unable to continue query. Exiting.")
             self.decorate_results(responses, {
-                "schema" : self.get_schema_name(interpreter)
+                "schema": self.get_schema_name(interpreter)
             })
             result = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         interpreter.context.set('result', result)
@@ -689,8 +690,8 @@ class SelectStatement(Statement):
         root_question_graph = self.generate_questions(interpreter)[0]['question_graph']
 
         for index, statement in enumerate(statements):
-            logger.debug (f" -- {statement.query}")
             response = statement.execute (interpreter)
+            logger.info(f"executing {statement.query.order} --- {index + 1} out of {len(statements)} ")
             response['question_order'] = statement.query.order
             responses.append (response)
             duplicate_statements.append (response)
@@ -712,11 +713,12 @@ class SelectStatement(Statement):
                     duplicate_statements = []
                     if len(values) == 0:
                         print (f"---> {json.dumps(response, indent=2)}")
-                        message = f"No valid results from service {statement.service} executing " + \
-                                  f"query {statement.query}. Unable to continue query. Exiting."
-                        # raise ServiceInvocationError (
-                        #     message = message,
-                        #     details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
+                        message = f"Warning empty result from {statement.service} executing " + \
+                                  f"query {statement.query}."
+                        interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
+                            message=message,
+                            details=Text.short(obj=f"{json.dumps(response, indent=2)}", limit=1000)
+                        ))
                         continue
                     first_concept.set_nodes(values)
         merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
