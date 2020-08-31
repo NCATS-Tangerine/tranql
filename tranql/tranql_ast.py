@@ -369,11 +369,65 @@ class SelectStatement(Statement):
                         new_nodes.append(value)
         concept.set_nodes(new_nodes)
 
-    def plan (self, plan):
+    def is_bound(self):
+        """ Returns true if curie has been set to any of the statements concepts."""
+        concepts =  self.query.concepts
+        for c in concepts:
+            nodes = concepts[c].nodes
+            bound = any(map(lambda node: bool(node.get('curie', False)), nodes))
+            if bound:
+                return bound
+        return False
+
+    def sort_plan(self, plan):
+        # sort the plan such that statements with bound curies are executed first
+        sorted_plan = []
+        is_bound = False
+        start = None
+        # find a bound plan
+        for p in plan:
+            start = p[2]
+            # is bound if the start  or the end of the plan is bound
+            is_bound = len(start[0][0].nodes) or len(start[-1][2].nodes)
+            if is_bound:
+                break
+        if is_bound:
+            # find plans bound to the same concept that add them as starting queries
+            for other_plan in plan:
+                bound_concept = start[0][0] if len(start[0][0].nodes) else start[-1][2]
+                if bound_concept.name == other_plan[2][0][0].name or bound_concept.name == other_plan[2][-1][2].name:
+                    sorted_plan.append(other_plan)
+            # add other bound / unbound plans in a sequence that preserves
+            # connectivity
+            while len(sorted_plan) != len(plan):
+                for p in [x for x in plan if x not in sorted_plan]:
+                    is_connected = False
+                    for processed_plan in sorted_plan:
+                        # find any statement already added that ensures connectivity
+                        is_connected = p[2][-1][2].name == processed_plan[2][0][0].name or \
+                            p[2][0][0].name == processed_plan[2][-1][2].name
+                        if is_connected:
+                            break
+                    if is_connected:
+                        connected_plan = p
+                        # add other plans that match this pattern as next
+                        for other_plans in plan:
+                            if other_plans[2] == connected_plan[2]:
+                                sorted_plan.append(other_plans)
+                        # break for loop since we changed list and while loop will resume
+                        break
+        else:
+            # we don't have any bound nodes so continue executing as previous
+            sorted_plan = plan
+        return sorted_plan
+
+    def plan(self, plan):
         """ Plan a query that may span reasoners. This uses a configured schema to determine
         what kinds of queries each reasoner can respond to. """
         statements = []
-        for phase in plan:
+        sorted_plan = self.sort_plan(plan)
+        logger.info(f'Query plan ----  {sorted_plan}')
+        for phase in sorted_plan:
             schema, url, steps = phase
             """ Make a new select statement for each segment. Set the from clause given the url. """
             logger.debug (f"Making select for schema segment: {schema}")
@@ -656,8 +710,8 @@ class SelectStatement(Statement):
 
             for response in responses:
                 response['question_order'] = self.query.order
-                logger.info(f"Response for --- {self.query.order} --- with { response['question_graph']['nodes']} "
-                            f" has {len(response['knowledge_map']) } answers")
+                logger.info(f"Response for --- {self.query.order} --- with { response.get('question_graph', {}).get('nodes')} "
+                            f" has {len(response.get('knowledge_map',[])) } answers")
 
             if len(responses) == 0:
                 interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
@@ -688,9 +742,10 @@ class SelectStatement(Statement):
 
         # Generate the root statement's question graph
         root_question_graph = self.generate_questions(interpreter)[0]['question_graph']
-
+        queried_services = []
         for index, statement in enumerate(statements):
-            response = statement.execute (interpreter)
+            response = statement.execute(interpreter)
+            queried_services.append((statement.query.order, statement.service))
             logger.info(f"executing {statement.query.order} --- {index + 1} out of {len(statements)} ")
             response['question_order'] = statement.query.order
             responses.append (response)
@@ -701,33 +756,40 @@ class SelectStatement(Statement):
                 last response, and transfers values to the new question. TODO: incorporate
                 user specified namnes. """
                 next_statement = statements[index+1]
-                name = next_statement.query.order [0]
-                #name = statement.query.order[-1]
-                #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
-                # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
+                name = next_statement.query.order[0]
+
                 first_concept = next_statement.query.concepts[name]
                 if statements[index].query.order == next_statement.query.order:
-                    first_concept.set_nodes (statements[index].query.concepts[name].nodes)
+                    first_concept.set_nodes(statements[index].query.concepts[name].nodes)
                 else:
-                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph, statements[index].query.order))
+                    values = self.jsonkit.select(f"$.knowledge_map.[*].[*].node_bindings.{name}",
+                                                 self.merge_results(duplicate_statements,
+                                                                    interpreter,
+                                                                    root_question_graph,
+                                                                    statements[index].query.order
+                                                                    ))
+                    queried_services = []  # should be empty at every layers of queries
                     duplicate_statements = []
                     if len(values) == 0:
-                        print (f"---> {json.dumps(response, indent=2)}")
-                        message = f"Warning empty result from {statement.service} executing " + \
-                                  f"query {statement.query}."
+                        message = f"Warning empty result from all queries services:  {queried_services} ",
                         interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
                             message=message,
                             details=Text.short(obj=f"{json.dumps(response, indent=2)}", limit=1000)
                         ))
-                        continue
+                        # if first statement is not bound means we want to return big graph i.e no where condition
+                        # if next statement is bound where condition was provided but previous kp wasn't able to answer
+                        if next_statement.is_bound() or not statement.is_bound() :
+                            continue
+                        else:
+                            # at this point we have asked all the kps capable of answering but couldn't find anything so
+                            # we should stop quering further or else bad things like big graph results will happen.
+                            break
                     first_concept.set_nodes(values)
-        merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
-        questions = self.generate_questions (interpreter)
-        # merged['question_graph'] = questions[0]['question_graph']
+        merged = self.merge_results(responses, interpreter, root_question_graph, self.query.order)
         return merged
 
     @staticmethod
-    def merge_results (responses, interpreter, question_graph, root_order=None):
+    def merge_results(responses, interpreter, question_graph, root_order=None):
         """ Merge results. """
 
         """
