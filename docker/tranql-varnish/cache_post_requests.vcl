@@ -42,5 +42,9 @@ sub vcl_backend_response {
     if (beresp.status == 500 || beresp.status == 502 || beresp.status == 503 || beresp.status == 504) {
             return (pass);
     }
+    if (beresp.http.cache-control ~ "(no-cache)" ||
+        beresp.http.pragma ~ "no-cache") {
+            set beresp.ttl = 0s;
+        }
 }
 
