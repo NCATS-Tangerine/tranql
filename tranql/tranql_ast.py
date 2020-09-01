@@ -6,6 +6,9 @@ import requests_cache
 import sys
 import traceback
 import time # Basic time profiling for async
+import yaml
+import importlib.machinery
+import os.path
 from collections import defaultdict
 from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
@@ -51,6 +54,65 @@ class Bionames:
         else:
             raise ServiceInvocationError (response.text)
         return result
+
+class CustomFunctions:
+    def __init__(self):
+        self.functions = self.load_functions()
+
+    @staticmethod
+    def load_functions():
+        functions = {}
+        with open(os.path.join(os.path.dirname(__file__), "udfs.yaml"), "r") as f:
+            udf_data = yaml.safe_load(f.read())
+            modules = udf_data["userDefinedFunctions"]["modules"]
+            for udf_module in modules:
+                source_file = udf_module["source"]
+                udf_functions = udf_module["functions"]
+
+                file_path = os.path.join(os.path.dirname(__file__), source_file)
+
+                loader = importlib.machinery.SourceFileLoader(file_path, file_path)
+                module = loader.load_module()
+
+                for function_name in udf_functions:
+                    functions[function_name] = getattr(module, function_name)
+
+        return functions
+
+    """ Intended for use as a decorator """
+    def custom_function(self, function, name=None):
+        if name is None: name = function.__name__
+        self.functions[name] = function
+
+    def resolve_function(self, parsed_function):
+        function_name = parsed_function["name"]
+        # For every arg passed in, recurse if it is a function to resolve its value
+        function_args = []
+        keyword_arguments = {}
+        # Will recurse to resolve the value of a function argument
+        make_not_function = lambda argument_value: self.resolve_function(argument_value) if isinstance(argument_value, dict) else argument_value
+        # Go through and make sure every argument isn't a nested function
+        # Also handle keyword arguments
+        for argument in parsed_function["args"]:
+            # kwarg
+            if isinstance(argument, list):
+                arg_name = argument[0]
+                arg_value = argument[2]
+                keyword_arguments[arg_name] = make_not_function(arg_value)
+            # normal arg
+            else:
+                function_args.append(make_not_function(argument))
+
+        return self.functions[function_name](*function_args, **keyword_arguments)
+
+
+custom_functions = CustomFunctions()
+
+""" How to define a function directly using decorator. Can also refer to unit tests for more examples """
+@custom_functions.custom_function
+def mirror(x):
+    return x
+
 
 class Statement:
     """ The interface contract for a statement. """
@@ -265,43 +327,107 @@ class SelectStatement(Statement):
 
     def expand_nodes (self, interpreter, concept):
         """ Expand variable expressions to nodes. """
-        value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        if value and isinstance(value, str):
-            if value.startswith ("$"):
-                varname = value
-                value = interpreter.context.resolve_arg (varname)
-                logger.debug (f"resolved {varname} to {value}")
-                if value == None:
-                    raise UndefinedVariableError (f"Undefined variable: {varname}")
-                elif isinstance (value, str):
-                    concept.set_nodes ([ value ])
-                elif isinstance(value, list):
-                    """ Binding multiple values to a node. """
-                    concept.set_nodes (value)
+        new_nodes = []
+        # value = concept.nodes[0] if len(concept.nodes) > 0 else None
+        for value in concept.nodes:
+            if value and isinstance(value, dict):
+                """ This is a concept already set
+                """
+                new_nodes.append(value)
+            if value and isinstance(value, str):
+                if value.startswith ("$"):
+                    varname = value
+                    value = interpreter.context.resolve_arg (varname)
+                    logger.debug (f"resolved {varname} to {value}")
+                    if value == None:
+                        raise UndefinedVariableError (f"Undefined variable: {varname}")
+                    elif isinstance (value, str):
+                        new_nodes.append(value)
+                        # concept.set_nodes ([ value ])
+                    elif isinstance(value, list):
+                        """ Binding multiple values to a node. """
+                        new_nodes += value
+                        # concept.set_nodes (value)
+                    else:
+                        raise TranQLException (
+                            f"Internal failure: object of unhandled type {type(value)}.")
                 else:
-                    raise TranQLException (
-                        f"Internal failure: object of unhandled type {type(value)}.")
-            else:
-                """ Bind a single value to a node. """
-                if not ':' in value:
-                    if not interpreter.dynamic_id_resolution:
-                        raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
-                    """ Deprecated. """
-                    """ Bind something that's not a curie. Dynamic id lookup.
-                    This is frowned upon. While it *may* be useful for prototyping and,
-                    interactive exploration, it will probably be removed. """
-                    logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                    concept.set_nodes (self.resolve_name (value, concept.type_name))
-                    logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
-                else:
-                    """ This is a single curie. Bind it to the node. """
-                    pass
+                    """ Bind a single value to a node. """
+                    if not ':' in value:
+                        if not interpreter.dynamic_id_resolution:
+                            raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
+                        """ Deprecated. """
+                        """ Bind something that's not a curie. Dynamic id lookup.
+                        This is frowned upon. While it *may* be useful for prototyping and,
+                        interactive exploration, it will probably be removed. """
+                        logger.debug (f"performing dynamic lookup resolving {concept}={value}")
+                        new_nodes.append(self.resolve_name (value, concept.type_name))
+                        # concept.set_nodes (self.resolve_name (value, concept.type_name))
+                        logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
+                    else:
+                        """ This is a single curie. Bind it to the node. """
+                        new_nodes.append(value)
+        concept.set_nodes(new_nodes)
 
-    def plan (self, plan):
+    def is_bound(self):
+        """ Returns true if curie has been set to any of the statements concepts."""
+        concepts =  self.query.concepts
+        for c in concepts:
+            nodes = concepts[c].nodes
+            bound = any(map(lambda node: bool(node.get('curie', False)), nodes))
+            if bound:
+                return bound
+        return False
+
+    def sort_plan(self, plan):
+        # sort the plan such that statements with bound curies are executed first
+        sorted_plan = []
+        is_bound = False
+        start = None
+        # find a bound plan
+        for p in plan:
+            start = p[2]
+            # is bound if the start  or the end of the plan is bound
+            is_bound = len(start[0][0].nodes) or len(start[-1][2].nodes)
+            if is_bound:
+                break
+        if is_bound:
+            # find plans bound to the same concept that add them as starting queries
+            for other_plan in plan:
+                bound_concept = start[0][0] if len(start[0][0].nodes) else start[-1][2]
+                if bound_concept.name == other_plan[2][0][0].name or bound_concept.name == other_plan[2][-1][2].name:
+                    sorted_plan.append(other_plan)
+            # add other bound / unbound plans in a sequence that preserves
+            # connectivity
+            while len(sorted_plan) != len(plan):
+                for p in [x for x in plan if x not in sorted_plan]:
+                    is_connected = False
+                    for processed_plan in sorted_plan:
+                        # find any statement already added that ensures connectivity
+                        is_connected = p[2][-1][2].name == processed_plan[2][0][0].name or \
+                            p[2][0][0].name == processed_plan[2][-1][2].name
+                        if is_connected:
+                            break
+                    if is_connected:
+                        connected_plan = p
+                        # add other plans that match this pattern as next
+                        for other_plans in plan:
+                            if other_plans[2] == connected_plan[2]:
+                                sorted_plan.append(other_plans)
+                        # break for loop since we changed list and while loop will resume
+                        break
+        else:
+            # we don't have any bound nodes so continue executing as previous
+            sorted_plan = plan
+        return sorted_plan
+
+    def plan(self, plan):
         """ Plan a query that may span reasoners. This uses a configured schema to determine
         what kinds of queries each reasoner can respond to. """
         statements = []
-        for phase in plan:
+        sorted_plan = self.sort_plan(plan)
+        logger.info(f'Query plan ----  {sorted_plan}')
+        for phase in sorted_plan:
             schema, url, steps = phase
             """ Make a new select statement for each segment. Set the from clause given the url. """
             logger.debug (f"Making select for schema segment: {schema}")
@@ -395,7 +521,7 @@ class SelectStatement(Statement):
                             options = options))
                 else:
                     """ No nodes specified for the first concept. """
-                    questions.append (self.message (options))
+                    questions.append (self.message (options=options))
             else:
                 """ Not the first concept - permute relative to previous. """
                 new_questions = []
@@ -442,7 +568,7 @@ class SelectStatement(Statement):
                                 index = edge_id,
                                 source = source_id,
                                 target = target_id))
-                        new_questions.append (self.message (options))
+                        new_questions.append (self.message (options=options))
                 questions = new_questions
         return questions
 
@@ -579,22 +705,23 @@ class SelectStatement(Statement):
                     if index >= maximumQueryRequests:
                         break
 
-            logger.setLevel (logging.DEBUG)
-            logger.debug (f"Making requests took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
-            logger.setLevel (logging.INFO)
+            logger.info (f"Making requests to {self.service} took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
+            logger.info (f"Got { len(responses)} responses")
 
             for response in responses:
                 response['question_order'] = self.query.order
+                logger.info(f"Response for --- {self.query.order} --- with { response.get('question_graph', {}).get('nodes')} "
+                            f" has {len(response.get('knowledge_map',[])) } answers")
 
             if len(responses) == 0:
-                # interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
-                #     f"No valid results from {self.service} with query {self.query}"
-                # ))
-                raise ServiceInvocationError (
-                    f"No valid results from service {self.service} executing " +
-                    f"query {self.query}. Unable to continue query. Exiting.")
+                interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
+                    f"No valid results from {self.service} with query {self.query}"
+                ))
+                # raise ServiceInvocationError (
+                #     f"No valid results from service {self.service} executing " +
+                #     f"query {self.query}. Unable to continue query. Exiting.")
             self.decorate_results(responses, {
-                "schema" : self.get_schema_name(interpreter)
+                "schema": self.get_schema_name(interpreter)
             })
             result = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         interpreter.context.set('result', result)
@@ -615,10 +742,11 @@ class SelectStatement(Statement):
 
         # Generate the root statement's question graph
         root_question_graph = self.generate_questions(interpreter)[0]['question_graph']
-
+        queried_services = []
         for index, statement in enumerate(statements):
-            logger.debug (f" -- {statement.query}")
-            response = statement.execute (interpreter)
+            response = statement.execute(interpreter)
+            queried_services.append((statement.query.order, statement.service))
+            logger.info(f"executing {statement.query.order} --- {index + 1} out of {len(statements)} ")
             response['question_order'] = statement.query.order
             responses.append (response)
             duplicate_statements.append (response)
@@ -628,31 +756,40 @@ class SelectStatement(Statement):
                 last response, and transfers values to the new question. TODO: incorporate
                 user specified namnes. """
                 next_statement = statements[index+1]
-                name = next_statement.query.order [0]
-                #name = statement.query.order[-1]
-                #values = self.jsonkit.select (f"$.knowledge_map.[*].node_bindings.{name}", response)
-                # logger.error (f"querying $.knowledge_map.[*].[*].node_bindings.{name} from {json.dumps(response, indent=2)}")
+                name = next_statement.query.order[0]
+
                 first_concept = next_statement.query.concepts[name]
                 if statements[index].query.order == next_statement.query.order:
-                    first_concept.set_nodes (statements[index].query.concepts[name].nodes)
+                    first_concept.set_nodes(statements[index].query.concepts[name].nodes)
                 else:
-                    values = self.jsonkit.select (f"$.knowledge_map.[*].[*].node_bindings.{name}", self.merge_results(duplicate_statements, interpreter, root_question_graph, statements[index].query.order))
+                    values = self.jsonkit.select(f"$.knowledge_map.[*].[*].node_bindings.{name}",
+                                                 self.merge_results(duplicate_statements,
+                                                                    interpreter,
+                                                                    root_question_graph,
+                                                                    statements[index].query.order
+                                                                    ))
+                    queried_services = []  # should be empty at every layers of queries
                     duplicate_statements = []
-                    first_concept.set_nodes (values)
                     if len(values) == 0:
-                        print (f"---> {json.dumps(response, indent=2)}")
-                        message = f"No valid results from service {statement.service} executing " + \
-                                  f"query {statement.query}. Unable to continue query. Exiting."
-                        raise ServiceInvocationError (
-                            message = message,
-                            details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
-        merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
-        questions = self.generate_questions (interpreter)
-        # merged['question_graph'] = questions[0]['question_graph']
+                        message = f"Warning empty result from all queries services:  {queried_services} ",
+                        interpreter.context.mem.get('requestErrors', []).append(ServiceInvocationError(
+                            message=message,
+                            details=Text.short(obj=f"{json.dumps(response, indent=2)}", limit=1000)
+                        ))
+                        # if first statement is not bound means we want to return big graph i.e no where condition
+                        # if next statement is bound where condition was provided but previous kp wasn't able to answer
+                        if next_statement.is_bound() or not statement.is_bound() :
+                            continue
+                        else:
+                            # at this point we have asked all the kps capable of answering but couldn't find anything so
+                            # we should stop quering further or else bad things like big graph results will happen.
+                            break
+                    first_concept.set_nodes(values)
+        merged = self.merge_results(responses, interpreter, root_question_graph, self.query.order)
         return merged
 
     @staticmethod
-    def merge_results (responses, interpreter, question_graph, root_order=None):
+    def merge_results(responses, interpreter, question_graph, root_order=None):
         """ Merge results. """
 
         """
@@ -1104,8 +1241,11 @@ class TranQL_AST:
                 elif command == 'where':
                     for condition in e[1:]:
                         if isinstance(condition, list) and len(condition) == 3:
-                            select.where.append (condition)
                             var, op, val = condition
+                            if isinstance(val, dict):
+                                val = custom_functions.resolve_function(val)
+                            select.where.append ([var, op, val])
+
                             if var in select.query:
                                 if op == '=':
                                     select.query[var].set_nodes ([ val ])
@@ -1113,6 +1253,12 @@ class TranQL_AST:
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
                                     select.query[var].exclude_patterns.append (val)
+                                # the '=' operator already fulfills the purpose of the 'in' operator because you can pass a list into it
+                                # elif op == 'in':
+                                #     if not isinstance(val, list):
+                                #         raise ValueError(f'"in" operator received invalid type {type(val)}')
+                                #     select.query[var].set_nodes ( val )
+
                             else:
                                 select.where.append ([ var, op, val ])
                 elif command == 'set':

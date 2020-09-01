@@ -1,0 +1,23 @@
+source_1_schema:
+  schema:
+    gene:
+      disease: [related_to]
+      chemical_substance: [related_to]
+    chemical_substance:
+      gene: [related_to]
+  url: /source_1
+source_2_schema:
+  schema:
+    disease:
+      chemical_substance: [related_to]
+  url: /source_2
+source_2_1_schema:
+  schema:
+    disease:
+      phenotypic_feature: [related_to]
+  url: /source_2_1
+source_3:
+  schema:
+    gene:
+      chemical_substance: [related_to]
+  url: /source_3
