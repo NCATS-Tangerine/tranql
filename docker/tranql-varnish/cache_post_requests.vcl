@@ -44,7 +44,11 @@ sub vcl_backend_response {
     }
     if (beresp.http.cache-control ~ "(no-cache)" ||
         beresp.http.pragma ~ "no-cache") {
-            set beresp.ttl = 0s;
+            // Unset headers so other clients won't have problems
+            // issue with difference in headers can cause `type error failed to fetch`
+            unset beresp.http.cache-control;
+            unset beresp.http.pragma;
+            return (pass);
         }
 }
 
