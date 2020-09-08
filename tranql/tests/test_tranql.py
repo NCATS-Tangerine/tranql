@@ -9,7 +9,7 @@ from deepdiff import DeepDiff
 from functools import reduce
 from tranql.main import TranQL
 from tranql.main import TranQLParser, set_verbose
-from tranql.tranql_ast import SetStatement, SelectStatement, custom_functions
+from tranql.tranql_ast import SetStatement, SelectStatement
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
@@ -69,138 +69,6 @@ def test_parse_predicate (requests_mock):
              ]
             ], [ "" ]
             ]])
-
-def test_parse_function (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-
-    """ Test parsing and resolving function values (including nested) """
-    # Create a custom function that concats two strings
-    @custom_functions.custom_function
-    def concat_strings(str_a, str_b):
-        return str_a + str_b
-
-    # Create a function that returns "asth"
-    @custom_functions.custom_function
-    def get_asthma():
-        return "asth"
-
-    # Test concat function
-    code = """
-        SELECT chemical_substance->gene->disease
-          FROM "/graph/gamma/quick"
-         WHERE disease=concat_strings(get_asthma(), "ma")
-    """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            "asthma"
-        ]
-    ]
-    tranql = TranQL ()
-    tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
-
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
-
-def test_parse_list_function (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-
-    """ Test resolving a function that returns a list """
-    # Create a function that returns a list
-    @custom_functions.custom_function
-    def returns_list():
-        return ["asthma", "smallpox"]
-
-    # Test list function
-    code = """
-        SELECT chemical_substance->gene->disease
-          FROM "/graph/gamma/quick"
-         WHERE disease=returns_list()
-    """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            [
-                "asthma",
-                "smallpox"
-            ]
-        ]
-    ]
-    tranql = TranQL ()
-    tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
-
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
-
-def test_parse_kwarg_function (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-
-    """ Test parsing of a function with keyword arguments """
-    # Create a function that returns a list
-    @custom_functions.custom_function
-    def kwarg_function(str_a, str_b, prefix="_PREFIX_", suffix="_SUFFIX_"):
-        return prefix + str_a + str_b + suffix
-
-    # Test list function
-    code = """
-        SELECT chemical_substance->gene->disease
-          FROM "/graph/gamma/quick"
-         WHERE disease=kwarg_function("beginning of body", "ending of body", prefix="_CUSTOM_PREFIX_")
-    """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            "_CUSTOM_PREFIX_beginning of bodyending of body_SUFFIX_"
-        ]
-    ]
-    tranql = TranQL ()
-    tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
-
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
-
-def test_parse_list (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-
-    """ Test parsing of lists within where statements """
-    """ Also make sure that vars are properly recognized """
-    code = """
-        SELECT chemical_substance->gene->disease
-          FROM "/graph/gamma/quick"
-         WHERE disease = ['asthma', 'smallpox', $my_var]
-    """
-    expected_where = [
-        [
-            "disease",
-            "=",
-            [
-                "asthma",
-                "smallpox",
-                "$my_var"
-            ]
-        ]
-    ]
-    tranql = TranQL ()
-    tranql.resolve_names = False
-    result_where = tranql.parse(code).statements[0].where
-
-    assert_lists_equal(
-        result_where,
-        expected_where
-    )
-
 
 def test_parse_set (requests_mock):
     set_mock(requests_mock, "workflow-5")
@@ -443,7 +311,7 @@ def test_ast_generate_questions_from_list():
     # get all chemical and genes
 
 
-    grab_ids = lambda node_type, questions: list(
+    grab_ids = lambda node_type: list(
         # using SET to select unique ids only and casting back to list
         # grabs ids from questions based on node type
         set(reduce(
@@ -458,8 +326,8 @@ def test_ast_generate_questions_from_list():
             []
         ))
     )
-    chemicals_ids = grab_ids('chemical_substance', questions)
-    gene_ids = grab_ids('gene', questions)
+    chemicals_ids = grab_ids('chemical_substance')
+    gene_ids = grab_ids('gene')
     assert len(questions) == 4
     chemicals.sort()
     chemicals_ids.sort()
@@ -467,65 +335,6 @@ def test_ast_generate_questions_from_list():
     gene_list.sort()
     assert_lists_equal(chemicals_ids, chemicals)
     assert_lists_equal(gene_list, gene_ids)
-
-def test_ast_generate_questions_list_variable():
-    # make sure that a list is parsed correctly when it contains variables
-
-    """ currently this test doesn't pass due to a bug in expand_nodes. the interpreter
-    will only call expand_nodes on the first node concept. so, if a variable is not
-    the first element in a list, it won't be resolved. if a variable is the first element
-    in a list, the entire list will be set to just that variable.
-
-    ex: set $var = "HGNC:X"
-        where gene=[$var, "HGNC:Y", "HGNC:Z"]
-    becomes:
-        ["HGNC:X"]
-    should be:
-        ["HGNC:X", "HGNC:Y", "HGNC:Z"]
-
-    ex2: set $var = "HGNC:X"
-         where gene=["HGNC:Y", $var, "HGNC:Z"]
-    becomes:
-         ["HGNC:Y", "$var", "HGNC:Z"]
-    should be:
-         ["HGNC:Y", "HGNC:X", "HGNC:Z"]
-    """
-
-
-    tranql = TranQL()
-    ast_3 = tranql.parse(f"""
-        SET var_str = 'CHEBI:0'
-        SET var_list = ['CHEBI:22', 'CHEBI:33']
-        SELECT chemical_substance->gene->disease
-          FROM "/graph/gamma/quick"
-         WHERE chemical_substance = [$var_str, 'CHEBI:1', $var_list]
-    """)
-    set_var_str = ast_3.statements[0]
-    set_var_list = ast_3.statements[1]
-    select_statement = ast_3.statements[2]
-
-    set_var_str.execute (tranql)
-    set_var_list.execute (tranql)
-    questions = select_statement.generate_questions (tranql)
-
-    grab_ids = lambda node_type, questions: list(
-        # using SET to select unique ids only and casting back to list
-        # grabs ids from questions based on node type
-        set(reduce(
-            lambda acc, question_graph: acc + list(map(
-                lambda node: node['curie'],
-                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
-            )),
-            map(
-                lambda question: question['question_graph'],
-                questions
-            ),
-            []
-        ))
-    )
-
-    chem_ids = grab_ids('chemical_substance', questions)
-    assert_lists_equal(sorted(chem_ids), sorted(['CHEBI:0', 'CHEBI:22', 'CHEBI:33', 'CHEBI:1']))
 
 def test_generate_questions_where_clause_list():
     # Try to generate questions if values for nodes are set as lists in the where clause
@@ -1406,7 +1215,7 @@ def test_schema_can_talk_to_automat():
     })
     ast = tranql.parse("""
             SELECT disease->d2:disease
-              FROM '/schema'
+              FROM '/schema'             
         """)
 
     select = ast.statements[0]

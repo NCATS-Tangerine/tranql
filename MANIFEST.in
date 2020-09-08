@@ -1,4 +1,0 @@
-recursive-include * *.txt
-recursive-include * *.json
-recursive-include * *.yaml
-recursive-include * *.yml
