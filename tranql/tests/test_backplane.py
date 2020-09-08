@@ -2,25 +2,13 @@ import pytest
 import json
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.backplane.server import api, app
-from tranql.backplane.server import RtxQuery, ICEESClusterQuery, GammaQuery
+from tranql.backplane.server import RtxQuery, ICEESClusterQuery
 import requests_mock
 
 @pytest.fixture
 def client():
     client = app.test_client()
     yield client
-
-def test_robokop_paramter_are_picked_up():
-    import os
-    os.environ['ROBOKOP_MAX_CONNECTIVITY'] = "1"
-    os.environ['ROBOKOP_MAX_RESULTS'] = "1"
-    gamma_query = GammaQuery()
-    assert gamma_query.quick_url == 'https://robokop.renci.org/api/simple/quick/?' \
-            f'rebuild=false&' \
-            f'output_format=MESSAGE&' \
-            f'max_connectivity=1&' \
-            f'max_results=1'
-
 
 def test_rtx_convert_curies(client):
     converted_to_rtx = RtxQuery.convert_curies_to_rtx({

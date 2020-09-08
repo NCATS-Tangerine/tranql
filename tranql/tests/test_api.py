@@ -344,9 +344,7 @@ def test_standard_api_resource(client, requests_mock):
             'edges' : []
         }
         },
-        200,
-        # headers,
-        {}
+        200
     )
 
     assert StandardAPIResource.response({
@@ -357,7 +355,5 @@ def test_standard_api_resource(client, requests_mock):
         'status' : 'Error',
         'errors' : []
         },
-        500,
-        # headers
-        {}
+        500
     )

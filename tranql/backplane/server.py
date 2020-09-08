@@ -798,13 +798,7 @@ class GammaResource(StandardAPIResource):
         super().__init__()
         self.robokop_url = 'https://robokop.renci.org' # TODO - make a configuration setting.
         self.view_post_url = f'{self.robokop_url}/api/simple/view/'
-        max_connectivity = os.environ.get('ROBOKOP_MAX_CONNECTIVITY', 0)
-        max_results = os.environ.get('ROBOKOP_MAX_RESULTS', 300)
-        self.quick_url = f'{self.robokop_url}/api/simple/quick/?' \
-            f'rebuild=false&' \
-            f'output_format=MESSAGE&' \
-            f'max_connectivity={max_connectivity}&' \
-            f'max_results={max_results}'
+        self.quick_url = f'{self.robokop_url}/api/simple/quick/?rebuild=false&output_format=MESSAGE&max_connectivity=0&max_results=300'
         #                                                      ?rebuild=false&output_format=MESSAGE&max_connectivity=0&max_results=250
     def view_url (self, uid):
         return f'{self.robokop_url}/simple/view/{uid}'
@@ -858,7 +852,7 @@ class GammaQuery(GammaResource):
                         schema:
                             $ref: '#/definitions/Error'
         """
-        self.validate(request, 'Message')
+        self.validate (request, 'Message')
         result = {}
         del request.json['knowledge_graph']
         del request.json['knowledge_maps']

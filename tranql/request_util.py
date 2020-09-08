@@ -30,11 +30,6 @@ async def make_request_async (semaphore, **kwargs):
                     # print (f"** asyncio-response: {json.dumps(response,indent=2)}")
                 elif http_response.status == 404:
                     raise UnknownServiceError (f"Service {url} was not found. Is it misspelled?")
-                elif http_response.status == 503:
-                    raise  ServiceInvocationError(
-                        f"An error occurred invoking service: {kwargs['url']}. Returned 503",
-                        details= f"Details for the requests:  {kwargs}"
-                    )
                 else:
                     http_response.raise_for_status()
                     # logger.error (f"error {http_response.status} processing request: {message}")
