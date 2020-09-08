@@ -124,13 +124,13 @@ class StandardAPIResource(Resource):
         return result
 
     @staticmethod
-    def response(data, headers={}):
+    def response(data):
         status_code = 200
         if isinstance(data, dict):
             status = data.get('status',None)
             if status == "Error":
                 status_code = 500
-        return (data, status_code, headers)
+        return (data, status_code)
 class WebAppRoot(Resource):
     def get(self):
         """
@@ -452,8 +452,7 @@ class TranQLQuery(StandardAPIResource):
             result = self.handle_exception (errors)
         with open ('query.out', 'w') as stream:
             json.dump (result, stream, indent=2)
-        if len(result.get('errors', [])):
-            return self.response(result, headers={'Cache-Control': 'no-cache'})
+
         return self.response(result)
 
 class AnnotateGraph(StandardAPIResource):
