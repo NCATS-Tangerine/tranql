@@ -8,7 +8,8 @@ import './TableViewer.css';
 
 export default class TableViewer extends Component {
   static defaultProps = {
-    close: () => {},
+    onOpen: () => {},
+    onClose: () => {},
     resetAttributesOnOpen : true,
     filterButtonProps : {},
     closeButtonProps : {},
@@ -36,6 +37,7 @@ export default class TableViewer extends Component {
     super(props);
 
     this.state = {
+      tableView : false,
       tableFilterView : false,
       tableAttributes : this.props.defaultTableAttributes,
       filterFilter : ''
@@ -44,19 +46,33 @@ export default class TableViewer extends Component {
     this._tabs = React.createRef();
     this._filterInputFilter = React.createRef();
 
+    this.open = this.open.bind(this);
+    this.close = this.close.bind(this);
+    this.toggleVisibility = this.toggleVisibility.bind(this);
     this.resetAttributes = this.resetAttributes.bind(this);
     this._getActiveTabName = this._getActiveTabName.bind(this);
   }
   resetAttributes() {
     this.setState({ tableAttributes : this.props.defaultTableAttributes });
   }
+  toggleVisibility() {
+    this.state.tableView ? this.close() : this.open();
+  }
+  open() {
+    const resetAttrsObj = this.state.resetAttributesOnOpen ? {tableAttributes : this.props.defaultTableAttributes} : {};
+    this.setState({ tableView : true, ...resetAttrsObj });
+    this.props.onOpen();
+  }
+  close() {
+    this.setState({ tableView : false });
+    this.props.onClose();
+  }
   _getActiveTabName() {
     return this._tabs.current.props.activeKey;
   }
   render() {
-    if (!this.props.tableView) return null;
+    if (!this.state.tableView) return null;
     return (
-      <div className="TableViewerContainer">
       <div className="TableViewer">
         <div className="table-viewer-button-container">
           {
@@ -80,7 +96,7 @@ export default class TableViewer extends Component {
           }} {...this.props.filterButtonProps}>
             {this.state.tableFilterView ? "Back" : "Filter"}
           </Button>
-          <Button className="table-viewer-close-button" size="sm" color="danger" onClick={() => this.props.close()} {...this.props.closeButtonProps}>Close</Button>
+          <Button className="table-viewer-close-button" size="sm" color="danger" onClick={() => this.close()} {...this.props.closeButtonProps}>Close</Button>
         </div>
         <Tabs defaultActiveKey={Object.keys(this.props.data)[0]} ref={this._tabs}>
           {
@@ -183,7 +199,6 @@ export default class TableViewer extends Component {
             })()
           }
         </Tabs>
-      </div>
       </div>
     );
   }
