@@ -49,30 +49,14 @@ export default class QueriesModal extends Component {
      *
      */
     this.state = {
-      show: false,
       currentQueryIndex: 0,
       queries: this.props.queries
     };
     this.state.queries.forEach((ex) => ex._editedQuery = ex.query);
 
-    this.show = this.show.bind (this);
-    this.hide = this.hide.bind (this);
-
     this._modalBody = React.createRef();
 
     this._getTools = this._getTools.bind(this);
-  }
-  /**
-   * Show the modal
-   */
-  show() {
-    this.setState({ show : true });
-  }
-  /**
-   * Hide the modal
-   */
-  hide() {
-    this.setState({ show : false });
   }
   /**
    * Getter method which returns the currently active query
@@ -139,8 +123,8 @@ export default class QueriesModal extends Component {
   }
   render() {
     return (
-      <Modal show={this.state.show}
-             onHide={this.hide}
+      <Modal show={this.props.show}
+             onHide={() => this.props.setActiveModal(null)}
              dialogClassName="queries-modal-dialog"
              id={this.props.id}
              className="queries-modal">

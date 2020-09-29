@@ -1,3 +1,7 @@
+.TableViewerContainer {
+  /* Something to do with the way position/overflow/padding works -- this padding has to be on a container or it does not display properly */
+  padding: 15px;
+}
 .TableViewer {
   position:relative;
   width:100%;
