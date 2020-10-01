@@ -2340,7 +2340,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
     }
 
     this._setActiveModal("ErrorModal");
-    this._messageDialog.current.handleShow (title, message);
+    this._messageDialog.current.handleShow (title, message, this._setActiveModal);
   }
   /**
    * Handle updated settings from the modal settings dialog.
