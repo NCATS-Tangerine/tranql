@@ -363,6 +363,8 @@ class SelectStatement(Statement):
                     else:
                         """ This is a single curie. Bind it to the node. """
                         new_nodes.append(value)
+            elif isinstance(value, dict):
+              new_nodes.append(value.get('curie', ''))
         concept.set_nodes(new_nodes)
 
     def plan (self, plan):
@@ -463,7 +465,7 @@ class SelectStatement(Statement):
                             options = options))
                 else:
                     """ No nodes specified for the first concept. """
-                    questions.append (self.message (options))
+                    questions.append (self.message (options=options))
             else:
                 """ Not the first concept - permute relative to previous. """
                 new_questions = []
@@ -510,7 +512,7 @@ class SelectStatement(Statement):
                                 index = edge_id,
                                 source = source_id,
                                 target = target_id))
-                        new_questions.append (self.message (options))
+                        new_questions.append (self.message (options=options))
                 questions = new_questions
         return questions
 
