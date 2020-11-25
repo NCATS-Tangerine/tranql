@@ -1,4 +1,4 @@
-FROM debian:9.5
+FROM debian:stretch-slim
 # Varnish image with POST request caching
 # more info on varnish can be found at http://varnish-cache.org/
 

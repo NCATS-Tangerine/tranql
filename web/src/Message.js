@@ -8,16 +8,13 @@ class Message extends Component {
   constructor(props, context) {
     super(props, context);
     this.state = {
-      show: false,
       title: "",
       errors: [],
     };
-    this.handleHide = () => {
-      this.setState({ show: false });
-    };
     this.handleShow = this.handleShow.bind (this);
   }
-  handleShow (title, errors) {
+  handleShow (title, errors, setActiveModal) {
+    this.setActiveModal = setActiveModal;
     if (typeof errors !== 'undefined') {
       errors.forEach((error) => {
         let { message, details } = error;
@@ -26,7 +23,6 @@ class Message extends Component {
         error.details = typeof details === "string" ? details.split ("\n").map((line,i) => <div key={i}><span>{line}</span><br/></div>) : details;
       })
       this.setState({
-        show: true,
         title : title,
         errors : errors
       });
@@ -48,8 +44,8 @@ class Message extends Component {
     return (
       <>
         <Modal
-          show={this.state.show}
-          onHide={this.handleHide}
+          show={this.props.activeModal==="ErrorModal"}
+          onHide={() => this.setActiveModal(null)}
           dialogClassName="messageDialog"
           aria-labelledby="example-custom-modal-styling-title"
         >
