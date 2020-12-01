@@ -1,0 +1,338 @@
+{
+  "biolink:NamedThing": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ]
+  },
+  "organism_taxon": {
+    "biolink:NamedThing": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon"
+    ],
+    "genomic_entity": [
+      "in_taxon"
+    ],
+    "biological_entity": [
+      "in_taxon"
+    ],
+    "molecular_entity": [
+      "in_taxon"
+    ],
+    "macromolecular_machine": [
+      "in_taxon"
+    ],
+    "gene": [
+      "in_taxon"
+    ],
+    "gene_or_gene_product": [
+      "in_taxon"
+    ]
+  },
+  "ontology_class": {
+    "biolink:NamedThing": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon"
+    ],
+    "genomic_entity": [
+      "in_taxon"
+    ],
+    "biological_entity": [
+      "in_taxon"
+    ],
+    "molecular_entity": [
+      "in_taxon"
+    ],
+    "macromolecular_machine": [
+      "in_taxon"
+    ],
+    "gene": [
+      "in_taxon"
+    ],
+    "gene_or_gene_product": [
+      "in_taxon"
+    ]
+  },
+  "named_thing": {
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ]
+  },
+  "genomic_entity": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  },
+  "biological_entity": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  },
+  "molecular_entity": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  },
+  "macromolecular_machine": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  },
+  "gene": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  },
+  "gene_or_gene_product": {
+    "organism_taxon": [
+      "in_taxon"
+    ],
+    "biolink:NamedThing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "ontology_class": [
+      "in_taxon"
+    ],
+    "named_thing": [
+      "in_taxon",
+      "molecularly_interacts_with"
+    ],
+    "genomic_entity": [
+      "molecularly_interacts_with"
+    ],
+    "biological_entity": [
+      "molecularly_interacts_with"
+    ],
+    "molecular_entity": [
+      "molecularly_interacts_with"
+    ],
+    "macromolecular_machine": [
+      "molecularly_interacts_with"
+    ],
+    "gene": [
+      "molecularly_interacts_with"
+    ],
+    "gene_or_gene_product": [
+      "molecularly_interacts_with"
+    ]
+  }
+}

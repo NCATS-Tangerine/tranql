@@ -709,8 +709,11 @@ def test_ast_multiple_reasoners (requests_mock):
     assert_lists_equal(statements[1].query.order,['chemical_substance','disease'])
     assert statements[1].get_schema_name(tranql) == "rtx"
 
-    assert_lists_equal(statements[2].query.order,['disease','gene'])
-    assert statements[2].get_schema_name(tranql) == "robokop"
+    assert_lists_equal(statements[2].query.order,['chemical_substance','disease'])
+    assert statements[2].get_schema_name(tranql) == "roger"
+
+    assert_lists_equal(statements[3].query.order,['disease','gene'])
+    assert statements[3].get_schema_name(tranql) == "robokop"
 def test_ast_merge_knowledge_maps (requests_mock):
     set_mock(requests_mock, "workflow-5")
     tranql = TranQL (options={
@@ -1191,7 +1194,7 @@ def test_ast_plan_statements (requests_mock):
     select = ast.statements[0]
     statements = select.plan (select.planner.plan (select.query))
 
-    assert len(statements) == 2
+    assert len(statements) == 3 # roger has been added
 
     for statement in statements:
         assert_lists_equal(
@@ -1392,11 +1395,12 @@ def test_setting_values_for_repeated_concepts():
         assert e['source_id'] == 'g1'
         assert e['target_id'] == 'g2'
 
-def test_schema_can_talk_to_automat():
+def test_schema_can_talk_to_automat(requests_mock):
+    set_mock(requests_mock, 'automat')
     config_file = os.path.join(os.path.dirname(__file__),"..","conf","schema.yaml")
     with open(config_file) as stream:
         schema_yml = yaml.load(stream, Loader=yaml.Loader)
-    automat_url = schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
+    automat_url = 'http://localhost:8099' + schema_yml['schema']['automat']['registry_url'].rstrip('/') # servers as a check too if we even load it
     live_kps = requests.get(f'{automat_url}/registry').json()
     exclusion = schema_yml['schema']['automat']['exclude']
     live_kps = [x for x in live_kps if x not in exclusion]
@@ -1441,7 +1445,7 @@ def test_registry_enabled():
             'automat': {
                 'doc': 'docter docter, help me read this',
                 'registry': 'automat',
-                'registry_url': 'https://automat.renci.org',
+                'registry_url': '/graph/automat/',
                 'url': '/graph/automat'
 
             }
@@ -1462,7 +1466,7 @@ def test_registry_adapter_automat():
     with requests_mock.mock() as mock_server:
         mock_server.get('http://automat/registry', json=['kp1'])
         expected_response = ['lets pretend this was a schema']
-        mock_server.get('http://automat/kp1/graph/schema', json=expected_response)
+        mock_server.get('http://automat/kp1/predicates', json=expected_response)
         ra = RegistryAdapter()
         response = ra.get_schemas('automat', 'http://automat')
         assert 'automat_kp1' in response
@@ -1487,7 +1491,7 @@ def test_schema_should_not_change_once_initilalized():
             'automat': {
                 'doc': 'docter docter, help me read this',
                 'registry': 'automat',
-                'registry_url': 'https://automat.renci.org',
+                'registry_url': '/graph/automat',
                 'url': '/graph/automat'
 
             }
@@ -1513,8 +1517,9 @@ def test_schema_should_not_change_once_initilalized():
 
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
         update_interval = 1
+        backplane = 'http://localhost:8099'
         schema_factory = SchemaFactory(
-            backplane='http://localhost:8091',
+            backplane=backplane,
             use_registry=True,
             update_interval=update_interval,
             create_new=True
@@ -1523,9 +1528,9 @@ def test_schema_should_not_change_once_initilalized():
             # setup mock kps
             kps = ['kp1', 'kp2']
             for kp in kps:
-                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+                m.get(f'{backplane}/graph/automat/{kp}/predicates', json=mock_schema_response[kp])
             # say registry returns kp1 on first call
-            m.get('https://automat.renci.org/registry', json=['kp1'])
+            m.get(f'{backplane}/graph/automat/registry', json=['kp1'])
             # here some Tranql objects have this instance.
             schema1 = schema_factory.get_instance()
             schema2 = schema_factory.get_instance()
@@ -1537,9 +1542,9 @@ def test_schema_should_not_change_once_initilalized():
             # setup mock kps
             kps = ['kp1', 'kp2']
             for kp in kps:
-                m.get(f'https://automat.renci.org/{kp}/graph/schema', json=mock_schema_response[kp])
+                m.get(f'{backplane}/graph/automat/{kp}/predicates', json=mock_schema_response[kp])
             # Now we change what registry returns and wait for update
-            m.get('https://automat.renci.org/registry', json=['kp2'])
+            m.get(f'{backplane}/graph/automat/registry', json=['kp2'])
             # lets wait for next updated and request a new object
             # testing to see if our new request results will affect the
             # the original schema
