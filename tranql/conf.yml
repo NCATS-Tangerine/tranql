@@ -4,3 +4,11 @@ ASYNCHRONOUS_REQUESTS: true
 NAME_BASED_MERGING: true
 RESOLVE_NAMES: false
 DYNAMIC_ID_RESOLUTION: false
+AUTOMAT_URL: https://automat-dev.edc.renci.org
+ROGER_URL: https://roger-plater.edc.renci.org
+ICEES_URL: https://icees.renci.org/2.0.0
+ICEES3_AND_EPR_URL: https://icees.renci.org:16339
+GAMMA_URL: https://robokop.renci.org
+GNBR_URL: https://gnbr-reason.ncats.io/decorator
+INDIGO_URL: https://indigo.ncats.io
+RTX_URL: https://rtx.ncats.io
