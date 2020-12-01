@@ -1439,7 +1439,8 @@ def test_registry_disable():
         schema = schema_factory.get_instance()
         assert len(schema.schema) == 0
 
-def test_registry_enabled():
+def test_registry_enabled(requests_mock):
+    set_mock(requests_mock, 'automat')
     mock_schema_yaml = {
         'schema': {
             'automat': {
@@ -1518,12 +1519,7 @@ def test_schema_should_not_change_once_initilalized():
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
         update_interval = 1
         backplane = 'http://localhost:8099'
-        schema_factory = SchemaFactory(
-            backplane=backplane,
-            use_registry=True,
-            update_interval=update_interval,
-            create_new=True
-        )
+
         with requests_mock.mock() as m:
             # setup mock kps
             kps = ['kp1', 'kp2']
@@ -1532,6 +1528,12 @@ def test_schema_should_not_change_once_initilalized():
             # say registry returns kp1 on first call
             m.get(f'{backplane}/graph/automat/registry', json=['kp1'])
             # here some Tranql objects have this instance.
+            schema_factory = SchemaFactory(
+                backplane=backplane,
+                use_registry=True,
+                update_interval=update_interval,
+                create_new=True
+            )
             schema1 = schema_factory.get_instance()
             schema2 = schema_factory.get_instance()
             # Doing something on second  schema instance should not affect the first.
