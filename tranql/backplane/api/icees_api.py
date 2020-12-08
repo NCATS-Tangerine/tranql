@@ -3,6 +3,7 @@ import json
 from flask import request, Response
 from tranql.backplane.api.standard_api import StandardAPIResource
 from tranql.config import config
+import string
 import logging
 
 logger = logging.getLogger(__name__)
@@ -219,6 +220,7 @@ class ICEESClusterQuery(StandardAPIResource):
     def get_supported_type(self):
         # list of entities that are too high level
         exclusion_list = ['named_thing', 'organismal_entity', 'organism_taxon', 'biological_entity', 'genomic_entity']
+        exclusion_list = [self.curify_type(x) for x in exclusion_list]
         if not self.synonymization_supported_types:
             base_url = 'https://nodenormalization-sri.renci.org'
             supported_semantic_types = list(filter(lambda x: x not in exclusion_list, requests.get(
@@ -232,6 +234,16 @@ class ICEESClusterQuery(StandardAPIResource):
             self.synonymization_supported_types = set(supported_semantic_types + supported_descendants)
         return self.synonymization_supported_types
 
+    def curify_type(self, concept_type_str):
+        """
+        Converts to biolink:TypeOfConcept from type_of_concept
+        :param concept_type_str
+        :return: pascal case of type with prefix biolink:
+        """
+        if concept_type_str.startswith('biolink:'):
+            return concept_type_str
+        return 'biolink:' + string.capwords(concept_type_str.replace('_', ' '), ' ').replace(' ', '')
+
     def synonymize(self, response):
         knowledge_map_key = 'knowledge_map'
         knowledge_graph_key = 'knowledge_graph'
@@ -241,8 +253,8 @@ class ICEESClusterQuery(StandardAPIResource):
         query_graph = response[query_graph_key]
         base_url = 'https://nodenormalization-sri.renci.org'
         supported_semantic_types = self.get_supported_type()
-        supported_q_ids = [x['id'] for x in query_graph['nodes'] if x['type'] in supported_semantic_types]
-        node_ids = set([x['id'] for x in knowledge_graph['nodes'] if x['type'] in supported_semantic_types])
+        supported_q_ids = [x['id'] for x in query_graph['nodes'] if self.curify_type(x['type']) in supported_semantic_types]
+        node_ids = set([x['id'] for x in knowledge_graph['nodes'] if self.curify_type(x['type']) in supported_semantic_types])
         chunk_size = 2000
         curie_params = [f'curie={x}' for x in node_ids]
         chunked_curie_params = [curie_params[start: start + chunk_size] for start in
@@ -259,7 +271,7 @@ class ICEESClusterQuery(StandardAPIResource):
 
         # replace supported types only careful not to replace other types like population_of_individual_organisms
         # also keep track of things in supported type but failed to be synonymized (going to remove traces of these)
-        keep_nodes = [node['id'] for node in knowledge_graph['nodes'] if node['type'] not in supported_semantic_types or
+        keep_nodes = [node['id'] for node in knowledge_graph['nodes'] if self.curify_type(node['type']) not in supported_semantic_types or
                       response.get(node['id'])]
 
         filtered_nodes = list(filter(lambda node: node['id'] in keep_nodes, knowledge_graph['nodes']))
@@ -271,7 +283,7 @@ class ICEESClusterQuery(StandardAPIResource):
         # now we will assign names and main ids for all the ones we know mapped
         for node in filtered_nodes:
             # make sure we are not bumping into unsupported node types
-            if node['id'] in keep_nodes and node['type'] in supported_semantic_types:
+            if node['id'] in keep_nodes and self.curify_type(node['type']) in supported_semantic_types:
                 node_data = response[node['id']]
                 norm_id = node_data['id']['identifier']
                 # default back to node name
