@@ -1,6 +1,5 @@
 import os
 import yaml
-import traceback
 import re
 from tranql.util import Resource
 
@@ -42,15 +41,15 @@ class Config(dict):
         '''
         key_var = re.sub('[\W]', '', key)
         name = self.prefix+'_'+key_var if self.prefix else key_var
-        #print(f"Config looking for {name}")
         try:
             env_name = name.upper()
-            #print ("IN ENVI")
             return os.environ[env_name]
         except KeyError:
             value = self.conf[key]
-            #print(f'GOT {value}')
             if isinstance(value, dict):
                 return Config(value, prefix=name)
             else:
                 return value
+
+config_file_name = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'conf.yml')
+config = Config(config_file_name)

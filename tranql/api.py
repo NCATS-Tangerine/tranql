@@ -450,9 +450,6 @@ class TranQLQuery(StandardAPIResource):
             traceback.print_exc()
             errors = [e, *tranql.context.mem.get ('requestErrors', [])]
             result = self.handle_exception (errors)
-        with open ('query.out', 'w') as stream:
-            json.dump (result, stream, indent=2)
-
         return self.response(result)
 
 class AnnotateGraph(StandardAPIResource):
@@ -538,7 +535,7 @@ class SchemaGraph(StandardAPIResource):
                         schema:
                           $ref: '#/definitions/Error'
         """
-        tranql = TranQL ()
+        tranql = TranQL (options={"registry": app.config.get('registry', False)})
         schema = tranql.schema
         schemaGraph = GraphTranslator(schema.schema_graph)
 

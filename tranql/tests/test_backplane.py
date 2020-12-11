@@ -174,8 +174,8 @@ def test_icees_synonymzation():
     get_semantic_types_response = {
       "semantic_types": {
         "types": [
-            "supported_type_1",
-            "supported_type_2"
+            "biolink:SupportedType1",
+            "biolink:SupportedType2"
         ]
       }
     }
@@ -228,15 +228,15 @@ def test_icees_synonymzation():
         )
 
         mock_server.get(
-            f'https://bl-lookup-sri.renci.org/bl/supported_type_1/descendants?version=latest',
+            f'https://bl-lookup-sri.renci.org/bl/biolink:SupportedType1/descendants?version=latest',
             json = [
-                'supported_type_1_subtype_1'
+                'biolink:SupportedType1Subtype1'
             ]
         )
         mock_server.get(
-            f'https://bl-lookup-sri.renci.org/bl/supported_type_2/descendants?version=latest',
+            f'https://bl-lookup-sri.renci.org/bl/biolink:SupportedType2/descendants?version=latest',
             json=[
-                'supported_type_2'
+                'biolink:SupportedType2'
             ]
         )
 

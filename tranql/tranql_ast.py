@@ -397,8 +397,13 @@ class SelectStatement(Statement):
                     is_connected = False
                     for processed_plan in sorted_plan:
                         # find any statement already added that ensures connectivity
-                        is_connected = p[2][-1][2].name == processed_plan[2][0][0].name or \
-                                       p[2][0][0].name == processed_plan[2][-1][2].name
+                        all_node_names = []
+                        for x in processed_plan[2]:
+                            for item in x:
+                                if isinstance(item, Concept):
+                                    all_node_names.append(item.name)
+                        is_connected = p[2][-1][2].name in all_node_names or \
+                                       p[2][0][0].name in all_node_names
                         if is_connected:
                             break
                     if is_connected:
@@ -699,7 +704,7 @@ class SelectStatement(Statement):
 
             logger.info (f"Making requests to {service} took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
             total_results = reduce(lambda x, y: x + len(y.get('knowledge_map',[])), responses, 0)
-            logger.info(f"Got {total_results} results from {service}.")
+            logger.info(f"Got {total_results} results from {service}. for {self.query.order} ")
             for response in responses:
                 response['question_order'] = self.query.order
 
@@ -837,6 +842,13 @@ class SelectStatement(Statement):
                     """
                     Give the node its own identifier inside its equivalent identifiers if it doesn't already have it.
                     """
+                    # Convert these to arrays.
+                    if isinstance(node['equivalent_identifiers'], str):
+                        if node['equivalent_identifiers'] == 'None':
+                            node['equivalent_identifiers'] = []
+                        else:
+                            node['equivalent_identifiers'] = [node['equivalent_identifiers']]
+
                     if node['id'] not in node['equivalent_identifiers']:
                         node['equivalent_identifiers'].append(node['id'])
 
@@ -1013,154 +1025,8 @@ class SelectStatement(Statement):
         # an answer with `population_of_individual_organisms : "COHORT:X" -> disease : "MONDO:Y"``
         # must be connected to another answer with `disease : "MONDO:Y" -> gene : "HGNC:Z"` in order to form a complete answer.
         # We need the entire path of a query in each answer.
-        return connect_knowledge_maps(responses,root_order)
-        # result_km = []
-        #
-        # if len(responses) == 1:
-        #     result_km = responses[0]['knowledge_map']
-        #
-        # elif root_order == None:
-        #     for response in responses:
-        #         result_km.extend(response['knowledge_map'])
-        # else:
-        #     ordered_responses = {}
-        #     for first_response in responses:
-        #         if root_order[0] == first_response['question_order'][0]:
-        #             if root_order[0] in ordered_responses:
-        #                 ordered_responses[root_order[0]].append (first_response)
-        #             else:
-        #                 ordered_responses[root_order[0]] = [first_response]
-        #
-        #     while sum(len(resp) for resp in ordered_responses.values()) < len(responses):
-        #         response = list(ordered_responses.values())[-1][0]
-        #         next_response_start = response['question_order'][-1]
-        #         # print(next_response_start)
-        #         for next_response in responses:
-        #             if next_response['question_order'][0] == next_response_start:
-        #                 if next_response_start in ordered_responses:
-        #                     ordered_responses[next_response_start].append (next_response)
-        #                 else:
-        #                     ordered_responses[next_response_start] = [next_response]
-        #
-        #     # print (json.dumps(
-        #     #     ordered_responses,
-        #     #     indent=2
-        #     # ))
-        #     for enum, current_responses in enumerate(list(ordered_responses.values())):
-        #         new_answers = []
-        #         if enum + 1 < len(ordered_responses):
-        #             next_responses = list(ordered_responses.values())[enum+1]
-        #         else:
-        #             next_responses = []
-        #         # First responses, must be head answers that will be used to build off of.
-        #         if enum == 0:
-        #             for current_response in current_responses:
-        #                 for answer in current_response['knowledge_map']:
-        #                     new_answers.append (answer)
-        #         root_answers = copy.deepcopy(new_answers)
-        #         for current_response in current_responses:
-        #             for next_response in next_responses:
-        #
-        #                 current_response_end = current_response['question_order'][-1]
-        #                 next_response_start = next_response['question_order'][0]
-        #
-        #                 # print([
-        #                 #     current_response_end,
-        #                 #     next_response_start,
-        #                 #     result_km,
-        #                 #     next_response['knowledge_map']
-        #                 # ])
-        #
-        #                 for current_answer in root_answers:
-        #                     for next_answer in next_response['knowledge_map']:
-        #                         current_node_bindings = current_answer['node_bindings']
-        #                         current_edge_bindings = current_answer['edge_bindings']
-        #
-        #                         next_node_bindings = next_answer['node_bindings']
-        #                         next_edge_bindings = next_answer['edge_bindings']
-        #
-        #
-        #                         current_last_concept_id = current_node_bindings[current_response_end]
-        #                         next_first_concept_id = next_node_bindings[next_response_start]
-        #                         # convert if to list if provided as string
-        #                         next_first_concept_id = [next_first_concept_id] if isinstance(next_first_concept_id, str) \
-        #                                                 else next_first_concept_id
-        #                         if current_last_concept_id == next_first_concept_id:
-        #                             merged_answer = copy.deepcopy(current_answer)
-        #                             merged_answer['node_bindings'].update (next_node_bindings)
-        #                             merged_answer['edge_bindings'].update (next_edge_bindings)
-        #
-        #                             new_answers.append(merged_answer)
-        #
-        #         result_km = []
-        #         dump_map = {}
-        #         # Filter duplicates and set new result_km
-        #         for answer in new_answers:
-        #             dumped = json.dumps(answer)
-        #             if dumped not in dump_map:
-        #                 dump_map[dumped] = answer
-        #                 result_km.append(answer)
-        #
-        #
-        #     # for prev_response in responses:
-        #     #     detached = root_order[0] != prev_response['question_order'][0]
-        #     #     if not detached:
-        #     #         # logger.critical([prev_response['question_order'], 'detached'])
-        #     #         result_km.extend(prev_response['knowledge_map'])
-        #     #     for response in responses:
-        #     #         if prev_response == response: continue
-        #     #
-        #     #         prev_response_end = prev_response['question_order'][-1]
-        #     #         current_response_start = response['question_order'][0]
-        #     #
-        #     #         # logger.critical([prev_response_end,current_response_start])
-        #     #
-        #     #         if prev_response_end == current_response_start:
-        #     #             prev_knowledge_map = prev_response['knowledge_map']
-        #     #             current_knowledge_map = response['knowledge_map']
-        #     #             for prev_answer in prev_knowledge_map:
-        #     #                 for current_answer in current_knowledge_map:
-        #     #                     prev_node_bindings = prev_answer['node_bindings']
-        #     #                     prev_edge_bindings = prev_answer['edge_bindings']
-        #     #                     current_node_bindings = current_answer['node_bindings']
-        #     #                     current_edge_bindings = current_answer['edge_bindings']
-        #     #
-        #     #                     prev_last_concept_id = prev_node_bindings[prev_response_end]
-        #     #                     current_first_concept_id = current_node_bindings[current_response_start]
-        #     #
-        #     #                     if prev_last_concept_id == current_first_concept_id:
-        #     #                         # Merge these two answers and then add the result to the resulting knowledge map
-        #     #                         merged_answer = copy.deepcopy(prev_answer)
-        #     #                         # Merge node_bindings of current answer into the copied previous answer
-        #     #                         merged_answer['node_bindings'].update (current_node_bindings)
-        #     #                         # Same for edge_bindings
-        #     #                         merged_answer['edge_bindings'].update (current_edge_bindings)
-        #     #
-        #     #                         result_km.append(merged_answer)
-        #
-        #
-        #         # result_km.append(answer)
-        #
-        #         # logger.critical([question_graph, response['question_order']])
-        #
-        # # Filter any answers whose node_bindings aren't the complete path
-        # # if root_order != None:
-        # #     filtered_result_km = []
-        # #     for answer in result_km:
-        # #         delete = False
-        # #         node_bindings = answer["node_bindings"]
-        # #         for qg_node in root_order:
-        # #             if qg_node not in node_bindings:
-        # #                 delete = True
-        # #                 break
-        # #         if not delete:
-        # #             filtered_result_km.append (answer)
-        # #     result_km = filtered_result_km
+        return connect_knowledge_maps(responses, root_order)
 
-
-
-        # logger.critical(result_km)
-        return result_km
 
 class TranQL_AST:
     """Represent the abstract syntax tree representing the logical structure of a parsed program."""
@@ -1436,15 +1302,16 @@ class QueryPlanStrategy:
         if not converted:
             source_target_predicates = self.explain_predicates (source_type, target_type)
             target_source_predicates = self.explain_predicates (target_type, source_type)
-            raise InvalidTransitionException (
-                source,
-                target,
-                predicate,
-                explanation=''.join ([
-                    "Valid transitions in the federated schema between the given types are: \n",
-                    f"{source_type}->{target_type}: {json.dumps(source_target_predicates, indent=2)}\n",
-                    f"{target_type}->{source_type}: {json.dumps(target_source_predicates, indent=2)} "
-                ]))
+
+            # raise InvalidTransitionException(
+            #     source,
+            #     target,
+            #     predicate,
+            #     explanation=''.join ([
+            #         "Valid transitions in the federated schema between the given types are: \n",
+            #         f"{source_type}->{target_type}: {json.dumps(source_target_predicates, indent=2)}\n",
+            #         f"{target_type}->{source_type}: {json.dumps(target_source_predicates, indent=2)} "
+            #     ]))
 
     def explain_predicates (self, source_type, target_type):
         list_of_lists = [

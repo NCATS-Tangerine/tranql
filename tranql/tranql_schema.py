@@ -131,7 +131,7 @@ class RegistryAdapter:
             main_schema = {}
             filtered_registry = filter(lambda x: x not in exclusion_list, registry)
             for path in filtered_registry:
-                graph_schema_path = f'{self.base_url}/{path}/graph/schema'
+                graph_schema_path = f'{self.base_url}/{path}/predicates'
                 graph_schema = requests.get(graph_schema_path).json()
                 # since we have a backplane proxy that is able to query
                 # automat kps in /graph/automat/<path> we will use that pattern as url
@@ -206,8 +206,9 @@ class Schema:
                     registry_name = metadata['registry']
                     registry_url = metadata['registry_url']
                     exclusion_list = metadata.get('exclude', [])
-                    new_schemas = self.registry_adapter.get_schemas(registry_name, registry_url, exclusion_list)
-                    ## Extend config['schema'] with these new onces
+                    new_schemas = self.registry_adapter.get_schemas(registry_name,
+                                                                    backplane + registry_url,
+                                                                    exclusion_list)
                     self.config['schema'].update(new_schemas)
                     # remove registry entry
                 del self.config['schema'][schema_name]
@@ -241,8 +242,7 @@ class Schema:
         self.schema = self.config['schema']
 
         """ Build a graph of the schema. """
-        #self.schema_graph = RedisGraph ()
-        self.schema_graph = NetworkxGraph ()
+        self.schema_graph = NetworkxGraph()
         try:
             self.schema_graph.delete ()
         except:

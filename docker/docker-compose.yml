@@ -1,12 +1,12 @@
 version: "3"
 services:
   backplane:
-    image: renciorg/tranql-base
+    image: renciorg/tranql-base:0.32
     entrypoint: /usr/local/bin/gunicorn --workers=2 --bind=0.0.0.0:$BACKPLANE_PORT --name=backplane --timeout=600 tranql.backplane.server:app
     ports:
       - "${BACKPLANE_PORT}:${BACKPLANE_PORT}"
   tranql:
-    image: renciorg/tranql-app
+    image: renciorg/tranql-app:0.32
     environment:
       - BACKPLANE=http://varnish_backplane:8080
 #      - BACKPLANE=http://backplane:8099  # Uncomment this line to avoid using cache.
@@ -16,18 +16,18 @@ services:
     ports:
       - "${APP_PORT}:${APP_PORT}"
   varnish_frontend:
-#    image: renciorg/tranql-varnish
-    build:
-      context: tranql-varnish
+    image: tranql-varinish-local
+#    build:
+#      context: tranql-varnish
     container_name: tranql_frontend_cache
     volumes:
       - ../varnish-cache/frontend.config.vcl:/etc/varnish/default.vcl
     ports:
       - "8080:8080"
   varnish_backplane:
-    #image: #renciorg/tranql-varnish
-    build:
-      context: tranql-varnish
+    image: tranql-varinish-local #renciorg/tranql-varnish
+#    build:
+#      context: tranql-varnish
     container_name: tranql_backplane_cache
     volumes:
       - ../varnish-cache/backplane.config.vcl:/etc/varnish/default.vcl

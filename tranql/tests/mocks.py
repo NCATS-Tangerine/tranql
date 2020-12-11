@@ -25,18 +25,21 @@ class MockMap(MockHelper):
                     "path" : "robokop_schema.json",
                     "method" : "get"
                 },
-                "http://robokop.renci.org:6010/api/predicates" : {
+                "http://localhost:8099/graph/gamma/predicates" : {
                     "path" : "predicates.json",
                     "method" : "get"
                 },
-                "https://rtx.ncats.io/beta/api/rtx/v1/predicates" : {
+                "http://localhost:8099/graph/rtx/predicates" : {
                     "path": "rtx_predicates.json",
                     "method" : "get"
                 },
                 "http://localhost:8099/clincial/icees/schema" : {
                     "path" : "icees_predicates.json",
                     "method" : "get"
-                },
+                },"http://localhost:8099/graph/roger/predicates" : {
+                    "path": "rtx_predicates.json",
+                    "method" : "get"
+                }
             },
             "workflow-5" : {
                 "http://localhost:8099/clinical/cohort/disease_to_chemical_exposure" : {
@@ -61,6 +64,20 @@ class MockMap(MockHelper):
                     "path" : "bionames_ibuprofen_chemical_substance.json",
                     "method" : "get"
                 },
+            },
+            "automat" : {
+                "http://localhost:8099/graph/automat/registry": {
+                    "path": "automat-registry.json",
+                    "method": "get"
+                },
+                "http://localhost:8099/graph/automat/viral-proteome/predicates": {
+                    "path": "automat-viral-proteome-schema.json",
+                    "method": "get"
+                },
+                "http://localhost:8099/graph/automat/intact/predicates": {
+                    "path": "automat-intact-schema.json",
+                    "method": "get"
+                }
             }
         }
         self.load(test_name)
