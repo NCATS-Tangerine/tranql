@@ -13,7 +13,7 @@ schema:
     doc: |
       The Robokop reasoner provides an endpoint returning the transitions it supports.
     url: /graph/gamma/quick
-    schema: http://robokop.renci.org:6010/api/predicates
+    schema: /graph/gamma/predicates
   icees :
     doc: |
       We point at the ICEES clinical reasoners schema endpoint, mapping questions it is
@@ -38,8 +38,7 @@ schema:
       When constracting our schema, we could ask for what is available on automat and add each KP's
       graph schema to our schema.
     registry: automat
-    registry_url: https://automat.renci.org
-    url: /graph/automat
+    registry_url: /graph/automat/
     exclude:
       - "cord19_scibite_v2"
       - "cord19_scigraph_v2"
@@ -47,7 +46,7 @@ schema:
     doc: |
       The Rtx reasoner provides an endpoint returning the transitions it supports.
     url: /graph/rtx
-    schema: https://rtx.ncats.io/beta/api/rtx/v1/predicates
+    schema: /graph/rtx/predicates
   implicit_conversion:
     doc: |
       Implicit conversions bridge segments of a query. If one reasoner can return a drug exposure
@@ -58,3 +57,8 @@ schema:
       drug_exposure:
         chemical_substance:
           - is_a
+  roger :
+    doc: |
+      Roger is a knowledge graph built by aggregeting several kgx formatted knowledge graphs from several sources.
+    url: /graph/roger
+    schema: /graph/roger/predicates
