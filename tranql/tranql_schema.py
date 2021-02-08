@@ -201,6 +201,8 @@ class Schema:
 
         """ Resolve remote schemas. """
         for schema_name, metadata in self.config['schema'].copy ().items ():
+            if metadata.get('redis', False) :
+                continue
             if 'registry' in metadata:
                 if use_registry:
                     registry_name = metadata['registry']
@@ -249,7 +251,8 @@ class Schema:
             pass
 
         for k, v in self.config['schema'].items ():
-            #print (f"layer: {k}")
+            if 'redis' in v:
+                continue
             self.add_layer (layer=v['schema'], name=k)
 
         self.schema_graph.commit ()
@@ -384,11 +387,12 @@ class Schema:
         Validate the question in a message object.
         :param message: Validate the edges in the question.
         """
-        question = message['question_graph']
-        nodes = { n['id'] : n for n in question['nodes'] }
+        question = message['query_graph']
+        nodes = question['nodes']
         for edge in question['edges']:
-            source = nodes[edge['source_id']]['type']
-            target = nodes[edge['target_id']]['type']
+            edge = question['edges'][edge]
+            source = nodes[edge['subject']]['category']
+            target = nodes[edge['object']]['category']
             self.validate_edge (source, target)
             # print (f"  -- valid transition: {source}->{target}")
 

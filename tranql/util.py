@@ -246,54 +246,62 @@ class Context:
         )
         ipd = importlib.import_module('IPython.core.display')
         ipd.display(ipd.HTML(result))
-        #return result
+
 
 class Concept:
-    def __init__(self, name, type_name, include_patterns = [], exclude_patterns = []):
+    def __init__(self, name:str, type_name:str, include_patterns = [], exclude_patterns = []):
+        """
+        :param name: Variable name in query (Eg a:gene where  a is name)
+        :param type_name: Concept type name in a query (Eg a:gene where gene is type name
+        :param include_patterns: Any patterns to exclusively include. (Filter concepts by id/curie)
+        :param exclude_patterns: Any patterns to exclusively execlude. (Filter concepts by id/curie)
+        """
         self.name = name
         self.type_name = type_name
-        self.nodes = []
+        self.curies = []
         self.include_patterns = include_patterns
         self.exclude_patterns = exclude_patterns
+
     def __repr__(self):
-        return f"{self.name}:{self.nodes}"
-    def set_exclude_patterns (self, patterns):
+        return f"{self.name}:{self.curies}"
+
+    def set_exclude_patterns(self, patterns: str):
         self.exclude_patterns = patterns
-    def filter_nodes (self, nodes):
+
+    def filter_curies(self, curies):
         final_list = []
-        for n in nodes:
+        for n in curies:
             exclude = False
+            assert isinstance(n, str), "error some one is sending non string stuff"
+            identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
             for pat in self.exclude_patterns:
-                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
-                matches = re.search (pat, identifier, re.IGNORECASE)
+                matches = re.search(pat, identifier, re.IGNORECASE)
                 if matches is not None:
                     exclude = True
                     break
             include = not len(self.include_patterns) > 0
             for pat in self.include_patterns:
-                identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
-                matches = re.search (pat, identifier, re.IGNORECASE)
+                matches = re.search(pat, identifier, re.IGNORECASE)
                 if matches is not None:
                     include = True
                     break
             if include and not exclude:
-                final_list.append (n)
+                final_list.append(n)
         return final_list
-    def set_nodes (self, nodes):
-        keep_nodes = {}
-        reduced_nodes = []
-        for node in nodes:
-            if isinstance(node, list):
-                reduced_nodes += node
+
+    def set_curies(self, curies:list):
+        reduced_curie_list = []
+        curies = curies if isinstance(curies, list) else [curies]
+        for curie in curies:
+            if isinstance(curie, list):
+                reduced_curie_list += curie
             else:
-                reduced_nodes.append(node)
-        for n in reduced_nodes:
-            identifier = n if isinstance(n, str) else (n['curie'] if 'curie' in n else n['id'])
-            keep_nodes[identifier] = n
-        self.nodes = self.filter_nodes (list(keep_nodes.values()))
+                reduced_curie_list.append(curie)
+        self.curies = self.filter_curies (list(reduced_curie_list))
+
     def apply_filters (self):
-        nodes = self.filter_nodes (self.nodes)
-        self.nodes = nodes
+        curies = self.filter_nodes(self.curies)
+        self.curies = curies
 
 class Text:
     """ Utilities for processing text. """

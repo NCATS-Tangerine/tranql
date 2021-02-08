@@ -21,39 +21,35 @@ class MockMap(MockHelper):
         """ A map of urls to file names of responses. """
         self.mock_map = {
             "predicates": {
-                "http://robokop.renci.org/api/operations" : {
-                    "path" : "robokop_schema.json",
-                    "method" : "get"
-                },
                 "http://localhost:8099/graph/gamma/predicates" : {
-                    "path" : "predicates.json",
+                    "path" : "predicates-1.0.json",
                     "method" : "get"
                 },
                 "http://localhost:8099/graph/rtx/predicates" : {
-                    "path": "rtx_predicates.json",
+                    "path": "rtx_predicates-1.0.json",
                     "method" : "get"
                 },
                 "http://localhost:8099/clincial/icees/schema" : {
-                    "path" : "icees_predicates.json",
+                    "path" : "icees_predicates-1.0.json",
                     "method" : "get"
                 },"http://localhost:8099/graph/roger/predicates" : {
-                    "path": "rtx_predicates.json",
+                    "path": "rtx_predicates-1.0.json",
                     "method" : "get"
                 }
             },
             "workflow-5" : {
                 "http://localhost:8099/clinical/cohort/disease_to_chemical_exposure" : {
-                    "path" : "disease_to_chemical_exposure.json"
+                    "path" : "disease_to_chemical_exposure-trapi-1.0.json"
                 },
                 "http://localhost:8099/graph/gamma/quick" : {
-                    "path" : "gamma_quick.json"
+                    "path" : "gamma_quick-1.0.json"
                 },
                 "https://bionames.renci.org/lookup/asthma/disease/" : {
                     "path" : "bionames_asthma_disease.json"
                 },
-                "http://localhost:8099/graph/rtx" : {
-                    "path" : "rtx.json"
-                },
+                # "http://localhost:8099/graph/rtx" : {
+                #     "path" : "rtx.json"
+                # },
             },
             "resolve_name" : {
                 "http://mychem.info/v1/query?q=ibuprofen" : {
@@ -71,11 +67,11 @@ class MockMap(MockHelper):
                     "method": "get"
                 },
                 "http://localhost:8099/graph/automat/viral-proteome/predicates": {
-                    "path": "automat-viral-proteome-schema.json",
+                    "path": "automat-viral-proteome-schema-1.0.json",
                     "method": "get"
                 },
                 "http://localhost:8099/graph/automat/intact/predicates": {
-                    "path": "automat-intact-schema.json",
+                    "path": "automat-intact-schema-1.0.json",
                     "method": "get"
                 }
             }

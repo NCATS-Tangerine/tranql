@@ -15,56 +15,77 @@ def client():
 """
 def test_decorate_kg (client):
     knowledge_graph = {
-      "edges": [
-        {
-          "id": "e0",
-          "source_id": "n0",
-          "target_id": "n1",
-          "type": "targets"
-        }
-      ],
-      "nodes": [
-        {
-          "id": "n0",
-          "type": "chemical_substance"
+      "nodes": {
+        "n0": {
+          "category": [
+            "biolink:ChemicalSubstance"
+          ]
         },
-        {
-          "id": "n1",
-          "type": "gene"
+        "n1": {
+          "category": [
+            "biolink:Gene"
+          ]
         }
-      ]
+      },
+      "edges": {
+        "e0": {
+          "subject": "n0",
+          "object": "n1",
+          "predicate": "biolink:targets"
+        }
+      }
     }
+
     expected = {
-      "edges": [
-        {
-          "id": "e0",
-          "source_id": "n0",
-          "target_id": "n1",
-          "type": "targets",
-          "reasoner": [
-            "robokop"
-          ],
-          "source_database": [
-            "unknown"
-          ]
-        }
-      ],
-      "nodes": [
-        {
+      "nodes": {
+        "n0": {
           "id": "n0",
-          "type": "chemical_substance",
-          "reasoner": [
-            "robokop"
+          "category": [
+            "biolink:ChemicalSubstance"
+          ],
+          "attributes": [
+            {
+              "name": "reasoner",
+              "type": "EDAM:data_0006",
+              "value": [
+                "robokop"
+              ]
+            }
           ]
         },
-        {
+        "n1": {
           "id": "n1",
-          "type": "gene",
-          "reasoner": [
-            "robokop"
+          "category": [
+            "biolink:Gene"
+          ],
+          "attributes": [
+            {
+              "name": "reasoner",
+              "type": "EDAM:data_0006",
+              "value": [
+                "robokop"
+              ]
+            }
           ]
         }
-      ]
+      },
+      "edges": {
+        "e0": {
+          "id": "e0",
+          "subject": "n0",
+          "object": "n1",
+          "predicate": "biolink:targets",
+          "attributes": [
+            {
+              "name": "reasoner",
+              "type": "EDAM:data_0006",
+              "value": [
+                "robokop"
+              ]
+            }
+          ]
+        }
+      }
     }
     args = {
         'reasoners' : ['robokop']
@@ -269,7 +290,7 @@ def test_query(client, requests_mock):
            AND population_of_individual_organizms = 'x'
            AND cohort = 'all_patients'
            AND max_p_value = '0.1'
-           SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
+           SET '$.message.knowledge_graph.nodes.*.id' AS chemical_exposures
 
         SELECT chemical_substance->gene->biological_process->anatomical_entity
           FROM "/graph/gamma/quick"
@@ -286,10 +307,10 @@ def test_query(client, requests_mock):
         data=program,
         content_type='application/json'
     )
-    assert 'message' not in response.json
+    assert 'message'  in response.json
     assert 'errors' not in response.json
-    assert response.json['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
-    assert response.json['knowledge_map'][0]['node_bindings']['chemical_substance'] == ["CHEBI:28177"]
+    assert "CHEBI:28177" in response.json['message']['knowledge_graph']['nodes']
+    assert response.json['message']['results'][0]['node_bindings']['chemical_substance'][0] == {"id": "CHEBI:28177"}
 
     response = client.post(
         '/tranql/query',
