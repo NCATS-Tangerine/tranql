@@ -387,12 +387,16 @@ def test_ast_generate_questions (requests_mock):
            AND max_p_value = '0.5'
            SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
     """)
-    questions = ast.statements[0].generate_questions (app)
-    assert questions[0]['question_graph']['nodes'][0]['curie'] == 'MONDO:0004979'
-    assert questions[0]['question_graph']['nodes'][0]['type'] == 'disease'
+    question = ast.statements[0].generate_questions (app)['message']
+    assert question['query_graph']['nodes']['cohort_diagnosis']['id'] == ['MONDO:0004979']
+    assert question['query_graph']['nodes']['cohort_diagnosis']['category'] == 'biolink:Disease'
+    assert question['query_graph']['nodes']['diagnoses']['category'] == 'biolink:Disease'
+
+
 def test_ast_generate_questions_from_list():
     tranql = TranQL()
-    curie_list = ['chebi:123', 'water']
+    tranql.dynamic_id_resolution = True
+    curie_list = ['chebi:123', 'CHEBI:234']
     ast = tranql.parse(
         f"""
             SET c = {curie_list}
@@ -403,21 +407,15 @@ def test_ast_generate_questions_from_list():
     )
     # first let's run the set statement
     ast.statements[0].execute(tranql)
-    questions = ast.statements[1].generate_questions(tranql)
-    question_nodes = reduce(lambda x, y: x + y,
-                            list(
-                                map(lambda question: question['question_graph']['nodes'],
-                                questions)), [])
-    question_curies = list(map(lambda x: x['curie'], filter(lambda node: node['type'] == 'chemical_substance', question_nodes)))
-    assert len(set(question_curies)) == 2
-    assert len(questions) == 2
-    for curie in question_curies:
-        assert curie in curie_list
-
+    questions = ast.statements[1].generate_questions(tranql)['message']
+    chemical_node =  questions['query_graph']['nodes']['chemical_substance']
+    assert chemical_node['id'] == curie_list
+    assert chemical_node['category'] == 'biolink:ChemicalSubstance'
+    assert questions['query_graph']['nodes']['gene']['category'] == 'biolink:Gene'
 
     # Multiple variable setting
     chemicals = curie_list
-    gene_list = ['BRAC1', 'BRAC2']
+    gene_list = ['GENE:1', 'GENE:2']
     ast_2 = tranql.parse(
         f"""
         SET chemicals= {chemicals}
@@ -439,28 +437,14 @@ def test_ast_generate_questions_from_list():
 
     # generate question
 
-    questions = select_statement.generate_questions(tranql)
+    questions = select_statement.generate_questions(tranql)['message']
     # get all chemical and genes
 
-
-    grab_ids = lambda node_type, questions: list(
-        # using SET to select unique ids only and casting back to list
-        # grabs ids from questions based on node type
-        set(reduce(
-            lambda acc, question_graph: acc + list(map(
-                lambda node: node['curie'],
-                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
-            )),
-            map(
-                lambda question: question['question_graph'],
-                questions
-            ),
-            []
-        ))
-    )
-    chemicals_ids = grab_ids('chemical_substance', questions)
-    gene_ids = grab_ids('gene', questions)
-    assert len(questions) == 4
+    nodes = questions['query_graph']['nodes']
+    chemical_node = nodes['chemical_substance']
+    gene_node = nodes['gene']
+    chemicals_ids = chemical_node['id']
+    gene_ids = gene_node['id']
     chemicals.sort()
     chemicals_ids.sort()
     gene_ids.sort()
@@ -506,25 +490,8 @@ def test_ast_generate_questions_list_variable():
 
     set_var_str.execute (tranql)
     set_var_list.execute (tranql)
-    questions = select_statement.generate_questions (tranql)
-
-    grab_ids = lambda node_type, questions: list(
-        # using SET to select unique ids only and casting back to list
-        # grabs ids from questions based on node type
-        set(reduce(
-            lambda acc, question_graph: acc + list(map(
-                lambda node: node['curie'],
-                filter(lambda node: node['type'] == node_type, question_graph['nodes'])
-            )),
-            map(
-                lambda question: question['question_graph'],
-                questions
-            ),
-            []
-        ))
-    )
-
-    chem_ids = grab_ids('chemical_substance', questions)
+    question = select_statement.generate_questions (tranql)['message']
+    chem_ids = question['query_graph']['nodes']['chemical_substance']['id']
     assert_lists_equal(sorted(chem_ids), sorted(['CHEBI:0', 'CHEBI:22', 'CHEBI:33', 'CHEBI:1']))
 
 def test_generate_questions_where_clause_list():
@@ -538,22 +505,9 @@ def test_generate_questions_where_clause_list():
     tranql = TranQL()
     ast = tranql.parse(query)
     select_statememt = ast.statements[0]
-    questions = select_statememt.generate_questions(tranql)
-
-    question_nodes = reduce(
-        lambda x, y: x + y,
-        list(
-            map(
-                lambda x: x['question_graph']['nodes'],
-                questions
-            )
-        ), [])
-    # filter out gene curies from the questions
-    gene_curies = list(map(lambda node: node['curie'], filter(lambda node: node['type'] == 'gene', question_nodes)))
+    question = select_statememt.generate_questions(tranql)['message']
+    gene_curies = question['query_graph']['nodes']['gene']['id']
     # we should have two questions
-    assert len(questions) == 2
-    gene_curies.sort()
-    curies.sort()
     assert set(gene_curies) == set(curies)
 
 def test_ast_format_constraints (requests_mock):
@@ -592,12 +546,12 @@ def test_ast_backwards_arrow (requests_mock):
     """)
     select = ast.statements[0]
     statements = select.plan (select.planner.plan (select.query))
-    backwards_questions = statements[1].generate_questions(tranql)
+    backwards_question = statements[1].generate_questions(tranql)["message"]
 
-    assert len(backwards_questions) == 1
-    assert len(backwards_questions[0]["question_graph"]["edges"]) == 1
-    assert backwards_questions[0]["question_graph"]["edges"][0]["source_id"] == "microRNA"
-    assert backwards_questions[0]["question_graph"]["edges"][0]["target_id"] == "biological_process"
+    edge_keys = list(backwards_question["query_graph"]["edges"].keys())
+    assert len(edge_keys) == 1
+    assert backwards_question["query_graph"]["edges"][edge_keys[0]]["subject"] == "microRNA"
+    assert backwards_question["query_graph"]["edges"][edge_keys[0]]["object"] == "biological_process"
 def test_ast_decorate_element (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that
@@ -647,11 +601,23 @@ def test_ast_decorate_element (requests_mock):
     select.decorate(edge,False,{
         "schema" : select.get_schema_name(tranql)
     })
+    has_reasoner_attr = False
+    for attribute in  node['attributes']:
+        if attribute['name'] == 'reasoner':
+            assert 'robokop' in attribute['value']
+            has_reasoner_attr = True
+            break
 
-    assert_lists_equal(node["reasoner"],["robokop"])
+    assert has_reasoner_attr
+    has_reasoner_attr = False
 
-    assert_lists_equal(edge["reasoner"],["robokop"])
-    assert_lists_equal(edge["source_database"],["unknown"])
+    for attribute in edge['attributes']:
+        if attribute['name'] == 'reasoner':
+            assert 'robokop' in attribute['value']
+            has_reasoner_attr = True
+            break
+    assert has_reasoner_attr
+    # assert_lists_equal(edge["source_database"],["unknown"])
 def test_ast_resolve_name (requests_mock):
     set_mock(requests_mock, "resolve_name")
     """ Validate that
@@ -680,12 +646,11 @@ def test_ast_predicate_question (requests_mock):
          WHERE chemical_substance='CHEMBL:CHEMBL521'
     """)
     select = ast.statements[0]
-    question = select.generate_questions(tranql)[0]["question_graph"]
+    question = select.generate_questions(tranql)["message"]["query_graph"]
 
     assert len(question["edges"]) == 1
-
-    assert "type" in question["edges"][0]
-    assert question["edges"][0]["type"] == "treats"
+    edge_keys = list(question['edges'].keys())
+    assert question["edges"][edge_keys[0]]["predicate"] == "biolink:treats"
 def test_ast_multiple_reasoners (requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Validate that
@@ -709,11 +674,8 @@ def test_ast_multiple_reasoners (requests_mock):
     assert_lists_equal(statements[1].query.order,['chemical_substance','disease'])
     assert statements[1].get_schema_name(tranql) == "rtx"
 
-    assert_lists_equal(statements[2].query.order,['chemical_substance','disease'])
-    assert statements[2].get_schema_name(tranql) == "roger"
-
-    assert_lists_equal(statements[3].query.order,['disease','gene'])
-    assert statements[3].get_schema_name(tranql) == "robokop"
+    assert_lists_equal(statements[2].query.order,['disease','gene'])
+    assert statements[2].get_schema_name(tranql) == "robokop"
 def test_ast_merge_knowledge_maps (requests_mock):
     set_mock(requests_mock, "workflow-5")
     tranql = TranQL (options={
@@ -1147,16 +1109,16 @@ def test_ast_plan_strategy (requests_mock):
     )
     # Both should be querying the same thing (disease->diseasee), differing only in the sub_schema that they are querying
     for sub_schema_plan in plan:
-        assert sub_schema_plan[2][0][0].type_name == "disease"
+        assert sub_schema_plan[2][0][0].type_name == "biolink:Disease"
         assert sub_schema_plan[2][0][0].name == "cohort_diagnosis"
-        assert sub_schema_plan[2][0][0].nodes == ["MONDO:0004979"]
+        assert sub_schema_plan[2][0][0].curies == ["MONDO:0004979"]
 
         assert sub_schema_plan[2][0][1].direction == "->"
         assert sub_schema_plan[2][0][1].predicate == None
 
-        assert sub_schema_plan[2][0][2].type_name == "disease"
+        assert sub_schema_plan[2][0][2].type_name == "biolink:Disease"
         assert sub_schema_plan[2][0][2].name == "diagnoses"
-        assert sub_schema_plan[2][0][2].nodes == []
+        assert sub_schema_plan[2][0][2].curies == []
 def test_ast_implicit_conversion (requests_mock):
     set_mock(requests_mock, "workflow-5")
     tranql = TranQL (options={
@@ -1194,8 +1156,7 @@ def test_ast_plan_statements (requests_mock):
     select = ast.statements[0]
     statements = select.plan (select.planner.plan (select.query))
 
-    assert len(statements) == 3 # roger has been added
-
+    assert len(statements) == 2 # roger is not accessed via schema
     for statement in statements:
         assert_lists_equal(
             list(statement.query.concepts.keys()),
@@ -1205,8 +1166,8 @@ def test_ast_plan_statements (requests_mock):
             ]
         )
 
-        assert statement.query.concepts['cohort_diagnosis'].nodes == ["MONDO:0004979"]
-        assert statement.query.concepts['diagnoses'].nodes == []
+        assert statement.query.concepts['cohort_diagnosis'].curies == ["MONDO:0004979"]
+        assert statement.query.concepts['diagnoses'].curies == []
         # TODO: figure out why there are duplicates generated??
         assert_lists_equal(statement.where, [
             ['cohort_diagnosis', '=', 'MONDO:0004979'],
@@ -1246,13 +1207,21 @@ def test_ast_bidirectional_query (requests_mock):
         statement = ast.statements
         """ This uses an unfortunate degree of knowledge about the implementation,
         both of the AST, and of theq query. Consider alternatives. """
-        questions = ast.statements[2].generate_questions (app)
-        nodes = questions[0]['question_graph']['nodes']
-        edges = questions[0]['question_graph']['edges']
-        node_index = { n['id'] : i for i, n in enumerate (nodes) }
-        assert nodes[-1]['curie'] == disease_id
-        assert nodes[0]['curie'] == chemical
-        assert node_index[edges[-1]['target_id']] == node_index[edges[-1]['source_id']] - 1
+        question = ast.statements[2].generate_questions (app)['message']
+        nodes = question['query_graph']['nodes']
+        edges = question['query_graph']['edges']
+        # chemical_substance->gene->anatomical_entity->phenotypic_feature<-disease
+        # node_index = { n['id'] : i for i, n in enumerate (nodes) }
+        assert nodes['disease']['id'] == [disease_id]
+        assert nodes['chemical_substance']['id'] == [chemical]
+        assert edges['e1_chemical_substance_gene']['subject'] == 'chemical_substance'
+        assert edges['e1_chemical_substance_gene']['object'] == 'gene'
+        assert edges['e2_gene_anatomical_entity']['subject'] == 'gene'
+        assert edges['e2_gene_anatomical_entity']['object'] == 'anatomical_entity'
+        assert edges['e3_anatomical_entity_phenotypic_feature']['subject'] == 'anatomical_entity'
+        assert edges['e3_anatomical_entity_phenotypic_feature']['object'] == 'phenotypic_feature'
+        assert edges['e4_disease_phenotypic_feature']['object'] == 'phenotypic_feature'
+        assert edges['e4_disease_phenotypic_feature']['subject'] == 'disease'
 
 #####################################################
 #
@@ -1278,7 +1247,6 @@ def test_interpreter_set (requests_mock):
 
     variables = [ "disease", "max_p_value", "cohort", "icees.population_density_cluster", "gamma.quick" ]
     output = { k : tranql.context.resolve_arg (f"${k}") for k in variables }
-    #print (f"resolved variables --> {json.dumps(output, indent=2)}")
     assert output['disease'] == "asthma"
     assert output['cohort'] == "COHORT:22"
 
@@ -1311,7 +1279,7 @@ def test_program (requests_mock):
        AND population_of_individual_organizms = 'x'
        AND cohort = 'all_patients'
        AND max_p_value = '0.1'
-       SET '$.knowledge_graph.nodes.[*].id' AS chemical_exposures
+       SET '$.message.knowledge_graph.nodes.*.id' AS chemical_exposures
 
     SELECT chemical_substance->gene->biological_process->anatomical_entity
       FROM "/graph/gamma/quick"
@@ -1319,13 +1287,10 @@ def test_program (requests_mock):
        SET knowledge_graph
     """)
 
-    #print (f"{ast}")
-    expos = tranql.context.resolve_arg("$chemical_exposures")
-    #print (f" expos =======> {json.dumps(expos)}")
 
     kg = tranql.context.resolve_arg("$knowledge_graph")
-    assert kg['knowledge_graph']['nodes'][0]['id'] == "CHEBI:28177"
-    assert kg['knowledge_map'][0]['node_bindings']['chemical_substance'] == ["CHEBI:28177"]
+    assert "CHEBI:28177"  in kg['message']['knowledge_graph']['nodes']
+    assert kg['message']['results'][0]['node_bindings']['chemical_substance'][0] == {"id": "CHEBI:28177"}
 
 
 def test_unique_ids_for_repeated_concepts():
@@ -1337,28 +1302,26 @@ def test_unique_ids_for_repeated_concepts():
         """
     )
     select_statement = ast.statements[0]
-    question = select_statement.generate_questions(tranql)[0]
+    question = select_statement.generate_questions(tranql)["message"]
     import json
     print(
         json.dumps(
             question, indent=4
         )
     )
-    assert question['question_graph']['nodes'] == [
-        {
-            'id': 'g1',
-            'type': 'gene'
+    assert question['query_graph']['nodes'] == {
+        "g1": {
+            "category": "biolink:Gene"
         },
-        {
-            'id': 'g2',
-            'type': 'gene'
+        "g2": {
+            "category": "biolink:Gene"
         }
-    ]
+    }
 
 def test_setting_values_for_repeated_concepts():
     tranql = TranQL()
-    gene_list_1 = ['BRCA1', 'BRCA2']
-    gene_list_2 = ['LTA', 'TNF']
+    gene_list_1 = ['x:BRCA1', 'y:BRCA2']
+    gene_list_2 = ['b:LTA', 'b:TNF']
     ast = tranql.parse(
         f"""
         SET brca={gene_list_1}
@@ -1376,24 +1339,17 @@ def test_setting_values_for_repeated_concepts():
     set_tnfs.execute(tranql)
 
     # generate questions
-    questions = ast.statements[2].generate_questions(tranql)
-    question_nodes = reduce(lambda x, y: x + y,
-                            map(lambda question: question['question_graph']['nodes'], questions),
-                            [])
-    question_edges = reduce(lambda x, y: x + y,
-                            map(lambda question: question['question_graph']['edges'], questions),
-                            [])
-    curies = list(map(lambda node: node['curie'], question_nodes))
-    for gene in gene_list_1:
-        assert gene in curies
-    for gene in gene_list_2:
-        assert gene in curies
+    question = ast.statements[2].generate_questions(tranql)["message"]
+    question_nodes = question['query_graph']['nodes']
+    assert set(question_nodes['g1']['id']) == set(gene_list_1)
+    assert set(question_nodes['g2']['id']) == set(gene_list_2)
+
 
     # also test if direction is good
-    for e in question_edges:
-        print(e)
-        assert e['source_id'] == 'g1'
-        assert e['target_id'] == 'g2'
+    for e in question['query_graph']['edges']:
+        edge = question['query_graph']['edges'][e]
+        assert edge['subject'] == 'g1'
+        assert edge['object'] == 'g2'
 
 def test_schema_can_talk_to_automat(requests_mock):
     set_mock(requests_mock, 'automat')

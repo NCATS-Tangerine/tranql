@@ -12,16 +12,15 @@ from tranql.concept import ConceptModel
 from tranql.concept import BiolinkModelWalker
 from tranql.util import Concept
 from tranql.util import JSONKit
-from tranql.util import deep_merge, light_merge
+from tranql.util import light_merge
 from tranql.request_util import async_make_requests
 from tranql.util import Text
 from tranql.exception import ServiceInvocationError
 from tranql.exception import UndefinedVariableError
 from tranql.exception import IllegalConceptIdentifierError
 from tranql.exception import UnknownServiceError
-from tranql.exception import InvalidTransitionException
 from tranql.utils.merge_utils import connect_knowledge_maps
-from functools import reduce
+from PLATER.services.util.graph_adapter import GraphInterface
 
 logger = logging.getLogger (__name__)
 
@@ -121,21 +120,25 @@ class Statement:
             result =  f"{backplane}{url}"
         return result
 
-    def message (self, q_nodes=[], q_edges=[], k_nodes=[], k_edges=[], options={}):
+    def message (self, q_nodes: dict=None,
+                 q_edges: dict=None,
+                 k_nodes: dict=None,
+                 k_edges: dict=None,
+                 options: dict=None):
         """ Generate the frame of a question. """
         return {
-            "question_graph": {
-                "edges": q_edges,
-                "nodes": q_nodes
+            "message": {
+                "query_graph": {
+                    "edges": q_edges or {} ,
+                    "nodes": q_nodes or {}
+                },
+                "knowledge_graph" : {
+                    "nodes" : k_nodes or {},
+                    "edges" : k_edges or {}
+                },
+                "results": []
             },
-            "knowledge_graph" : {
-                "nodes" : k_nodes,
-                "edges" : k_edges
-            },
-            "knowledge_maps" : [
-                {}
-            ],
-            "options" : options
+            "options": options
         }
 
     def request (self, url, message):
@@ -241,16 +244,6 @@ class CreateGraphStatement(Statement):
         interpreter.context.set (self.name, response)
         return response
 
-def synonymize(nodetype,identifier):
-    robokop_server = 'robokopdb2.renci.org'
-    robokop_server = 'robokop.renci.org'
-    url=f'http://{robokop_server}/api/synonymize/{identifier}/{nodetype}/'
-    url=f'http://{robokop_server}:6010/api/synonymize/{identifier}/{nodetype}/'
-    response = requests.post(url)
-    logger.debug (f'Return Status: {response.status_code}' )
-    if response.status_code == 200:
-        return response.json()
-    return []
 
 class SelectStatement(Statement):
     """
@@ -270,24 +263,28 @@ class SelectStatement(Statement):
     def __repr__(self):
         return f"SELECT {self.query} from:{self.service} where:{self.where} set:{self.set_statements}"
 
-    def edge (self, index, source, target, type_name=None):
+    def edge(self, source, target, type_name=None):
         """ Generate a question edge. """
         e = {
-            "id" : f"e{index}",
-            "source_id": source,
-            "target_id": target
+            "subject": source,
+            "object": target
         }
         if type_name is not None:
-            e["type"] = type_name
+            e["predicate"] = type_name
         return e
-    def node (self, index, type_name, value=None):
+
+
+
+    def node(self, type_name, curies=None, **kwargs):
         """ Generate a question node. """
         n = {
-            "id": f"{index}",
-            "type": type_name
+            "category": type_name
         }
-        if value:
-            n ['curie'] = value
+        if len(curies):
+            n['id'] = curies
+        # Add other attributes to the node.
+        # Used as filters possibly in KP.
+        n.update(kwargs)
         return n
 
     def val(self, value, field="id"):
@@ -320,47 +317,44 @@ class SelectStatement(Statement):
         logger.debug (f"name resolution result: {name} => {result}")
         return result
 
-    def expand_nodes (self, interpreter, concept):
+    def expand_nodes(self, interpreter, concept: Concept):
         """ Expand variable expressions to nodes. """
         new_nodes = []
-        # value = concept.nodes[0] if len(concept.nodes) > 0 else None
-        for value in concept.nodes:
-            if value and isinstance(value, str):
-                if value.startswith ("$"):
-                    varname = value
-                    value = interpreter.context.resolve_arg (varname)
-                    logger.debug (f"resolved {varname} to {value}")
-                    if value == None:
-                        raise UndefinedVariableError (f"Undefined variable: {varname}")
-                    elif isinstance (value, str):
-                        new_nodes.append(value)
-                        # concept.set_nodes ([ value ])
-                    elif isinstance(value, list):
-                        """ Binding multiple values to a node. """
-                        new_nodes += value
-                        # concept.set_nodes (value)
-                    else:
-                        raise TranQLException (
-                            f"Internal failure: object of unhandled type {type(value)}.")
+        for value in concept.curies:
+            if value.startswith ("$"):
+                varname = value
+                value = interpreter.context.resolve_arg (varname)
+                logger.debug (f"resolved {varname} to {value}")
+                if value == None:
+                    raise UndefinedVariableError (f"Undefined variable: {varname}")
+                elif isinstance (value, str):
+                    new_nodes.append(value)
+                elif isinstance(value, list):
+                    """ Binding multiple values to a node. """
+                    new_nodes += value
                 else:
-                    """ Bind a single value to a node. """
-                    if not ':' in value:
-                        if not interpreter.dynamic_id_resolution:
-                            raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
-                        """ Deprecated. """
-                        """ Bind something that's not a curie. Dynamic id lookup.
-                        This is frowned upon. While it *may* be useful for prototyping and,
-                        interactive exploration, it will probably be removed. """
-                        logger.debug (f"performing dynamic lookup resolving {concept}={value}")
-                        new_nodes.append(self.resolve_name (value, concept.type_name))
-                        # concept.set_nodes (self.resolve_name (value, concept.type_name))
-                        logger.debug (f"resolved {value} to identifiers: {concept.nodes}")
-                    else:
-                        """ This is a single curie. Bind it to the node. """
-                        new_nodes.append(value)
-            elif isinstance(value, dict):
-              new_nodes.append(value.get('curie', ''))
-        concept.set_nodes(new_nodes)
+                    raise TranQLException (
+                        f"Internal failure: object of unhandled type {type(value)}.")
+                # if variable was something like $x = ['CHEBI:123', 'water'] we need to Curiefy 'water'
+                concept.set_curies(new_nodes)
+                new_nodes = self.expand_nodes(interpreter, concept)
+            else:
+                """ Bind a single value to a node. """
+                if not ':' in value:
+                    if not interpreter.dynamic_id_resolution:
+                        raise Exception('Invalid curie "' + value + '". Did you mean to enable dynamic id resolution?')
+                    """ Deprecated. """
+                    """ Bind something that's not a curie. Dynamic id lookup.
+                    This is frowned upon. While it *may* be useful for prototyping and,
+                    interactive exploration, it will probably be removed. """
+                    logger.debug (f"performing dynamic lookup resolving {concept}={value}")
+                    new_nodes.append(self.resolve_name (value, concept.type_name))
+                    logger.debug (f"resolved {value} to identifiers: {new_nodes}")
+                else:
+                    """ This is a single curie. Bind it to the node. """
+                    new_nodes.append(value)
+        concept.set_curies(new_nodes)
+        return new_nodes
 
     def is_bound(self):
         """ Returns true if curie has been set to any of the statements concepts."""
@@ -381,13 +375,13 @@ class SelectStatement(Statement):
         for p in plan:
             start = p[2]
             # is bound if the start  or the end of the plan is bound
-            is_bound = len(start[0][0].nodes) or len(start[-1][2].nodes)
+            is_bound = len(start[0][0].curies) or len(start[-1][2].curies)
             if is_bound:
                 break
         if is_bound:
             # find plans bound to the same concept that add them as starting queries
             for other_plan in plan:
-                bound_concept = start[0][0] if len(start[0][0].nodes) else start[-1][2]
+                bound_concept = start[0][0] if len(start[0][0].curies) else start[-1][2]
                 if bound_concept.name == other_plan[2][0][0].name or bound_concept.name == other_plan[2][-1][2].name:
                     sorted_plan.append(other_plan)
             # add other bound / unbound plans in a sequence that preserves
@@ -455,119 +449,76 @@ class SelectStatement(Statement):
                 constraint_copy[0] = name.replace (prefix, "")
                 self.where[enum] = constraint_copy
 
-    def generate_questions (self, interpreter):
-        """
-        Given an archetype question graph and values, generate question
-        instances for each value permutation.
-        """
-        for index, name in enumerate(self.query.order):
-            """ Convert literals into nodes in the message's question graph. """
-            concept = self.query[name]
-            if len(concept.nodes) > 0:
-                self.expand_nodes (interpreter, concept)
-                logger.debug (f"concept--nodes: {concept.nodes}")
-                concept.set_nodes ([
-                    self.node (
-                        index = name, #index,
-                        type_name = concept.type_name,
-                        value = self.val(v, field='curie'))
-                    for v in concept.nodes
-                ])
-                filters = interpreter.context.resolve_arg ('$id_filters')
-                if filters:
-                    filters = [ f.lower () for f in filters.split(",") ]
-                    concept.set_nodes ([
-                        n for n in concept.nodes
-                        if not n['curie'].split(':')[0].lower () in filters
-                    ])
-            else:
-                """ There are no values - it's just a template for a model type. """
-                concept.set_nodes ([ self.node (
-                    index = name, #index,
-                    type_name = concept.type_name) ])
-
+    def get_TRAPI_options(self, interpreter):
         options = {}
         for constraint in self.where:
             """ This is where we pass constraints to a service. We do this only for constraints
             which do not refer to elements in the query. """
-            logger.debug (f"manage constraint: {constraint}")
+            logger.debug(f"manage constraint: {constraint}")
             name, op, value = constraint
-            value = interpreter.context.resolve_arg (value)
+            value = interpreter.context.resolve_arg(value)
             if not name in self.query:
                 """
                 This is not constraining a concept name in the graph query.
                 So interpret it as an option to the underlying service.
                 """
                 options[name] = constraint[1:]
-        edges = []
+        return options
+
+    def generate_questions(self, interpreter):
+        """
+        Given an archetype question graph and values, generate question
+        instances for each value permutation.
+        """
         questions = []
-        logger.debug (f"concept order> {self.query.order}")
-        for index, name in enumerate (self.query.order):
-            concept = self.query[name]
-            previous = self.query.order[index-1] if index > 0 else None
-            logger.debug (f"query:{self.query}")
-            #logger.debug (f"questions:{index} ==>> {json.dumps(questions, indent=2)}")
+        # Get options from where clause.
+        options = self.get_TRAPI_options(interpreter=interpreter)
+        nodes = {}
+        edges = {}
+        for index, concept_query_id in enumerate(self.query.order):
+            """ Expand and filter nodes. """
+            concept = self.query[concept_query_id]
+            if len(concept.curies) > 0:
+                self.expand_nodes (interpreter, concept)
+                logger.debug(f"concept--nodes: {concept.curies}")
+                filters = interpreter.context.resolve_arg ('$id_filters')
+                if filters:
+                    filters = [f.lower() for f in filters.split(",")]
+                    concept.set_curies([
+                        n for n in concept.curies
+                        if not n.split(':')[0].lower() in filters
+                    ])
+            # add node
+            node = self.node(
+                concept.type_name,
+                concept.curies
+            )
+            nodes[concept.name] = node
             if index == 0:
-                """ Model the first step. """
-                if len(concept.nodes) > 0:
-                    """ The first concept is bound. """
-                    for node in concept.nodes:
-                        questions.append (self.message (
-                            q_nodes = [ node ],
-                            q_edges = [],
-                            options = options))
-                else:
-                    """ No nodes specified for the first concept. """
-                    questions.append (self.message (options=options))
+                # skip first index for edge computing.
+                continue
+            # add edges
+            last_node_name = self.query.order[index -1]
+            edge_spec = self.query.arrows[index - 1]
+            if edge_spec.direction == self.query.forward_arrow:
+                subject = last_node_name
+                object = concept_query_id
             else:
-                """ Not the first concept - permute relative to previous. """
-                new_questions = []
-                for question in questions:
-                    if len(concept.nodes) > 0:
-                        for node in concept.nodes:
-                            """ Permute each question. """
-                            nodes = copy.deepcopy (question["question_graph"]['nodes'])
-                            if len(nodes) == 0:
-                                logger.debug (f"No values in concept {concept.name}")
-                                continue
-                            lastnode = nodes[-1]
-                            nodes.append (node)
-                            edges = copy.deepcopy (question["question_graph"]['edges'])
-                            edge_spec = self.query.arrows[index-1]
-                            if edge_spec.direction == self.query.forward_arrow:
-                                edge_id = f'{index}_{lastnode["id"]}_{node["id"]}'
-                                edges.append (self.edge (
-                                    index = edge_id,
-                                    source=lastnode['id'],
-                                    target=node['id'],
-                                    type_name = edge_spec.predicate))
-                            else:
-                                edge_id = f'{index}_{node["id"]}_{lastnode["id"]}'
-                                edges.append (self.edge (
-                                    index = edge_id,
-                                    source=node['id'],
-                                    target=lastnode['id'],
-                                    type_name = edge_spec.predicate))
-                            new_questions.append (self.message (
-                                q_nodes = nodes,
-                                options = options,
-                                q_edges = edges))
-                    else:
-                        query_nodes = question['question_graph']['nodes']
-                        question['question_graph']['nodes'].append (
-                            self.node (index = name, #index,
-                                       type_name = concept.type_name))
-                        source_id = query_nodes[-2]['id']
-                        target_id = query_nodes[-1]['id']
-                        edge_id = f'{index}_{source_id}_{target_id}'
-                        question['question_graph']['edges'].append (
-                            self.edge (
-                                index = edge_id,
-                                source = source_id,
-                                target = target_id))
-                        new_questions.append (self.message (options=options))
-                questions = new_questions
-        return questions
+                subject = concept_query_id
+                object = last_node_name
+            edge_id = f'e{index}_{subject}_{object}'
+            predicate = edge_spec.predicate
+            query_graph_edge = self.edge(
+                source=subject,
+                target=object,
+                type_name=predicate
+            )
+            edges[edge_id] = query_graph_edge
+        question_graph = self.message(
+            q_nodes = nodes,
+            q_edges = edges
+        )
+        return question_graph
 
     """
     Decorates a result message
@@ -581,11 +532,14 @@ class SelectStatement(Statement):
     @staticmethod
     def decorate_result(response, options={}):
         if 'knowledge_graph' in response:
-            for node in response['knowledge_graph'].get('nodes',[]):
-                SelectStatement.decorate(node, True, options)
-
-            for edge in response['knowledge_graph'].get('edges',[]):
-                SelectStatement.decorate(edge, False, options)
+            nodes = response['knowledge_graph'].get('nodes', {})
+            edges = response['knowledge_graph'].get('edges', {})
+            for node_id in nodes:
+                nodes[node_id]['id'] = node_id
+                SelectStatement.decorate(nodes[node_id], True, options)
+            for edge_id in edges:
+                edges[edge_id]['id'] = edge_id
+                SelectStatement.decorate(edges[edge_id], False, options)
     """
     Decorates a list of result messages
 
@@ -615,13 +569,31 @@ class SelectStatement(Statement):
     """
     @staticmethod
     def decorate(element, is_node, options):
-        if "reasoner" not in element: element["reasoner"] = []
+        attributes = element.get('attributes', {})
+        has_reasoner_attribute = False
+        schema = []
         if "schema" in options:
-            if isinstance(options["schema"],str): options["schema"] = [options["schema"]]
-            element["reasoner"].extend(options["schema"])
-        # Only edges have the source_database property
-        if not is_node:
-            element["source_database"] = element.get("source_database",["unknown"])
+            # Convert schema to list
+            if isinstance(options["schema"], str): options["schema"] = [options["schema"]]
+            schema = options["schema"]
+
+        for attribute in attributes:
+            if attribute.get('name') == 'reasoner':
+                has_reasoner_attribute = True
+                attribute['value'] = attribute.get('value', [])
+                attribute['value'] = attribute['value'] if isinstance(attribute['value'], list) else [attribute['value']]
+                attribute['value'] += schema
+                attribute['value'] = list(set(attribute['value']))
+                attribute['type'] = 'EDAM:data_0006'
+        if not has_reasoner_attribute:
+            element['attributes'] = element.get('attributes', [])
+            element['attributes'].append({
+                'name': 'reasoner',
+                'value': schema,
+                'type': 'EDAM:data_0006'
+            })
+        # Add Source database
+        # @TODO properly add edge source if not provided
 
     def get_schema_name(self,interpreter):
         schema = None
@@ -642,8 +614,31 @@ class SelectStatement(Statement):
         - Resolve the service name.
         - Execute the questions.
         """
-        result = None
-        if self.service == "/schema":
+        all_schemas = interpreter.schema.config['schema']
+        redis_key = [
+            key for key in all_schemas
+            if 'redis' in all_schemas[key] and self.service.startswith(key + ':')
+        ]
+        if len(redis_key):
+            redis_key = redis_key[0]
+            redis_connection_details = all_schemas[redis_key]['redis_connection_params']
+            service_name, graph_name = self.service.split(':')
+            redis_connection_details.update(
+                {
+                    'auth': ('', interpreter.config.get(service_name.upper() +'_PASSWORD','')),
+                    'db_name': graph_name,
+                    'db_type': 'redis',
+                }
+            )
+            graph_interface = GraphInterface(
+                **redis_connection_details
+            )
+            question = self.generate_questions(interpreter)
+            import asyncio
+            answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph']))
+            response = {'message': answer}
+
+        elif self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:
             """ We want to find what schema name corresponds to the url we are querying.
@@ -652,11 +647,11 @@ class SelectStatement(Statement):
             self.format_constraints(interpreter)
 
             self.service = self.resolve_backplane_url (self.service, interpreter)
-            questions = self.generate_questions (interpreter)
+            question = self.generate_questions (interpreter)
 
-            [self.ast.schema.validate_question(question) for question in questions]
+            self.ast.schema.validate_question(question['message'])
 
-            root_question_graph = questions[0]['question_graph']
+            root_question_graph = question["message"]['query_graph']
 
             service = interpreter.context.resolve_arg (self.service)
 
@@ -674,55 +669,51 @@ class SelectStatement(Statement):
             interpreter.context.set('requestErrors',[])
             if interpreter.asynchronous:
                 maximumParallelRequests = 4
-                responses = async_make_requests ([
+                response = async_make_requests ([
                     {
                         "method" : "post",
                         "url" : service,
-                        "json" : q,
+                        "json" : question,
                         "headers" : {
                             "accept": "application/json"
                         }
                     }
-                    for q in questions[:maximumQueryRequests]
                 ],maximumParallelRequests)
-                errors = responses["errors"]
-                responses = responses["responses"]
+                errors = response["errors"]
+                response = response["responses"][0]
                 interpreter.context.mem.get('requestErrors', []).extend(errors)
-
             else:
-                responses = []
-                for index, q in enumerate(questions):
-                    logger.debug (f"executing question {json.dumps(q, indent=2)}")
-                    response = self.request (service, q)
-                    # TODO - add a parameter to limit service invocations.
-                    # Until we parallelize requests, cap the max number we attempt for performance reasons.
-                    #logger.debug (f"response: {json.dumps(response, indent=2)}")
-                    responses.append (response)
+                response = {}
+                # for index, q in enumerate(questions):
+                logger.debug (f"executing question {json.dumps(question, indent=2)}")
+                response = self.request (service, question)
+                # TODO - add a parameter to limit service invocations.
+                # Until we parallelize requests, cap the max number we attempt for performance reasons.
+                #logger.debug (f"response: {json.dumps(response, indent=2)}")
+                # responses.append (response)
 
-                    if index >= maximumQueryRequests:
-                        break
-
-            logger.info (f"Making requests to {service} took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
-            total_results = reduce(lambda x, y: x + len(y.get('knowledge_map',[])), responses, 0)
+            logger.info (f"Making request to {service} took {time.time()-prev} s (asynchronous = {interpreter.asynchronous})")
+            total_results = len(response.get('message',{}).get('results',[]))
             logger.info(f"Got {total_results} results from {service}. for {self.query.order} ")
-            for response in responses:
-                response['question_order'] = self.query.order
 
-            if len(responses) == 0:
+            response['question_order'] = self.query.order
+
+            if len(response) == 0:
+                # @TODO might not be a proper error checking.
                 interpreter.context.mem.get('requestErrors',[]).append(ServiceInvocationError(
                     f"No valid results from {self.service} with query {self.query}"
                 ))
             else:
-                self.decorate_results(responses, {
+                self.decorate_result(response['message'], {
                     "schema" : self.get_schema_name(interpreter)
                 })
-            result = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
-        interpreter.context.set('result', result)
+            # result = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
+        interpreter.context.set('result', response)
         """ Execute set statements associated with this statement. """
         for set_statement in self.set_statements:
             logger.debug (f"{set_statement}")
-            set_statement.execute (interpreter, context = { "result" : result })
-        return result
+            set_statement.execute (interpreter, context = { "result" : response })
+        return response
 
     def execute_plan (self, interpreter):
         """ Execute a query using a schema based query planning strategy. """
@@ -734,7 +725,7 @@ class SelectStatement(Statement):
         first_concept = None
 
         # Generate the root statement's question graph
-        root_question_graph = self.generate_questions(interpreter)[0]['question_graph']
+        root_question_graph = self.generate_questions(interpreter)[0]['query_graph']
 
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
@@ -752,7 +743,7 @@ class SelectStatement(Statement):
                 if statements[index].query.order == next_statement.query.order:
                     name = next_statement.query.order[0]
                     first_concept = next_statement.query.concepts[name]
-                    first_concept.set_nodes (statements[index].query.concepts[name].nodes)
+                    first_concept.set_curies (statements[index].query.concepts[name].nodes)
                 else:
                     name = [name for name in statements[index].query.order if name in next_statement.query.order][0]
                     first_concept = next_statement.query.concepts[name]
@@ -770,7 +761,7 @@ class SelectStatement(Statement):
                             message = message,
                             details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
                     duplicate_statements = []
-                    first_concept.set_nodes(values)
+                    first_concept.set_curies(values)
         merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
         return merged
 
@@ -1095,7 +1086,7 @@ class TranQL_AST:
 
                             if var in select.query:
                                 if op == '=':
-                                    select.query[var].set_nodes ([ val ])
+                                    select.query[var].set_curies ([val])
                                 elif op == '=~':
                                     select.query[var].include_patterns.append (val)
                                 elif op == '!=~':
@@ -1167,12 +1158,13 @@ class Query:
         elif isinstance (key, Edge):
             self.arrows.append (key)
         elif isinstance(key, list) and len(key) == 3:
+            predicate = f'biolink:{key[1]}'
             if key[2].endswith(self.forward_arrow):
                 self.arrows.append (Edge(direction=self.forward_arrow,
-                                         predicate=key[1]))
+                                         predicate=predicate))
             elif key[0].startswith(self.back_arrow):
                 self.arrows.append (Edge(direction=self.back_arrow,
-                                         predicate=key[1]))
+                                         predicate=predicate))
         else:
             """ It's a concept identifier, potentially named. """
             type_name = key
@@ -1183,9 +1175,13 @@ class Query:
                 name, type_name = key.split (':')
             self.order.append (name)
             """ Verify the type name is in the model we have. """
+            # @TODO there is a canned version of this for possible swapping
+            # Add bmt here(?) needs access to bmt git repo (i.e internet connection)
+
             if self.concept_model.get (type_name) == None or type_name not in self.concept_model:
                 raise Exception(f'Concept "{type_name}" is not in the concept model.')
-
+            # For now just do manual string manipulation for type name
+            type_name = f'biolink:' + type_name.replace('_', ' ').title().replace(' ', '')
             self.concepts[name] = Concept (name=name, type_name=type_name)
     def __getitem__(self, key):
         return self.concepts [key]
@@ -1197,24 +1193,6 @@ class Query:
         return key in self.concepts
     def __repr__(self):
         return f"{self.concepts} | {self.arrows}"
-
-class QueryPlan:
-    """ A plan outlining which schema to use to fulfill a query. """
-    def __init__(self):
-        self.plan = []
-    def add (self, schema_name, schema_url, subj, pred, obj):
-        """ Add a mapping between a schema and a query transition. """
-        top_schema = None
-        if len(self.plan) > 0:
-            top = self.plan[-1]
-            top_schema = top[0]
-            if top_schema == schema_name:
-                # this is the next edge in an ongoing segment.
-                top[2].append ([ source, predicate, target ])
-            else:
-                plan.append ([ schema_name, sub_schema_url, [
-                    [ source, predicate, target ]
-                ]])
 
 class QueryPlanStrategy:
     """ A strategy for developing a query plan given a schema. """
@@ -1256,6 +1234,11 @@ class QueryPlanStrategy:
 
         for schema_name, sub_schema_package in self.schema.schema.items ():
             """ Look for a path satisfying this edge in each schema. """
+            # This will restrict usage of TRANQL with redis graph
+            # Explicitly i.e its either /schema or a redis backend
+            # @TODO handle this more elegantly
+            if 'redis' in sub_schema_package:
+                continue
             sub_schema = sub_schema_package ['schema']
             sub_schema_url = sub_schema_package ['url']
 
@@ -1299,19 +1282,6 @@ class QueryPlanStrategy:
                                           exclude_patterns=source.exclude_patterns), predicate, target ]
                             ]])
                             converted = True
-        if not converted:
-            source_target_predicates = self.explain_predicates (source_type, target_type)
-            target_source_predicates = self.explain_predicates (target_type, source_type)
-
-            # raise InvalidTransitionException(
-            #     source,
-            #     target,
-            #     predicate,
-            #     explanation=''.join ([
-            #         "Valid transitions in the federated schema between the given types are: \n",
-            #         f"{source_type}->{target_type}: {json.dumps(source_target_predicates, indent=2)}\n",
-            #         f"{target_type}->{source_type}: {json.dumps(target_source_predicates, indent=2)} "
-            #     ]))
 
     def explain_predicates (self, source_type, target_type):
         list_of_lists = [
