@@ -1,0 +1,120 @@
+{
+  "biolink:AnatomicalEntity": {
+    "biolink:BiologicalProcess": [
+      "biolink:capable_of"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:has_part"
+    ]
+  },
+  "biolink:BiologicalProcess": {
+    "biolink:BiologicalProcess": [
+      "biolink:subclass_of"
+    ]
+  },
+  "biolink:CellularComponent": {
+    "biolink:CellularComponent": [
+      "biolink:subclass_of"
+    ]
+  },
+  "biolink:ChemicalSubstance": {
+    "biolink:Disease": [
+      "biolink:indicated_for",
+      "biolink:contraindicated_for"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:indicated_for",
+      "biolink:contraindicated_for"
+    ],
+    "biolink:Protein": [
+      "biolink:physically_interacts_with"
+    ]
+  },
+  "biolink:Disease": {
+    "biolink:BiologicalProcess": [
+      "biolink:affects"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:affects"
+    ],
+    "biolink:Disease": [
+      "biolink:subclass_of"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:has_phenotype"
+    ]
+  },
+  "biolink:Metabolite": {
+    "biolink:Protein": [
+      "biolink:physically_interacts_with"
+    ]
+  },
+  "biolink:Microrna": {
+    "biolink:AnatomicalEntity": [
+      "biolink:expressed_in"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:involved_in"
+    ],
+    "biolink:Disease": [
+      "biolink:gene_mutations_contribute_to",
+      "biolink:gene_associated_with_condition"
+    ],
+    "biolink:Microrna": [
+      "biolink:regulates"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:has_phenotype"
+    ],
+    "biolink:Protein": [
+      "biolink:regulates"
+    ]
+  },
+  "biolink:MolecularFunction": {
+    "biolink:MolecularFunction": [
+      "biolink:subclass_of"
+    ]
+  },
+  "biolink:PhenotypicFeature": {
+    "biolink:AnatomicalEntity": [
+      "biolink:affects"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:subclass_of"
+    ]
+  },
+  "biolink:Protein": {
+    "biolink:AnatomicalEntity": [
+      "biolink:expressed_in"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:involved_in"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:expressed_in"
+    ],
+    "biolink:ChemicalSubstance": [
+      "biolink:physically_interacts_with"
+    ],
+    "biolink:Disease": [
+      "biolink:gene_mutations_contribute_to",
+      "biolink:gene_associated_with_condition"
+    ],
+    "biolink:Metabolite": [
+      "biolink:physically_interacts_with"
+    ],
+    "biolink:MolecularFunction": [
+      "biolink:capable_of"
+    ],
+    "biolink:Pathway": [
+      "biolink:participates_in"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:has_phenotype"
+    ],
+    "biolink:Protein": [
+      "biolink:physically_interacts_with",
+      "biolink:regulates"
+    ]
+  }
+}

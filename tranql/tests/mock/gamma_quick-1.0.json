@@ -1,0 +1,68 @@
+{
+  "message": {
+    "query_graph": {
+      "nodes": {
+        "chemical_substance": {
+          "category": "biolink:ChemicalSubstance"
+        },
+        "gene": {
+          "category": "biolink:Gene"
+        }
+      },
+      "edges": {
+        "e1": {
+          "subject": "chemical_substance",
+          "object": "gene"
+        }
+      }
+    },
+    "results": [
+      {
+        "node_bindings": {
+          "chemical_substance": [
+            {
+              "id": "CHEBI:28177"
+            }
+          ],
+          "gene": [
+            {
+              "id": "HGNC:2597"
+            }
+          ]
+        },
+        "edge_bindings": {
+          "e1": [
+            {
+              "id": "e0"
+            }
+          ],
+          "s0": [
+            {
+              "id": "1cdd83d6-7f6b-4b17-9139-63f8e81f2122"
+            }
+          ]
+        }
+      }
+    ],
+    "knowledge_graph": {
+      "nodes": {
+        "CHEBI:28177": {
+          "category": [
+            "biolink:ChemicalSubstance"
+          ]
+        },
+        "HGNC:2597": {
+          "category": [
+            "biolink:Gene"
+          ]
+        }
+      },
+      "edges": {
+        "e0": {
+          "subject": "CHEBI:28177",
+          "object": "HGNC:2597"
+        }
+      }
+    }
+  }
+}

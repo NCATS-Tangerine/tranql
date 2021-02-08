@@ -1,0 +1,885 @@
+{
+  "biolink:NamedThing": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:in_taxon",
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Gene": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:Biolink:Namedthing": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:in_taxon",
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Gene": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:MolecularEntity": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Gene": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:GeneFamily": {
+    "biolink:NamedThing": [
+      "biolink:in_taxon",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:in_taxon",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:part_of"
+    ],
+    "biolink:Gene": [
+      "biolink:part_of"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:part_of"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:part_of"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ]
+  },
+  "biolink:BiologicalEntity": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Gene": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:Gene": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:MacromolecularMachine": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:GenomicEntity": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:GeneOrGeneProduct": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:in_taxon",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:SO:similar_to",
+      "biolink:part_of"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:part_of"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:related_to",
+      "biolink:SO:similar_to",
+      "biolink:enabled_by",
+      "biolink:part_of"
+    ],
+    "biolink:OrganismTaxon": [
+      "biolink:in_taxon"
+    ],
+    "biolink:OntologyClass": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:SO:similar_to"
+    ],
+    "biolink:BiologicalProcessOrActivity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalProcess": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularActivity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:OrganismalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:CellularComponent": [
+      "biolink:related_to"
+    ],
+    "biolink:AnatomicalEntity": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:OrganismTaxon": {
+    "biolink:NamedThing": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:in_taxon"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:in_taxon"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:in_taxon"
+    ]
+  },
+  "biolink:OntologyClass": {
+    "biolink:NamedThing": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:in_taxon"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:Gene": [
+      "biolink:in_taxon"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:in_taxon"
+    ],
+    "biolink:GeneFamily": [
+      "biolink:in_taxon"
+    ]
+  },
+  "biolink:BiologicalProcessOrActivity": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:Gene": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:actively_involved_in",
+      "biolink:enabled_by"
+    ]
+  },
+  "biolink:BiologicalProcess": {
+    "biolink:NamedThing": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:Gene": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:actively_involved_in"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:actively_involved_in"
+    ]
+  },
+  "biolink:MolecularActivity": {
+    "biolink:NamedThing": [
+      "biolink:enabled_by"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:enabled_by"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:Gene": [
+      "biolink:enabled_by"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:enabled_by"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:enabled_by"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:enabled_by"
+    ]
+  },
+  "biolink:OrganismalEntity": {
+    "biolink:NamedThing": [
+      "biolink:related_to"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:related_to"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:Gene": [
+      "biolink:related_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:related_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:CellularComponent": {
+    "biolink:NamedThing": [
+      "biolink:related_to"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:related_to"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:Gene": [
+      "biolink:related_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:related_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:related_to"
+    ]
+  },
+  "biolink:AnatomicalEntity": {
+    "biolink:NamedThing": [
+      "biolink:related_to"
+    ],
+    "biolink:Biolink:Namedthing": [
+      "biolink:related_to"
+    ],
+    "biolink:MolecularEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:BiologicalEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:Gene": [
+      "biolink:related_to"
+    ],
+    "biolink:MacromolecularMachine": [
+      "biolink:related_to"
+    ],
+    "biolink:GenomicEntity": [
+      "biolink:related_to"
+    ],
+    "biolink:GeneOrGeneProduct": [
+      "biolink:related_to"
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "biolink:PopulationOfIndividualOrganisms": {
+    "biolink:ChemicalSubstance": [
+      "biolink:association"
+    ],
+    "biolink:Environmental": [
+      "biolink:association"
+    ],
+    "biolink:DiseaseOrPhenotypicFeature": [
+      "biolink:association"
+    ],
+    "biolink:Disease": [
+      "biolink:association"
+    ],
+    "biolink:PhenotypicFeature": [
+      "biolink:association"
+    ],
+    "biolink:NamedThing": [
+      "biolink:association"
+    ],
+    "biolink:ActivityAndBehavior": [
+      "biolink:association"
+    ],
+    "biolink:Drug": [
+      "biolink:association"
+    ],
+    "biolink:DrugExposure": [
+      "biolink:association"
+    ]
+  }
+}
