@@ -54,11 +54,16 @@ schema:
       types allowing the implementation of complex queries.
     url: /implicit_conversion
     schema:
-      drug_exposure:
-        chemical_substance:
+      biolink:DrugExposure:
+        biolink:ChemicalSubstance:
           - is_a
-  roger :
+  redis:
     doc: |
       Roger is a knowledge graph built by aggregeting several kgx formatted knowledge graphs from several sources.
-    url: /graph/roger
-    schema: /graph/roger/predicates
+    url: "redis:"
+    redis: true
+    redis_connection_params:
+      host: localhost
+      port: 6380
+        # SET USERNAME and PASSWORD
+        # via ROGER_USERNAME , ROGER_PASSWORD Env vars (i.e capitialize service name)
