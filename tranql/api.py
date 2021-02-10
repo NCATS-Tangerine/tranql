@@ -22,7 +22,7 @@ from tranql.exception import TranQLException
 logger = logging.getLogger (__name__)
 
 web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
-WEB_PREFIX = os.path.get('WEB_PATH_PREFIX', '')
+WEB_PREFIX = os.environ.get('WEB_PATH_PREFIX', '')
 WEB_PREFIX = f"/{ WEB_PREFIX.strip('/') }" if WEB_PREFIX else ''
 
 app = Flask(__name__)
