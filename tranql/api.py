@@ -22,10 +22,10 @@ from tranql.exception import TranQLException
 logger = logging.getLogger (__name__)
 
 web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
+WEB_PREFIX = os.environ.get('WEB_PATH_PREFIX', '')
+WEB_PREFIX = f"/{ WEB_PREFIX.strip('/') }" if WEB_PREFIX else ''
 
 app = Flask(__name__)
-#app = Flask(__name__, static_folder=web_app_root)
-#dashboard.bind(app)
 
 api = Api(app)
 CORS(app)
@@ -68,13 +68,13 @@ swagger = Swagger(app, template=template, config={
     "specs": [
         {
             "endpoint": 'apispec_1',
-            "route": '/apispec_1.json',
+            "route": f'{WEB_PREFIX}/apispec_1.json',
             "rule_filter": lambda rule: True,  # ?
             "model_filter": lambda tag: True,  # ?
         }
     ],
     "swagger_ui": True,
-    "specs_route": "/apidocs/",
+    "specs_route": f"{WEB_PREFIX}/apidocs/",
     "openapi": "3.0.1",
     'swagger_ui_bundle_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-bundle.js',
     'swagger_ui_standalone_preset_js': 'https://rawcdn.githack.com/swagger-api/swagger-ui/v3.23.1/dist/swagger-ui-standalone-preset.js',
@@ -743,18 +743,18 @@ class ParseIncomplete(StandardAPIResource):
 #
 ###############################################################################################
 
-api.add_resource(TranQLQuery, '/tranql/query')
-api.add_resource(SchemaGraph, '/tranql/schema')
-api.add_resource(AnnotateGraph, '/tranql/annotate')
-api.add_resource(MergeMessages,'/tranql/merge_messages')
-api.add_resource(DecorateKG,'/tranql/decorate_kg')
-api.add_resource(ModelConceptsQuery, '/tranql/model/concepts')
-api.add_resource(ModelRelationsQuery, '/tranql/model/relations')
-api.add_resource(ParseIncomplete, '/tranql/parse_incomplete')
-api.add_resource(ReasonerURLs, '/tranql/reasonerURLs')
+api.add_resource(TranQLQuery, f'{WEB_PREFIX}/tranql/query')
+api.add_resource(SchemaGraph, f'{WEB_PREFIX}/tranql/schema')
+api.add_resource(AnnotateGraph, f'{WEB_PREFIX}/tranql/annotate')
+api.add_resource(MergeMessages,f'{WEB_PREFIX}/tranql/merge_messages')
+api.add_resource(DecorateKG,f'{WEB_PREFIX}/tranql/decorate_kg')
+api.add_resource(ModelConceptsQuery, f'{WEB_PREFIX}/tranql/model/concepts')
+api.add_resource(ModelRelationsQuery, f'{WEB_PREFIX}/tranql/model/relations')
+api.add_resource(ParseIncomplete, f'{WEB_PREFIX}/tranql/parse_incomplete')
+api.add_resource(ReasonerURLs, f'{WEB_PREFIX}/tranql/reasonerURLs')
 
-api.add_resource(WebAppPath, '/<path:path>', endpoint='webapp_path')
-api.add_resource(WebAppPath, '/', endpoint='webapp_root', defaults={'path': 'index.html'})
+api.add_resource(WebAppPath, f'{WEB_PREFIX}/<path:path>', endpoint='webapp_path')
+api.add_resource(WebAppPath, f'{WEB_PREFIX}/', endpoint='webapp_root', defaults={'path': 'index.html'})
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
@@ -762,7 +762,7 @@ if __name__ != '__main__':
     app.logger.setLevel(gunicorn_logger.level)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Short sample app')
+    parser = argparse.ArgumentParser(description='Tranql web app')
     parser.add_argument('--host', action="store", dest="host", default='0.0.0.0')
     parser.add_argument('--port', action="store", dest="port", default=8001, type=int)
     parser.add_argument('-d', '--debug', help="Debug log level.", default=False, action='store_true')
