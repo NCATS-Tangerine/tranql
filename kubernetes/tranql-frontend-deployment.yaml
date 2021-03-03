@@ -24,7 +24,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: tranql-app
-        image: renciorg/tranql-app
+        image: helxplatform/tranql-app
         command: [ "/usr/local/bin/gunicorn", "--workers=2", "--bind=0.0.0.0:8001", "--timeout=600", "--access-logfile=$(ACCESS_LOG)", "--error-logfile=$(ERROR_LOG)", "--log-level=debug", "tranql.api:app" ]
         ports:
           - containerPort: 8001

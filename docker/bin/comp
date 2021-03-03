@@ -1,5 +1,7 @@
 #!/bin/bash
 
+repo=helxplatform
+
 function get_ver () {
     if [ ! -f "bin/.ver" ]
     then
@@ -24,7 +26,7 @@ build () {
         echo "Version file .ver not found."
         echo "Please check for or re-create tranql/docker/bin/.ver"
     fi
-    docker build --no-cache $mod -t renciorg/$mod:latest -t renciorg/$mod:$newversion
+    docker build --no-cache $mod -t $repo/$mod:latest -t $repo/$mod:$newversion
 }
 push () {
     local mod=$1
@@ -38,8 +40,8 @@ push () {
         echo "Version file .ver not found."
         echo "Please check for or re-create tranql/docker/bin/.ver"
     fi
-    docker push renciorg/$mod:latest
-    docker push renciorg/$mod:$vers
+    docker push $repo/$mod:latest
+    docker push $repo/$mod:$vers
 }
 clean () {
     images () {

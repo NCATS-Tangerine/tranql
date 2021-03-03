@@ -1,7 +1,7 @@
 
 ## Values for tranql frontend
 tranql_frontend:
-  image: renciorg/tranql-app
+  image: helxplatform/tranql-app
   image_tag: latest
   deployment_name: tranql-frontend-deployment
   service_name: tranql-frontend-service
@@ -14,7 +14,7 @@ tranql_frontend:
 
 ## Values for tranql backplane
 tranql_backplane:
-  image: renciorg/tranql-base
+  image: helxplatform/tranql-base
   image_tag: latest
   deployment_name: tranql-backend-deployment
   service_name: tranql-backend-service
@@ -33,7 +33,7 @@ tranql_logs:
 
 ### Varnish cache configurations
 tranql_varnish:
-  image: renciorg/tranql-varnish
+  image: helxplatform/tranql-varnish
   image_tag: latest
   port: 8080
   frontend:
@@ -52,7 +52,7 @@ tranql_varnish:
     cache_ttl: 3h
 
 tranql_artillery:
-  image: renciorg/tranql-artillery
+  image: helxplatform/tranql-artillery
   image_tag: latest
 
 # the following values will be used to select the entry point from a loadbalancer

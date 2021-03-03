@@ -24,7 +24,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: tranql-backplane
-        image: renciorg/tranql-base:latest
+        image: helxplatform/tranql-base:latest
         command: [ "/usr/local/bin/gunicorn", "--workers=2", "--timeout=600", "--access-logfile=$(ACCESS_LOG)", "--error-logfile=$(ERROR_LOG)", "--log-level=debug", "tranql.backplane.server:app" ]
         ports:
           - containerPort: 8099
