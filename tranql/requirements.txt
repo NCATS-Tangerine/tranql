@@ -33,7 +33,7 @@ inflection==0.3.1
 #ipywidgets==7.4.2
 itsdangerous==1.1.0
 jedi==0.13.3
-jinja2==2.10
+jinja2==2.11.3
 jsonpath-rw==1.4.0
 jsonpickle==1.1
 jsonschema==2.6.0
