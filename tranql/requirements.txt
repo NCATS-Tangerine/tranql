@@ -79,7 +79,7 @@ python-coveralls==2.9.2
 python-dateutil==2.8.0
 pytz==2018.9
 #pywinpty==0.5.5
-pyyaml==4.2b1
+pyyaml==5.4
 #pyzmq==18.0.0
 QtAwesome==0.6.0
 qtconsole==4.4.3
