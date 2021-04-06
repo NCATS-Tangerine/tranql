@@ -1598,6 +1598,23 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       });
     }
   }
+
+  /**
+   * Convert a string from TRAPI 1.0 category to TRAPI 0.9 type.
+   *
+   * @param {String} value - String to convert.
+   * @private
+   */
+   _categoryToType(value) {
+    if (value) {
+      const blStr = "biolink:";
+      var typeVal = value.substring(blStr.length, value.length);
+      return typeVal.match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
+             .map(x => x.toLowerCase())
+             .join('_');
+    }
+  }
+
   /**
    * Render the graph via the rendering pipeline.
    *
@@ -1607,6 +1624,55 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
    * @private
    */
   _translateGraph (message,noRenderChain,schema) {
+    if(message !== undefined && message !== null &&
+      message.message !== undefined && message.message !== null &&
+      message.message.knowledge_graph !== undefined && message.message.knowledge_graph !== null) {
+
+      // Downcast message.nodes and message.links from TRAPI 1.0 to TRAPI 0.9
+      let newNodeArray = [];
+      for (const [id, node] of Object.entries(message.message.knowledge_graph.nodes)) {
+        node["id"] = id;
+        if (node["category"] !== undefined && node["category"] !== null) {
+          const catArr = node["category"];
+          console.log(`CATEGORY=[${catArr}]`);
+          let typeArr = catArr.map(this._categoryToType);
+          node["type"] = typeArr;
+        }
+        if (node.attributes !== undefined ) {
+          node.attributes.forEach((attr) => {
+            const key = attr["name"];
+            const val = attr["value"];
+            node[key] = val;
+          });
+          delete node.attributes;
+        }
+        newNodeArray.push(node);
+      };
+      message.knowledge_graph.nodes = newNodeArray;
+
+      let newLinkArray = [];
+      for (const [id, link] of Object.entries(message.message.knowledge_graph.edges)) {
+        link["source_id"] = link["subject"];
+        link["target_id"] = link["object"];
+        if (link["predicate"] !== undefined && link["predicate"] !== null) {
+          const blStr = "biolink:";
+          const predStr = link["predicate"];
+          const typeVal = predStr.substring(blStr.length, predStr.length);
+          link["type"] = typeVal;
+        }
+        if (link.attributes !== undefined) {
+          link.attributes.forEach((attr) => {
+            const key = attr["name"];
+            const val = attr["value"];
+            link[key] = val;
+          });
+          delete link.attributes;
+        }
+        newLinkArray.push(link);
+      };
+      message.knowledge_graph.edges = newLinkArray;
+    };
+
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
       if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;

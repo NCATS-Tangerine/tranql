@@ -168,6 +168,7 @@ class ReasonerFilter extends Actor {
     const filteredReasoners = context.reasonerSources.filter((reasoner) => !reasoner.checked);
     const new_nodes = message.graph.nodes.reduce (function (result, node) {
       const reasoners = node.origin.reasoner;
+      if (reasoners === undefined) return result;
       const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
       if (keep_it) {
         result.push(node);
@@ -176,6 +177,7 @@ class ReasonerFilter extends Actor {
     }, []);
     const new_links = message.graph.links.reduce (function (result, link) {
       const reasoners = link.origin.reasoner;
+      if (reasoners === undefined) return result;
       const keep_it = !reasoners.some((reasoner) => filteredReasoners.map((r)=>r.label).includes(reasoner));
       if (keep_it) {
         result.push(link);
