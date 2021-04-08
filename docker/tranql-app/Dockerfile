@@ -1,4 +1,4 @@
-FROM renciorg/tranql-base:0.38
+FROM helxplatform/tranql-base
 
 WORKDIR /
 RUN apk add nodejs npm git
