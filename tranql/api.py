@@ -9,7 +9,7 @@ import traceback
 import yaml
 import jsonschema
 import requests
-from flask import Flask, request, abort, Response, send_from_directory
+from flask import Flask, request, abort, Response, send_from_directory, render_template, make_response
 from flask_restful import Api, Resource
 from flasgger import Swagger
 from flask_cors import CORS
@@ -25,7 +25,7 @@ web_app_root = os.path.join (os.path.dirname (__file__), "..", "web", "build")
 WEB_PREFIX = os.environ.get('WEB_PATH_PREFIX', '')
 WEB_PREFIX = f"/{ WEB_PREFIX.strip('/') }" if WEB_PREFIX else ''
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=web_app_root)
 
 api = Api(app)
 CORS(app)
@@ -143,7 +143,7 @@ class WebAppRoot(Resource):
 #api.add_resource(WebAppRoot, '/', endpoint='webapp_root')
 
 class WebAppPath(Resource):
-    def get(self, path):
+    def get(self, path, web_prefix):
         """
         Web app path
         ---
@@ -157,6 +157,8 @@ class WebAppPath(Resource):
               description: Resource path.
         """
         logger.error (f"........................PATH: {path}")
+        if path.endswith('index.html'):
+            return make_response(render_template(path, web_prefix=web_prefix),200)
         if path != "" and os.path.exists(web_app_root + "/" + path):
             return send_from_directory (web_app_root, filename=path)
         else:
@@ -753,8 +755,8 @@ api.add_resource(ModelRelationsQuery, f'{WEB_PREFIX}/tranql/model/relations')
 api.add_resource(ParseIncomplete, f'{WEB_PREFIX}/tranql/parse_incomplete')
 api.add_resource(ReasonerURLs, f'{WEB_PREFIX}/tranql/reasonerURLs')
 
-api.add_resource(WebAppPath, f'{WEB_PREFIX}/<path:path>', endpoint='webapp_path')
-api.add_resource(WebAppPath, f'{WEB_PREFIX}/', endpoint='webapp_root', defaults={'path': 'index.html'})
+api.add_resource(WebAppPath, f'{WEB_PREFIX}/<path:path>', endpoint='webapp_path', defaults={'web_prefix': WEB_PREFIX})
+api.add_resource(WebAppPath, f'{WEB_PREFIX}/', endpoint='webapp_root', defaults={'path': f'index.html', 'web_prefix': WEB_PREFIX})
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')

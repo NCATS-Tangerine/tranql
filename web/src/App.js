@@ -94,7 +94,8 @@ class App extends Component {
       this.tranqlURL = "http://localhost:8001";
     }
     if(process.env.NODE_ENV === 'production') {
-      this.tranqlURL = window.location.origin;
+      // behind proxy this would treat the path used to load index.html as root
+      this.tranqlURL = window.location.href;
     }
     //this.tranqlURL = window.location.origin;
     //this.tranqlURL = "http://localhost:8001"; // dev only
