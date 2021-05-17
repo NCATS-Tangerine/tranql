@@ -1,4 +1,5 @@
-FROM helxplatform/tranql-base
+ARG BASE_IMAGE_VERSION=latest
+FROM helxplatform/tranql-base:${BASE_IMAGE_VERSION}
 
 WORKDIR /
 RUN apk add nodejs npm git
