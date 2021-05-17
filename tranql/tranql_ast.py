@@ -637,7 +637,10 @@ class SelectStatement(Statement):
             import asyncio
             answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph']))
             response = {'message': answer}
-
+            # Adds source db as reasoner attr in nodes and edges.
+            self.decorate_result(response['message'], {
+                "schema": self.service
+            })
         elif self.service == "/schema":
             result = self.execute_plan (interpreter)
         else:

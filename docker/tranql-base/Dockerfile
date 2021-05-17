@@ -1,12 +1,14 @@
 FROM python:3.7.3-alpine
 
+ARG BRANCH=master
+
 WORKDIR /
 
-RUN apk add git build-base linux-headers zeromq zeromq-dev
+RUN apk add git build-base linux-headers zeromq zeromq-dev libxslt-dev
 RUN pip install --upgrade pip
 #COPY requirements.txt ./
 #RUN pip install --no-cache-dir -r ./requirements.txt
-RUN git clone https://github.com/NCATS-Tangerine/tranql.git
+RUN git clone --single-branch --branch ${BRANCH}  https://github.com/NCATS-Tangerine/tranql.git
 #RUN grep -v mysql tranql/tranql/requirements.txt > r
 #RUN mv r tranql/tranql/requirements.txt
 RUN pip install --no-cache-dir -r tranql/tranql/requirements.txt
