@@ -1673,7 +1673,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
       };
       message.knowledge_graph.edges = newLinkArray;
     };
-
+    this._configureMessage (message,false,false);
     this.setState({},() => {
       if (typeof noRenderChain === "undefined") noRenderChain = false;
       if (typeof schema === "undefined") schema = this.state.schemaViewerActive && this.state.schemaViewerEnabled;
