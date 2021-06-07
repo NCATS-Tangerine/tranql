@@ -2147,6 +2147,7 @@ def test_redis_graph_cypher_options():
     redis_connection_params:
       host: localhost
       port: 6380"""
+
     mock_schema_yaml = {
         'schema':{
             'redis': {
@@ -2180,6 +2181,16 @@ def test_redis_graph_cypher_options():
     # we override the schema
     tranql = TranQL()
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        # clean up schema singleton
+        update_interval = 1
+        backplane = 'http://localhost:8099'
+        schema_factory = SchemaFactory(
+            backplane=backplane,
+            use_registry=False,
+            update_interval=update_interval,
+            create_new=True
+        )
+        tranql.schema = schema_factory.get_instance()
         with patch('PLATER.services.util.graph_adapter.GraphInterface.instance', graph_Inteface_mock(limit=20, skip=100, options_set=True)):
             ast = tranql.parse(
                 """
