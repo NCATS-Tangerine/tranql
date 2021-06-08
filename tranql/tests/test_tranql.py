@@ -2137,3 +2137,77 @@ def test_merged_node_ids_should_be_updated_in_knowledge_map():
     assert node_bindings_by_edge_kg_id['e_kg_id_22']['n1'] == ['kg_id_3']
     assert node_bindings_by_edge_kg_id['e_kg_id_2']['n0'] == ['kg_id_1']
     assert node_bindings_by_edge_kg_id['e_kg_id_2']['n1'] == ['kg_id_3']
+
+
+def test_redis_graph_cypher_options():
+    """doc: |
+      Roger is a knowledge graph built by aggregeting several kgx formatted knowledge graphs from several sources.
+    url: "redis:"
+    redis: true
+    redis_connection_params:
+      host: localhost
+      port: 6380"""
+
+    mock_schema_yaml = {
+        'schema':{
+            'redis': {
+                'doc': 'Red is a color but REDIS?',
+                'url': 'redis:',
+                'redis': True,
+                'redis_connection_params': {
+                    'host': 'local',
+                    'port': 6379
+                }
+            }
+        }
+    }
+
+    class graph_Inteface_mock:
+        def __init__(self, limit , skip, options_set):
+            self.limit = limit
+            self.skip  = skip
+            self.options_set = options_set
+
+        async def answer_trapi_question(self, message, options={}):
+            assert message
+            if self.options_set:
+                assert options
+                assert options['limit'] == self.limit
+                assert options['skip'] == self.skip
+            else:
+                assert options == {}
+            return {}
+
+    # we override the schema
+    tranql = TranQL()
+    with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
+        # clean up schema singleton
+        update_interval = 1
+        backplane = 'http://localhost:8099'
+        schema_factory = SchemaFactory(
+            backplane=backplane,
+            use_registry=False,
+            update_interval=update_interval,
+            create_new=True
+        )
+        tranql.schema = schema_factory.get_instance()
+        with patch('PLATER.services.util.graph_adapter.GraphInterface.instance', graph_Inteface_mock(limit=20, skip=100, options_set=True)):
+            ast = tranql.parse(
+                """
+                SELECT g1:gene->g2:gene
+                FROM 'redis:test'
+                where limit = 20 and skip = 100
+                """
+            )
+            select_statement = ast.statements[0]
+            select_statement.execute(interpreter=tranql)
+
+        with patch('PLATER.services.util.graph_adapter.GraphInterface.instance', graph_Inteface_mock(limit=20, skip=100, options_set=False)):
+            ast = tranql.parse(
+                """
+                SELECT g1:gene->g2:gene
+                FROM 'redis:test'
+                """
+            )
+            select_statement = ast.statements[0]
+            select_statement.execute(interpreter=tranql)

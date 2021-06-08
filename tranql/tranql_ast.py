@@ -516,7 +516,8 @@ class SelectStatement(Statement):
             edges[edge_id] = query_graph_edge
         question_graph = self.message(
             q_nodes = nodes,
-            q_edges = edges
+            q_edges = edges,
+            options= options
         )
         return question_graph
 
@@ -635,7 +636,15 @@ class SelectStatement(Statement):
             )
             question = self.generate_questions(interpreter)
             import asyncio
-            answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph']))
+            options = question.get('options')
+            limit = options.get('limit', [])
+            skip = options.get('skip', [])
+            cypher_query_options = {}
+            if limit:
+                cypher_query_options['limit'] = limit[-1]
+            if skip:
+                cypher_query_options['skip'] = skip[-1]
+            answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph'], options=cypher_query_options))
             response = {'message': answer}
             # Adds source db as reasoner attr in nodes and edges.
             self.decorate_result(response['message'], {
