@@ -45,6 +45,7 @@ def connect_knowledge_maps(responses):
             transformed_q_graph_edges[edge_attributes['subject']][edge_attributes['object']].add(edge_id)
         # convert node ids into list, collect score aswell
     score_table = {}
+
     for bindings in all_knowledge_maps:
         score_key = set()
         nodes = bindings.get('node_bindings', {})
@@ -377,6 +378,33 @@ def merge_kgraphs(kgraphs):
 
     return output
 
+def calc_score_based_on_publications(merged_kg):
+    edges = merged_kg.get('knowledge_graph', {}).get('edges', {})
+    bindings = merged_kg.get('results', [])
+    edge_scores = {}
+    for e in edges:
+        edge = edges[e]
+        attributes = edge.get('attributes', [])
+        attribute_name = 'publications'
+        current_edge_score = 0
+        for attr in attributes:
+            if attribute_name == attr['original_attribute_name'] and len(attr['value']) > 0:
+                attr['value'] = [attr['value']] if isinstance(attr['value'], str) else attr['value']
+                current_edge_score += len(attr['value'])
+        edge_scores[e] = current_edge_score
+
+    for binding in bindings:
+        edge_bindings = binding.get('edge_bindings', {})
+        kg_ids = []
+        for edge_id in edge_bindings:
+            kg_ids += reduce(lambda a, b: a + [b['id']], edge_bindings[edge_id], [])
+        score = 0
+        for kg_id in kg_ids:
+            score += edge_scores.get(kg_id , 0)
+        binding['score'] = score
+
+    return merged_kg
+
 
 def merge_messages(messages):
     """Merge messages."""
@@ -389,8 +417,10 @@ def merge_messages(messages):
 
     results_deduplicated = connect_knowledge_maps(messages)
 
-    return {
+    merged =  {
         "query_graph": messages[0]["query_graph"],
         "knowledge_graph": merge_kgraphs(kgraphs),
         "results": results_deduplicated
     }
+    merged = calc_score_based_on_publications(merged)
+    return merged
