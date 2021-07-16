@@ -2,16 +2,14 @@ import networkx as nx
 import json
 import yaml
 import copy
-import logging
 import requests
-import requests_cache
 import os
 from tranql.concept import BiolinkModelWalker
-from collections import defaultdict
 from tranql.exception import TranQLException, InvalidTransitionException
-from tranql.redis_graph import RedisGraph
 import time
 import threading
+from PLATER.services.util.graph_adapter import GraphInterface
+from tranql.util import snake_case
 
 class NetworkxGraph:
     def __init__(self):
@@ -87,7 +85,6 @@ class GraphTranslator:
             "options" : {}
         }
 
-
 class RegistryAdapter:
     def __init__(self):
         self.__registry_adapters = {
@@ -144,6 +141,44 @@ class RegistryAdapter:
             return main_schema
 
 
+class RedisAdapter:
+    registry_adapters = {}
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def _create_graph_interface(service_name, redis_conf, tranql_config):
+        redis_connection_details = redis_conf
+        redis_connection_details.update(
+            {
+                'auth': ('', tranql_config.get(service_name.upper() + '_PASSWORD', '')),
+                'db_name': 'test',
+                'db_type': 'redis',
+            }
+        )
+        return GraphInterface(
+            **redis_connection_details
+        )
+
+    def _get_adatpter(self, name):
+        if name not in RedisAdapter.registry_adapters:
+            raise ValueError(f"Redis backend with name {name} not registered.")
+        return RedisAdapter.registry_adapters.get(name)
+
+    def set_adapter(self, name, redis_config, tranql_config):
+        RedisAdapter.registry_adapters[name] = RedisAdapter._create_graph_interface(
+            service_name=name,
+            redis_conf=redis_config,
+            tranql_config=tranql_config
+        )
+
+    def get_schema(self, name):
+        gi: GraphInterface = self._get_adatpter(name)
+        schema = gi.get_schema()
+        return schema
+
+
 class SchemaFactory:
     """
     Keeps a single SchemaInstance object till next update.
@@ -151,7 +186,7 @@ class SchemaFactory:
     _cached = None
     _update_thread = None
 
-    def __init__(self, backplane, use_registry, update_interval, create_new=False):
+    def __init__(self, backplane, use_registry, update_interval, tranql_config, create_new=False, skip_redis=False ):
         """
         Make a new schema object if there is nothing cached
         and start update thread.
@@ -160,13 +195,13 @@ class SchemaFactory:
         """
 
         if not SchemaFactory._cached or create_new:
-            SchemaFactory._cached = Schema(backplane, use_registry)
+            SchemaFactory._cached = Schema(backplane, use_registry, tranql_config, skip_redis=skip_redis)
 
         if not SchemaFactory._update_thread:
             # avoid creating multiple threads.
             SchemaFactory._update_thread = threading.Thread(
                 target=SchemaFactory.update_cache_loop,
-                args=(backplane, use_registry , update_interval),
+                args=(backplane, use_registry , tranql_config, skip_redis, update_interval),
                 daemon=True)
             SchemaFactory._update_thread.start()
 
@@ -175,16 +210,16 @@ class SchemaFactory:
         return copy.deepcopy(SchemaFactory._cached)
 
     @staticmethod
-    def update_cache_loop(backplane, use_registry, update_interval=20*60):
+    def update_cache_loop(backplane, use_registry, tranql_config,skip_redis, update_interval=20*60):
         while True:
-            SchemaFactory._cached = Schema(backplane, use_registry)
+            SchemaFactory._cached = Schema(backplane, use_registry, tranql_config, skip_redis)
             time.sleep(update_interval)
 
 
 class Schema:
     """ A schema for a distributed knowledge network. """
 
-    def __init__(self, backplane, use_registry):
+    def __init__(self, backplane, use_registry, tranql_config, skip_redis=False):
         """
         Create a metadata map of the knowledge network.
         """
@@ -201,8 +236,10 @@ class Schema:
 
         """ Resolve remote schemas. """
         for schema_name, metadata in self.config['schema'].copy ().items ():
-            if metadata.get('redis', False) :
-                continue
+            if metadata.get('redis', False) and not skip_redis:
+                redis_adapter = RedisAdapter()
+                redis_adapter.set_adapter(schema_name, metadata.get('redis_connection_params'), tranql_config)
+                metadata['schema'] = self.snake_case_schema(redis_adapter.get_schema(schema_name))
             if 'registry' in metadata:
                 if use_registry:
                     registry_name = metadata['registry']
@@ -223,7 +260,7 @@ class Schema:
                 try:
                     old_s_d = schema_data
                     response = requests.get (schema_data)
-                    schema_data = response.json()
+                    schema_data = self.snake_case_schema(response.json())
                     if 'message' in schema_data:
                         raise Exception(schema_data['message'])
                 except Exception as e:
@@ -251,11 +288,26 @@ class Schema:
             pass
 
         for k, v in self.config['schema'].items ():
-            if 'redis' in v:
-                continue
             self.add_layer (layer=v['schema'], name=k)
 
         self.schema_graph.commit ()
+
+    def snake_case_schema(self, schema):
+        new_schema = {}
+        for node in schema:
+            new_node_name = snake_case(node.replace('biolink:', ''))
+            sub_nodes = schema[node]
+            new_schema[new_node_name] = new_schema.get(new_node_name, {})
+            for sub_node in sub_nodes:
+                new_subnode_name = snake_case(sub_node.replace('biolink:', ''))
+                new_schema[new_node_name][new_subnode_name] = new_schema[new_node_name].get(new_subnode_name, [])
+                predicates = sub_nodes[sub_node]
+                for predicate in predicates:
+                    new_predicate = snake_case(predicate.replace('biolink:', ''))
+                    if new_predicate not in new_schema[new_node_name][new_subnode_name]:
+                        new_schema[new_node_name][new_subnode_name].append(new_predicate)
+        return new_schema
+
 
     def add_layer (self, layer, name=None):
         """
@@ -378,6 +430,8 @@ class Schema:
         :param source_type: A source type.
         :param target_type: A target type.
         """
+        source_type = snake_case(source_type.replace('biolink:', ''))
+        target_type = snake_case(target_type.replace('biolink:', ''))
         edge = self.schema_graph.get_edge (start=source_type, end=target_type)
         if not edge:
             raise InvalidTransitionException (source_type, target_type, explanation=f'No valid transitions exist between {source_type} and {target_type} in this schema.')
