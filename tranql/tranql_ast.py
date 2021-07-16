@@ -640,11 +640,14 @@ class SelectStatement(Statement):
             options = question.get('options')
             limit = options.get('limit', [])
             skip = options.get('skip', [])
+            max_connections = options.get('max_connectivity', [])
             cypher_query_options = {}
             if limit:
                 cypher_query_options['limit'] = limit[-1]
             if skip:
                 cypher_query_options['skip'] = skip[-1]
+            if max_connections:
+                cypher_query_options['max_connectivity'] = max_connections[-1]
             answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph'], options=cypher_query_options))
             response = {'message': answer}
             # Adds source db as reasoner attr in nodes and edges.

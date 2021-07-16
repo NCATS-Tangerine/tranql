@@ -388,7 +388,7 @@ def calc_score_based_on_publications(merged_kg):
         attribute_name = 'publications'
         current_edge_score = 0
         for attr in attributes:
-            if attribute_name == attr['original_attribute_name'] and len(attr['value']) > 0:
+            if (attribute_name == attr.get('original_attribute_name') or attribute_name == attr.get('name')) and len(attr['value']) > 0:
                 attr['value'] = [attr['value']] if isinstance(attr['value'], str) else attr['value']
                 current_edge_score += len(attr['value'])
         edge_scores[e] = current_edge_score
