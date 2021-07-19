@@ -214,7 +214,8 @@ def test_merge_messages (GraphInterfaceMock, client):
             },
             "results": [{
                 "node_bindings": {},
-                "edge_bindings": {}
+                "edge_bindings": {},
+                "score": 0
             }],
             "query_graph": {
                 "nodes": {},
