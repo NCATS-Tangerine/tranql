@@ -60,7 +60,7 @@ schema:
   redis:
     doc: |
       Roger is a knowledge graph built by aggregeting several kgx formatted knowledge graphs from several sources.
-    url: "redis:"
+    url: "redis:test"
     redis: true
     redis_connection_params:
       host: localhost

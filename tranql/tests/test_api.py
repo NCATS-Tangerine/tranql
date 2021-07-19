@@ -3,6 +3,8 @@ import json
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
 from tranql.exception import TranQLException
 from tranql.api import api, app, StandardAPIResource
+from tranql.tests.mock_graph_adapter import GraphInterfaceMock
+from unittest.mock import patch
 
 @pytest.fixture
 def client():
@@ -98,142 +100,136 @@ def test_decorate_kg (client):
     )
     assert ordered(response.json) == ordered(expected)
 
-def test_merge_messages (client):
+
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_merge_messages (GraphInterfaceMock, client):
     messages = [
       {
-        "knowledge_graph": {
-          "edges": [
-            {
-              "source_id": "TEST:CS1",
-              "target_id": "TEST:G1",
-              "type": "targets"
-            }
-          ],
-          "nodes": [
-            {
-              "id": "TEST:CS1",
-              "type": "chemical_substance"
+       "message": {
+           "knowledge_graph": {
+              "edges": {
+                "e0": {
+                  "subject": "TEST:CS1",
+                  "object": "TEST:G1",
+                  "predicate": "targets"
+                }
+              },
+              "nodes": {
+                "TEST:CS1": {
+                  "category": ["chemical_substance"]
+                },
+                "TEST:G1": {
+                  "category": ["gene"]
+                }
+              }
             },
-            {
-              "id": "TEST:G1",
-              "type": "gene"
-            }
-          ]
-        },
-        "knowledge_map": [],
-        "question_graph": {
-            "nodes": [],
-            "edges": []
+           "results": [{
+                "node_bindings": {},
+                "edge_bindings": {}
+            }],
+           "query_graph": {
+            "nodes": {},
+            "edges": {}
         }
+       }
       },
       {
-        "knowledge_graph": {
-          "edges": [
-            {
-              "source_id": "TEST:CS2",
-              "target_id": "TEST:G2",
-              "type": "interacts_with"
-            }
-          ],
-          "nodes": [
-            {
-              "equivalent_identifiers": [
-                "TEST:CS1"
-              ],
-              "id": "TEST:merged",
-              "type": [
-                "chemical_substance",
-                "Drug"
-              ]
+          "message": {
+            "knowledge_graph": {
+                "edges": {
+                    "e0": {
+                      "subject": "TEST:CS2",
+                      "object": "TEST:G2",
+                      "predicate": "interacts_with"
+                    }
+                },
+
+                "nodes": {
+                    "TEST:CS1": {
+                      "equivalent_identifiers": [
+                        "TEST:CS1"
+                      ],
+                      "category": [
+                        "chemical_substance",
+                        "Drug"
+                      ]
+                    },
+                    "TEST:CS2": {
+                      "category": ["chemical_substance"]
+                    },
+                    "TEST:G2": {
+                      "category": ["gene"]
+                    }
+                }
             },
-            {
-              "id": "TEST:CS2",
-              "type": "chemical_substance"
-            },
-            {
-              "id": "TEST:G2",
-              "type": "gene"
-            }
-          ]
-        },
-        "knowledge_map": [],
-        "question_graph": {
-            "nodes": [],
-              "edges": []
+            "results": [{
+                "node_bindings": {},
+                "edge_bindings": {}
+            }],
+            "query_graph": {
+                    "nodes": {},
+                    "edges": {}
+              }
           }
       }
     ]
     expected = {
-      "knowledge_graph": {
-        "nodes": [
-          {
-            "id": "TEST:CS1",
-            "type": [
-              "chemical_substance",
-              "Drug"
-            ],
-            "equivalent_identifiers": [
-              "TEST:merged",
-              "TEST:CS1"
-            ]
-          },
-          {
-            "id": "TEST:G1",
-            "type": [
-              "gene"
-            ],
-            "equivalent_identifiers": [
-              "TEST:G1"
-            ]
-          },
-          {
-            "id": "TEST:CS2",
-            "type": [
-              "chemical_substance"
-            ],
-            "equivalent_identifiers": [
-              "TEST:CS2"
-            ]
-          },
-          {
-            "id": "TEST:G2",
-            "type": [
-              "gene"
-            ],
-            "equivalent_identifiers": [
-              "TEST:G2"
-            ]
-          }
-        ],
-        "edges": [
-          {
-            "source_id": "TEST:CS1",
-            "target_id": "TEST:G1",
-            "type": [
-              "targets"
-            ]
-          },
-          {
-            "source_id": "TEST:CS2",
-            "target_id": "TEST:G2",
-            "type": [
-              "interacts_with"
-            ]
-          }
-        ]
-      },
-      "knowledge_map": [],
-      "question_graph": {
-        "nodes": [],
-        "edges": []
-      }
+        "message": {
+            "knowledge_graph": {
+                "nodes": {
+                    "TEST:CS1": {
+                        "category": [
+                            "chemical_substance",
+                            "Drug"
+                        ]
+                    },
+                    "TEST:G1": {
+                        "category": [
+                            "gene"
+                        ]
+                    },
+                    "TEST:CS2": {
+                        "category": [
+                            "chemical_substance"
+                        ]
+                    },
+                    "TEST:G2": {
+                        "category": [
+                            "gene"
+                        ]
+                    }
+                },
+                "edges": {
+                    "2f827c8f7a18": {
+                        "subject": "TEST:CS1",
+                        "object": "TEST:G1",
+                        "predicate": "targets"
+                    },
+                    "fa228ef6a64a":{
+                        "subject": "TEST:CS2",
+                        "object": "TEST:G2",
+                        "predicate": "interacts_with"
+                    }
+                }
+            },
+            "results": [{
+                "node_bindings": {},
+                "edge_bindings": {},
+                "score": 0
+            }],
+            "query_graph": {
+                "nodes": {},
+                "edges": {}
+            }
+        }
+
     }
     args = {
         'name_based_merging': True,
         'resolve_names': False,
-        'question_graph': json.dumps({
-          "nodes": [],
-          "edges": []
+        'query_graph': json.dumps({
+          "nodes": {},
+          "edges": {}
         })
     }
     response = client.post(
@@ -248,7 +244,8 @@ def test_merge_messages (client):
 """
 [schema]
 """
-def test_schema(client, requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_schema(GraphIntefaceMock, client, requests_mock):
     set_mock(requests_mock, "workflow-5")
     response = client.get('/tranql/schema').json
     assert 'schema' in response
@@ -267,7 +264,8 @@ def test_model_relations(client, requests_mock):
 """
 [validation]
 """
-def test_query(client, requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_query(GraphInterfaceMock, client, requests_mock):
     set_mock(requests_mock, "workflow-5")
     program = """
         --

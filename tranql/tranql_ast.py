@@ -14,12 +14,12 @@ from tranql.util import Concept
 from tranql.util import JSONKit
 from tranql.util import light_merge
 from tranql.request_util import async_make_requests
-from tranql.util import Text
+from tranql.util import Text, snake_case
 from tranql.exception import ServiceInvocationError
 from tranql.exception import UndefinedVariableError
 from tranql.exception import IllegalConceptIdentifierError
 from tranql.exception import UnknownServiceError
-from tranql.utils.merge_utils import connect_knowledge_maps
+from tranql.utils.merge_utils import merge_messages
 from PLATER.services.util.graph_adapter import GraphInterface
 
 logger = logging.getLogger (__name__)
@@ -302,6 +302,7 @@ class SelectStatement(Statement):
         if not isinstance(type_names, list):
             type_names = [type_names]
         result = []
+        type_names = [snake_case(type_name.replace('biolink:', '')) for type_name in type_names]
         for type_name in type_names:
             equivalent_identifiers = Bionames.get_ids (name, type_name)
             for i in equivalent_identifiers:
@@ -639,11 +640,14 @@ class SelectStatement(Statement):
             options = question.get('options')
             limit = options.get('limit', [])
             skip = options.get('skip', [])
+            max_connections = options.get('max_connectivity', [])
             cypher_query_options = {}
             if limit:
                 cypher_query_options['limit'] = limit[-1]
             if skip:
                 cypher_query_options['skip'] = skip[-1]
+            if max_connections:
+                cypher_query_options['max_connectivity'] = max_connections[-1]
             answer = asyncio.run(graph_interface.answer_trapi_question(question['message']['query_graph'], options=cypher_query_options))
             response = {'message': answer}
             # Adds source db as reasoner attr in nodes and edges.
@@ -651,7 +655,7 @@ class SelectStatement(Statement):
                 "schema": self.service
             })
         elif self.service == "/schema":
-            result = self.execute_plan (interpreter)
+            response = self.execute_plan (interpreter)
         else:
             """ We want to find what schema name corresponds to the url we are querying.
             Then we can format the constraints accordingly (e.g. the ICEES schema name is 'icces'). """
@@ -692,7 +696,7 @@ class SelectStatement(Statement):
                     }
                 ],maximumParallelRequests)
                 errors = response["errors"]
-                response = response["responses"][0]
+                response = response["responses"][0] if len(response["responses"]) else {}
                 interpreter.context.mem.get('requestErrors', []).extend(errors)
             else:
                 response = {}
@@ -737,7 +741,7 @@ class SelectStatement(Statement):
         first_concept = None
 
         # Generate the root statement's question graph
-        root_question_graph = self.generate_questions(interpreter)[0]['query_graph']
+        root_question_graph = self.generate_questions(interpreter)['message']['query_graph']
 
         for index, statement in enumerate(statements):
             logger.debug (f" -- {statement.query}")
@@ -750,12 +754,12 @@ class SelectStatement(Statement):
                 """ Implement handoff. Finds the type name of the first element of the
                 next plan segment, looks up values for that type from the answer bindings of the
                 last response, and transfers values to the new question. TODO: incorporate
-                user specified namnes. """
+                user specified names. """
                 next_statement = statements[index+1]
                 if statements[index].query.order == next_statement.query.order:
                     name = next_statement.query.order[0]
                     first_concept = next_statement.query.concepts[name]
-                    first_concept.set_curies (statements[index].query.concepts[name].nodes)
+                    first_concept.set_curies (statements[index].query.concepts[name].curies)
                 else:
                     name = [name for name in statements[index].query.order if name in next_statement.query.order][0]
                     first_concept = next_statement.query.concepts[name]
@@ -774,261 +778,12 @@ class SelectStatement(Statement):
                             details = Text.short (obj=f"{json.dumps(response, indent=2)}", limit=1000))
                     duplicate_statements = []
                     first_concept.set_curies(values)
-        merged = self.merge_results (responses, interpreter, root_question_graph, self.query.order)
+        merged = self.merge_results (responses)
         return merged
 
     @staticmethod
-    def merge_results (responses, interpreter, question_graph, root_order=None):
-        """ Merge results. """
-
-        """
-        If True, SelectStatement::resolve_name (and therefore the Bionames API) will be called on every node that does not already possess the `equivalent_identifiers` property.
-        As of now, this feature should be left disabled as it results in large queries failing due to the flooding of the Bionames API. Additionally, the Bionames class does not use async requests as of now, so it is also quite slow.
-        """
-        RESOLVE_EQUIVALENT_IDENTIFIERS = interpreter.resolve_names
-        """
-        If True, all nodes that have identical names will be assumed to be identical nodes and will consequently be merged together.
-        """
-        NAME_BASED_MERGING = interpreter.name_based_merging
-
-        # result = responses[0] if len(responses) > 0 else None
-        result = {
-                "knowledge_graph": {
-                    "nodes": [],
-                    "edges": []
-                },
-                "knowledge_map": [],
-                "question_graph": question_graph
-        }
-        # if not 'knowledge_graph' in result:
-        #     message = "Malformed response does not contain knowledge_graph element."
-        #     logger.error (f"{message} svce: {service}: {json.dumps(result, indent=2)}")
-        #     raise MalformedResponseError (message)
-        kg = result['knowledge_graph']
-        #answers = result['answers']
-        answers = result['knowledge_map']
-
-        node_map = {}
-
-        replace_edge_ids = []
-        if RESOLVE_EQUIVALENT_IDENTIFIERS:
-            logger.info ('Starting to fetch equivalent identifiers')
-        total_requests = 0
-        prev_time = time.time()
-        """
-        Fetch/create equivalent identifiers for all nodes in the responses.
-
-        Convert the type property on all nodes and edges to a list if it is not already one.
-        """
-        for response in responses:
-            if 'knowledge_graph' in response:
-                nodes = response['knowledge_graph'].get('nodes',[])
-                edges = response['knowledge_graph'].get('edges',[])
-                for node in nodes:
-                    """
-                    Convert the `type` property of all nodes into a list. Create it if they do not already have it.
-                    """
-                    if 'type' not in node:
-                        node['type'] = []
-                    if (not isinstance(node['type'],list)):
-                        node['type'] = [node['type']]
-
-                    """
-                    Create the `equivalent_identifiers` property on all nodes that do not already have it.
-                    """
-                    if 'equivalent_identifiers' not in node:
-                        ids = [node['id']]
-                        if RESOLVE_EQUIVALENT_IDENTIFIERS:
-                            ids = SelectStatement.resolve_name (node.get('name',None), node.get('type',''))
-                        node['equivalent_identifiers'] = ids
-                        total_requests += 1
-                    """
-                    Give the node its own identifier inside its equivalent identifiers if it doesn't already have it.
-                    """
-                    # Convert these to arrays.
-                    if isinstance(node['equivalent_identifiers'], str):
-                        if node['equivalent_identifiers'] == 'None':
-                            node['equivalent_identifiers'] = []
-                        else:
-                            node['equivalent_identifiers'] = [node['equivalent_identifiers']]
-
-                    if node['id'] not in node['equivalent_identifiers']:
-                        node['equivalent_identifiers'].append(node['id'])
-
-                for edge in edges:
-                    """
-                    Convert the `type` property of all edges into a list. Create it if they do not already have it.
-                    """
-                    if 'type' not in edge:
-                        edge['type'] = []
-                    if (not isinstance(edge['type'],list)):
-                        edge['type'] = [edge['type']]
-
-        if RESOLVE_EQUIVALENT_IDENTIFIERS:
-            logger.info (f'Finished fetching equivalent identifiers for {total_requests} nodes ({time.time()-prev_time}s).')
-
-        """
-        For instances where multiple nodes have the same name, infer that they are equivalent and give each equivalent identifiers to one another.
-        Note: this infers that if a node has the same `name` property as another, then it be the other. If this ever becomes untrue, it needs to be updated.
-        """
-        if NAME_BASED_MERGING:
-            node_name_map = {}
-            for response in responses:
-                if 'knowledge_graph' in response:
-                    nodes = response['knowledge_graph'].get('nodes',[])
-                    for node in nodes:
-                        """
-                        Add to the node_name_map of duplicate names to nodes
-                        """
-                        name = node.get('name',None)
-                        if name != None:
-                            if name not in node_name_map:
-                                node_name_map[name] = [node]
-                            else:
-                                node_name_map[name].append(node)
-
-            for i in node_name_map:
-                """
-                Assign every node the equivalent_identifiers property of all other nodes with the same name
-                """
-                nodes = node_name_map[i]
-                all_equivalent_identifiers = []
-                [all_equivalent_identifiers.extend(node['equivalent_identifiers']) for node in nodes]
-                # Filter out all duplicates
-                all_equivalent_identifiers = list(set(all_equivalent_identifiers))
-                for node in nodes:
-                    node['equivalent_identifiers'] = all_equivalent_identifiers
-        # Uses more space but less cpu
-        # Using a reverse lookup for equivalent to map
-        eq_ids_to_node_ids_map = {}
-        for r in responses:
-            for nodes in r['knowledge_graph']['nodes']:
-                for i in nodes['equivalent_identifiers']:
-                    if i not in eq_ids_to_node_ids_map:
-                        eq_ids_to_node_ids_map[i] = nodes['id']
-
-
-        for response in responses:
-            #logger.error (f"   -- Response message: {json.dumps(result, indent=2)}")
-            # TODO: Preserve reasoner provenance. This treats nodes as equal if
-            # their ids are equal. Consider merging provenance/properties.
-            # Edges, we may keep distinct and whole or merge to some tbd extent.
-            if 'knowledge_graph' in response:
-                rkg = response['knowledge_graph']
-                #result['answers'] += response['answers']
-                [kg['edges'].append(e) for e in rkg.get('edges',[])]
-                # qg = response.get('question_graph',{})
-                # result['question_graph']['nodes'].extend(qg.get('nodes',[]))
-                # result['question_graph']['edges'].extend(qg.get('edges',[]))
-                other_nodes = rkg['nodes'] if 'nodes' in rkg else []
-                for n in other_nodes:
-                    """
-                    If possible, try to convert all nodes to a single identifier so that we don't end up with multiple separate nodes that are actually the same in the graph.
-                    Example: https://i.imgur.com/Z76R1wZ.png. The node on left is called "citric acid," and the node on right is called "anhydrous citric acid."
-                    The left node's id is "CHEBI:30769" and the right node's id is "CHEMBL:CHEMBL1261." These identifiers are actually equivalent to each other.
-                    """
-                    ids = n['equivalent_identifiers']
-                    exists = False
-                    for id in ids:
-                        if id in eq_ids_to_node_ids_map:
-                            main_id = eq_ids_to_node_ids_map[id]
-                            node = node_map.get(main_id, None)
-                            if node:
-                                exists = True
-                        if exists:
-                            replace_edge_ids.append([n["id"], node["id"]])
-                            # Ensure that both nodes' properties are represented in the new node.
-                            light_merge(node,n)
-                            light_merge(n,node)
-                            break
-                    if not exists:
-                        node_map[n['id']] = n
-                        kg['nodes'].append (n)
-        # We need to update the edges' ids if we changed any node ids.
-        for old_id, new_id in replace_edge_ids:
-            for edge in result['knowledge_graph'].get('edges',[]):
-                if old_id == edge['source_id']:
-                    edge['source_id'] = new_id
-                if old_id == edge['target_id']:
-                    edge['target_id'] = new_id
-            # We also need to replace these old identifiers within the knowledge map or bad things will happen.
-            for response in responses:
-                old_id_as_list = [old_id] if isinstance(old_id, str) else old_id
-                new_id_as_list = [new_id] if isinstance(new_id, str) else new_id
-                for answer in response['knowledge_map']:
-                    node_bindings = answer.get('node_bindings',{})
-
-                    for concept in node_bindings:
-                        identifier = node_bindings[concept]
-                        # convert identifier to list
-                        identifier = [identifier] if isinstance(identifier, str) else identifier
-                        if identifier == old_id_as_list:
-                            identifier = new_id_as_list
-                        node_bindings[concept] = identifier
-                    answer['node_bindings'] = node_bindings
-
-
-        # Kill all duplicate edges. Merge them into the winning edge.
-        # This has to occur after edge ids are replaced so that we can more succesfully detect duplicate edges, since nodes will have been merged into one another.
-        merged_edges = {}
-        killed_edges = []
-        for response in responses:
-            if 'knowledge_graph' in response:
-                rkg = response['knowledge_graph']
-                other_edges = rkg['edges'] if 'edges' in rkg else []
-                for e in other_edges:
-                    exists = False
-                    e_type = e.get('type',None)
-                    edge_key = '#'.join(sorted(e_type)) + e['source_id'] + e['target_id']
-                    if edge_key in merged_edges:
-                        exists = True
-                        edge = merged_edges[edge_key]
-                    if exists:
-                        id_1, id_2 = edge['id'], e['id']
-                        light_merge(edge,e)
-                        light_merge(e,edge)
-                        killed_edges.append ([id_2, id_1])
-                    else:
-                        merged_edges[edge_key] = e
-
-        # For each killed edge, go through the knowledge_map and replace the dead edge's id with the new edge's id.
-        for old_edge_id, new_edge_id in killed_edges:
-            for response in responses:
-                for answer in response['knowledge_map']:
-                    edge_bindings = answer.get('edge_bindings',{})
-                    delete = False
-                    for concept in edge_bindings:
-                        if isinstance(edge_bindings[concept], list):
-                            identifiers = []
-                            for identifier in edge_bindings[concept]:
-                                if identifier == old_edge_id:
-                                    identifier = new_edge_id
-                                identifiers.append(identifier)
-                            edge_bindings[concept] = identifiers
-                        else:
-                            identifier = edge_bindings[concept]
-                            if identifier == old_edge_id:
-                                identifier = new_edge_id
-                            edge_bindings[concept] = identifier
-
-        kg['edges'] = [merged_edges[edge_key] for edge_key in merged_edges]
-
-
-        result['knowledge_map'] = SelectStatement.connect_knowledge_maps(responses, root_order)
-
-
-        return result
-
-    @staticmethod
-    def connect_knowledge_maps(responses, root_order):
-        # Now that all the merging in the knowledge graph is completed, the answers in the knowledge maps must be merged.
-        # We need to connect answers from each response together with answers from every other response.
-        # For example, given the query `select population_of_individual_organisms->disease->gene`, which is split
-        # into two statements: `select population_of_individual_organisms->disease FROM icees` and `select disease->gene FROM robokop`,
-        # an answer with `population_of_individual_organisms : "COHORT:X" -> disease : "MONDO:Y"``
-        # must be connected to another answer with `disease : "MONDO:Y" -> gene : "HGNC:Z"` in order to form a complete answer.
-        # We need the entire path of a query in each answer.
-        return connect_knowledge_maps(responses, root_order)
+    def merge_results (responses):
+        return {"message": merge_messages([response["message"] for response in responses])}
 
 
 class TranQL_AST:
@@ -1239,8 +994,8 @@ class QueryPlanStrategy:
         schema = None
         converted = False
 
-        source_type = source.type_name
-        target_type = target.type_name
+        source_type = snake_case(source.type_name.replace('biolink:', ''))
+        target_type = snake_case(target.type_name.replace('biolink:', ''))
         if predicate.direction == Query.back_arrow:
             source_type, target_type = target_type, source_type
 
@@ -1249,8 +1004,6 @@ class QueryPlanStrategy:
             # This will restrict usage of TRANQL with redis graph
             # Explicitly i.e its either /schema or a redis backend
             # @TODO handle this more elegantly
-            if 'redis' in sub_schema_package:
-                continue
             sub_schema = sub_schema_package ['schema']
             sub_schema_url = sub_schema_package ['url']
 

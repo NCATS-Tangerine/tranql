@@ -18,6 +18,7 @@ from tranql.main import TranQL, TranQLIncompleteParser
 from tranql.tranql_ast import SelectStatement
 from tranql.tranql_schema import GraphTranslator
 from tranql.exception import TranQLException
+from tranql.config import Config as TranqlConfig
 
 logger = logging.getLogger (__name__)
 
@@ -360,18 +361,9 @@ class MergeMessages(StandardAPIResource):
 
         """
         messages = request.json
-        interpreter_options = {
-            "name_based_merging" : request.args.get('name_based_merging','true').upper() == 'TRUE',
-            "resolve_names" : request.args.get('resolve_names','false').upper() == 'TRUE'
-        }
-        root_question_graph = json.loads(request.args['question_graph'])
-        root_order = request.args.get('root_order',None)
-        if root_order != None:
-            # werkzeug.ImmutableMultiDict.getlist doesn't allow for a default if the key isn't present,
-            # so first check if its present, and, if so, get it as a list.
-            root_order = request.args.getlist('root_order')
-        tranql = TranQL (options=interpreter_options)
-        return self.response(SelectStatement.merge_results(messages,tranql,root_question_graph,root_order))
+        return self.response(SelectStatement.merge_results(messages))
+
+
 class TranQLQuery(StandardAPIResource):
     """ TranQL Resource. """
 
@@ -725,16 +717,15 @@ class ParseIncomplete(StandardAPIResource):
         else:
             query = request.json
 
-        tranql = TranQL (options= {
-            'use_registry': app.config.get('registry', False)
-        })
-        parser = TranQLIncompleteParser (tranql.context.resolve_arg ("$backplane"))
-
+        # tranql = TranQL (options= {
+        #     'use_registry': app.config.get('registry', False)
+        # })
+        config_path = "conf.yml"
+        config = TranqlConfig(config_path)
+        parser = TranQLIncompleteParser (config.get('BACKPLANE'))
         result = None
-
         try:
             result = self.parse(parser, query)
-
         except Exception as e:
             result = self.handle_exception(e)
         return self.response(result)

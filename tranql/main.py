@@ -120,7 +120,13 @@ class TranQL:
         self.use_registry = options.get("registry", False) or self.config.get('USE_REGISTRY', False)
         # for testing singleton is causing problems
         self.recreate_schema = options.get('recreate_schema', False)
-        schema_factory = SchemaFactory(backplane=backplane, use_registry=self.use_registry, update_interval=20*60, create_new=self.recreate_schema)
+        schema_factory = SchemaFactory(
+            backplane=backplane,
+            use_registry=self.use_registry,
+            update_interval=20*60,
+            create_new=self.recreate_schema,
+            tranql_config=self.config
+        )
         self.schema = schema_factory.get_instance()
         self.parser = TranQLParser (self.schema)
 

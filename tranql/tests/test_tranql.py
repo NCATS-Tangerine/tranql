@@ -1,24 +1,18 @@
-import json
-import pytest
 import os
-import itertools
 import requests
 import yaml
-from pprint import pprint
-from deepdiff import DeepDiff
 from functools import reduce
 from tranql.main import TranQL
-from tranql.main import TranQLParser, set_verbose
 from tranql.tranql_ast import SetStatement, SelectStatement, custom_functions
 from tranql.tests.util import assert_lists_equal, set_mock, ordered
+from tranql.utils.merge_utils import connect_knowledge_maps, find_all_paths
 from tranql.tests.mocks import MockHelper
 from tranql.tests.mocks import MockMap
 from tranql.tranql_schema import SchemaFactory
 import requests_mock
 from unittest.mock import patch
 import copy, time
-from tranql.utils.merge_utils import connect_knowledge_maps, find_all_paths
-
+from tranql.tests.mock_graph_adapter import GraphInterfaceMock
 #set_verbose ()
 
 def assert_parse_tree (code, expected):
@@ -39,7 +33,8 @@ def assert_parse_tree (code, expected):
 #
 #####################################################
 
-def test_parse_predicate (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_predicate (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "predicates")
 
     """ Test parsing a predicate. """
@@ -70,7 +65,8 @@ def test_parse_predicate (requests_mock):
             ], [ "" ]
             ]])
 
-def test_parse_function (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_function (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test parsing and resolving function values (including nested) """
@@ -106,7 +102,8 @@ def test_parse_function (requests_mock):
         expected_where
     )
 
-def test_parse_list_function (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_list_function (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test resolving a function that returns a list """
@@ -140,7 +137,8 @@ def test_parse_list_function (requests_mock):
         expected_where
     )
 
-def test_parse_kwarg_function (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_kwarg_function (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test parsing of a function with keyword arguments """
@@ -171,7 +169,8 @@ def test_parse_kwarg_function (requests_mock):
         expected_where
     )
 
-def test_parse_list (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_list (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test parsing of lists within where statements """
@@ -202,7 +201,8 @@ def test_parse_list (requests_mock):
     )
 
 
-def test_parse_set (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_set (GraphIntefaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
 
     """ Test parsing set statements. """
@@ -224,7 +224,8 @@ def test_parse_set (requests_mock):
             ["set", "gamma.quick", "=", "http://robokop.renci.org:80/api/simple/quick/"]
         ])
 
-def test_parse_set_with_comment (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_set_with_comment (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Test parsing set statements with comments. """
     print (f"test_parse_set_with_comment()")
@@ -236,7 +237,8 @@ def test_parse_set_with_comment (requests_mock):
             ["set", "disease", "=", "asthma"]
         ])
 
-def test_parse_select_simple (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_select_simple (GraphIntefaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Verify the token stream of a simple select statement. """
     print (f"test_parse_select_simple()")
@@ -254,7 +256,8 @@ def test_parse_select_simple (requests_mock):
              ["set", ["knowledge_graph"]]]
         ])
 
-def test_parse_select_complex (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_select_complex (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Verify the token stream of a more complex select statement. """
     print (f"test_parse_select_complex()")
@@ -280,7 +283,8 @@ def test_parse_select_complex (requests_mock):
              ["set", ["$.nodes.[*].id", "as", "chemical_exposures"]]]
         ])
 
-def test_parse_query_with_repeated_concept (requests_mock):
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_parse_query_with_repeated_concept (GraphInterfaceMock, requests_mock):
     set_mock(requests_mock, "workflow-5")
     """ Verify the parser accepts a grammar allowing concept names to be prefixed by a name
     and a colon. """
@@ -676,156 +680,162 @@ def test_ast_multiple_reasoners (requests_mock):
 
     assert_lists_equal(statements[2].query.order,['disease','gene'])
     assert statements[2].get_schema_name(tranql) == "robokop"
-def test_ast_merge_knowledge_maps (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-    tranql = TranQL (options={
-        'recreate_schema': True
-    })
-    tranql.asynchronous = False
-    tranql.resolve_names = False
-    ast = tranql.parse ("""
-        select chemical_substance->disease->gene
-          from "/schema"
-         where chemical_substance="CHEMBL:CHEMBL3"
-    """)
 
-    # select = ast.statements[0]
-    # statements = select.plan (select.planner.plan (select.query))
-    # print(statements[0].query.order)
 
-    # (select.execute_plan(tranql))
-
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_ast_merge_knowledge_maps (GraphInterfaceMock, requests_mock):
     responses = [
         {
-            'knowledge_map' : [
+            "message":
                 {
-                    'node_bindings' : {
-                    'chemical_substance' : 'CHEBI:100',
-                        'disease' : 'MONDO:50'
+                    "knowledge_graph": {
+                        "edges": {},
+                        "nodes": {}
                     },
-                    'edge_bindings' : {
-                        'e0' : 'ROOT_EDGE'
+                    'results': [
+                        {
+                            'node_bindings': {
+                                'chemical_substance': [{"id": "CHEBI:100"}],
+                                'disease': [{"id": 'MONDO:50'}]
+                            },
+                            'edge_bindings': {
+                                'e0': [{
+                                    "id": 'ROOT_EDGE'
+                                }]
+                            }
+                        }
+                    ],
+                    'query_graph': {
+                        'nodes': {
+                            "chemical_substance": {'category': 'chemical_substance'},
+                            "disease": {'category': 'disease'}
+                        },
+                        'edges': {
+                            'e0': {'subject': 'chemical_substance', 'object': 'disease'}
+                        }
                     }
                 }
-            ],
-            'question_order' : ['chemical_substance','disease'],
-            'question_graph': {
-                'nodes': [
-                    {'id': 'chemical_substance', 'type': 'chemical_substance'},
-                    {'id': 'disease', 'type': 'disease'}
+        },
+        {
+            "message": {
+                "knowledge_graph": {
+                    "edges": {},
+                    "nodes": {}
+                },
+                'results': [
+                    {
+                        'node_bindings': {
+                            'disease': [{"id": 'MONDO:50'}],
+                            'gene': [{"id": 'HGNC:1'}],
+                            'metabolite': [{"id": 'KEGG:C00017'}]
+                        },
+                        'edge_bindings': {
+                            'e1': [{"id": 'TEST_EDGE'}]
+                        }
+                    }
                 ],
-                'edges':[
-                    {'id': 'e0', 'source_id': 'chemical_substance', 'target_id': 'disease'}
-                ]
+                'query_graph': {
+                    'nodes': {
+                        'disease': {'category': 'disease'},
+                        "gene": {'category': 'gene'},
+                        "metabolite": {'category': 'metabolite'}
+                    },
+                    'edges': {
+                        'e0': {'subject': 'disease', 'object': 'gene'},
+                        'e1': {'subject': 'gene', 'object': 'metabolite'}
+                    }
+                }
             }
         },
         {
-            'knowledge_map' : [
-                {
-                    'node_bindings' : {
-                        'disease' : 'MONDO:50',
-                        'gene' : 'HGNC:1',
-                        'metabolite' : 'KEGG:C00017'
-                    },
-                    'edge_bindings' : {
-                        'e1' : 'TEST_EDGE'
-                    }
-                }
-            ],
-            'question_order' : ['disease','gene','metabolite'],
-            'question_graph' : {
-                'nodes': [
-                    {'id': 'disease', 'type':'disease'},
-                    {'id': 'gene', 'type':'gene'},
-                    {'id': 'metabolite', 'type': 'metabolite'}
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id':'disease', 'target_id':'gene'},
-                    {'id': 'e1', 'source_id': 'gene', 'target_id': 'metabolite'}
-                ]
-            }
-        },
-        {
-            'knowledge_map' : [
-                {
-                    'node_bindings' : {
-                        'disease' : 'MONDO:50',
-                        'gene' : 'HGNC:1',
-                        'metabolite' : 'KEGG:FOOBAR'
-                    },
-                    'edge_bindings' : {
+            "message": {
+                "knowledge_graph": {
+                    "edges": {},
+                    "nodes": {}
+                },
+                'results': [
+                    {
+                        'node_bindings': {
+                            'disease': [{"id": 'MONDO:50'}],
+                            'gene': [{"id": 'HGNC:1'}],
+                            'metabolite': [{"id": 'KEGG:FOOBAR'}]
+                        },
+                        'edge_bindings': {
 
+                        }
+                    }
+                ],
+                'query_graph': {
+                    'nodes': {
+                        "disease": {'category': 'disease'},
+                        "gene": {'category': 'gene'},
+                        "metabolite": {'category': 'metabolite'}
+                    },
+                    'edges': {
+                        "e0": {'subject': 'disease', 'object': 'gene'},
+                        "e1": {'subject': 'gene', 'object': 'metabolite'}
                     }
                 }
-            ],
-            'question_order' : ['disease','gene','metabolite'],
-            'question_graph' : {
-                'nodes': [
-                    {'id': 'disease', 'type':'disease'},
-                    {'id': 'gene', 'type':'gene'},
-                    {'id': 'metabolite', 'type': 'metabolite'}
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id':'disease', 'target_id':'gene'},
-                    {'id': 'e1', 'source_id': 'gene', 'target_id': 'metabolite'}
-                ]
             }
         },
         {
-            'knowledge_map' : [
-                {
-                    'node_bindings' : {
-                        'metabolite' : 'KEGG:FOOBAR',
-                        'protein' : 'UniProtKB:TESTING'
+            "message": {
+                "knowledge_graph": {
+                    "edges": {},
+                    "nodes": {}
+                },
+                'results': [
+                    {
+                        'node_bindings': {
+                            'metabolite': [{"id": 'KEGG:FOOBAR'}],
+                            'protein': [{"id": 'UniProtKB:TESTING'}]
+                        },
+                        'edge_bindings': {
+                        }
+                    }
+                ],
+                'query_graph': {
+                    'nodes': {
+                        "metabolite": {'category': 'metabolite'},
+                        "protein": {'category': 'protein'}
                     },
-                    'edge_bindings' : {
-
+                    'edges': {
+                        'e0': {'subject': 'metabolite', 'object': 'protein'}
                     }
                 }
-            ],
-            'question_order' : ['metabolite','protein'],
-            'question_graph': {
-                'nodes': [
-                    {'id': 'metabolite', 'type': 'metabolite'},
-                    {'id': 'protein', 'type': 'protein'}
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id': 'metabolite', 'target_id': 'protein'}
-                ]
             }
         },
         {
-            'knowledge_map' : [
-                {
-                    'node_bindings' : {
-                        'metabolite' : 'KEGG:C00017',
-                        'protein' : 'UniProtKB:Q9NZJ5'
-                    },
-                    'edge_bindings' : {
+            "message": {
+                "knowledge_graph": {
+                    "edges": {},
+                    "nodes": {}
+                },
+                'results': [
+                    {
+                        'node_bindings': {
+                            'metabolite': [{"id": 'KEGG:C00017'}],
+                            'protein': [{"id": 'UniProtKB:Q9NZJ5'}]
+                        },
+                        'edge_bindings': {
 
+                        }
+                    }
+                ],
+                'query_graph': {
+                    'nodes': {
+                        'metabolite': {'category': 'metabolite'},
+                        'protein': {'category': 'protein'}
+                    },
+                    'edges': {
+                        'e0': {'subject': 'metabolite', 'object': 'protein'}
                     }
                 }
-            ],
-            'question_order' : ['metabolite','protein'],
-            'question_graph': {
-                'nodes': [
-                    {'id': 'metabolite', 'type': 'metabolite'},
-                    {'id': 'protein', 'type': 'protein'}
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id': 'metabolite', 'target_id': 'protein'}
-                ]
             }
         }
     ]
 
-    merged = SelectStatement.connect_knowledge_maps(responses,[
-        'chemical_substance',
-        'disease',
-        'gene',
-        'metabolite',
-        'protein'
-    ])
+    merged = connect_knowledge_maps([r["message"] for r in responses])
     ###
     # The Knowledge map is only valid if it has a connection, note that it is a filler
     # for the blanks of the question graph.
@@ -846,241 +856,27 @@ def test_ast_merge_knowledge_maps (requests_mock):
     assert_lists_equal(ordered(merged), ordered([
         {
             "node_bindings" : {
-                "chemical_substance" : ["CHEBI:100"],
-                "disease" : ["MONDO:50"],
+                "chemical_substance" : [{"id":"CHEBI:100"}],
+                "disease" : [{"id":"MONDO:50"}],
             },
             "edge_bindings" : {
-                "e0" : "ROOT_EDGE"
+                "e0" : [{"id":"ROOT_EDGE"}]
             },
             "score": 0
         },
         {
             "node_bindings" : {
-                "gene" : ["HGNC:1"],
-                "metabolite" : ["KEGG:C00017"]
+                "gene" : [{"id": "HGNC:1"}],
+                "metabolite" : [{"id": "KEGG:C00017"}]
             },
             "edge_bindings" : {
-                "e1" : "TEST_EDGE",
+                "e1" : [{"id": "TEST_EDGE"}],
             },
             "score": 0
         }
     ]))
 
-    # print(json.dumps(merged,indent=2))
 
-def test_ast_merge_results (requests_mock):
-    set_mock(requests_mock, "workflow-5")
-    """ Validate that
-            -- Results from the query plan are being merged together correctly
-    """
-    print("test_ast_merge_answers ()")
-    tranql = TranQL (options={
-        'recreate_schema': True
-    })
-    tranql.resolve_names = False
-    ast = tranql.parse ("""
-        SELECT cohort_diagnosis:disease->diagnoses:disease
-          FROM '/clinical/cohort/disease_to_chemical_exposure'
-         WHERE cohort_diagnosis = 'MONDO:0004979' --asthma
-           AND Sex = '0'
-           AND cohort = 'all_patients'
-           AND max_p_value = '0.5'
-           SET '$.knowledge_graph.nodes.[*].id' AS diagnoses
-    """)
-
-    question_graph = {
-            'edges': [
-                {
-                    'id': 'foo',
-                    'type': 'test',
-                    'source_id': 'chemical_substance',
-                    'target_id': 'gene'
-                }, {
-                    'id': 'edge_2',
-                    'type': 'other_type',
-                    'source_id': 'chemical_substance',
-                    'target_id': 'test'
-                }
-            ],
-            'nodes': [
-                {
-                    'id': 'chemical_substance',
-                    'type': 'chemical_substance',
-                }, {
-                    'id': 'gene',
-                    'type': 'gene'
-                }, {
-                    'id': 'test',
-                    'type': 'test'
-                }
-            ]
-        }
-
-    select = ast.statements[0]
-
-    # What is the proper format for the name of a mock file? This should be made into one
-    mock_responses = [
-        {
-            'question_graph': question_graph,
-            'knowledge_graph': {
-                'nodes': [
-                    {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
-                    {'id': 'HGNC:2597', 'type': 'gene'},
-                    {
-                        'id': 'egg',
-                        'name':'test_name_merge',
-                        'type': 'foo_type',
-                        'test_attr': ['a','b']
-                    },
-                    {
-                        'id': 'equivalent_identifier_merge',
-                        'equivalent_identifiers': ['TEST:00000'],
-                        'merged_property': [
-                            'a',
-                            'b'
-                        ]
-                    }
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'HGNC:2597'},
-                    {
-                        # Test if edges that are connected to merged nodes will be successfully merged with other duplicate edges
-                        'source_id' : 'CHEBI:28177',
-                        'target_id' : 'egg',
-                        'type': ['merge_this'],
-                        'merge_this_list' : ['edge_1'],
-                        'unique_attr_e_1' : 'e_1',
-                        'id' : 'winning_edge_id'
-                    },
-                ]
-            },
-            'knowledge_map': [
-                {
-                    'node_bindings': {
-                        'chemical_substance': 'CHEBI:28177',
-                        'gene': 'HGNC:2597'
-                    },
-                    'edge_bindings': {}
-                }
-            ]
-        },
-        {
-            'question_graph': question_graph,
-            'knowledge_graph': {
-                'nodes': [
-                    {'id': 'CHEBI:28177', 'type': 'chemical_substance'},
-                    {
-                        'id': 'also_test_array_type_and_string_type_merge',
-                        'name':'test_name_merge',
-                        'type': ['foo_type','bar_type'],
-                        'test_attr': ['a','c']
-                    },
-                    {'id': 'TEST:00000', 'type': 'test', 'merged_property': ['a','c']},
-                ],
-                'edges': [
-                    {'id': 'e0', 'source_id': 'CHEBI:28177', 'target_id': 'TEST:00000'},
-                    {
-                        'source_id' : 'CHEBI:28177',
-                        'target_id' : 'also_test_array_type_and_string_type_merge',
-                        'type': ['merge_this'],
-                        'merge_this_list' : ['edge_2'],
-                        'unique_attr_e_2' : 'e_2',
-                        'id': 'other_edge_id'
-                    }
-                ]
-            },
-            'knowledge_map': [
-                {
-                    'node_bindings': {
-                        'chemical_substance': 'CHEBI:28177',
-                        'test': 'TEST:00000'
-                    },
-                    'edge_bindings': {}
-                }
-            ]
-        }
-    ]
-
-    expected_result = {
-        "knowledge_graph": {
-            "edges": [
-                {
-                    "id": "e0",
-                    "source_id": "CHEBI:28177",
-                    "target_id": "HGNC:2597",
-                    "type": []
-                },
-                {
-                    "id": "e0",
-                    "source_id": "CHEBI:28177",
-                    "target_id": "equivalent_identifier_merge",
-                    "type": []
-                },
-                {
-                    "id" : "winning_edge_id",
-                    "source_id" : "CHEBI:28177",
-                    "target_id" : "egg",
-                    "type" : ["merge_this"],
-                    "merge_this_list" : ["edge_1", "edge_2"],
-                    "unique_attr_e_1" : "e_1",
-                    "unique_attr_e_2" : "e_2"
-                }
-            ],
-            "nodes": [
-                {
-                    "equivalent_identifiers": [
-                        "CHEBI:28177"
-                    ],
-                    "id": "CHEBI:28177",
-                    "type": ["chemical_substance"]
-                },
-                {
-                    "equivalent_identifiers": [
-                        "HGNC:2597"
-                    ],
-                    "id": "HGNC:2597",
-                    "type": ["gene"]
-                },
-                {
-                    "equivalent_identifiers": [
-                        "also_test_array_type_and_string_type_merge",
-                        "egg"
-                    ],
-                    "type": [
-                        "foo_type",
-                        "bar_type"
-                    ],
-                    "id": "egg",
-                    "name": "test_name_merge",
-                    "test_attr": [
-                        "a",
-                        "b",
-                        "c"
-                    ]
-                },
-                {
-                    "equivalent_identifiers": [
-                        "TEST:00000",
-                        "equivalent_identifier_merge"
-                    ],
-                    "merged_property": ["a", "b", "c"],
-                    "id": "equivalent_identifier_merge",
-                    "type": ["test"]
-                }
-            ]
-        },
-        "knowledge_map": [
-            # no edge bindings exist in response so we should expect nothing here
-        ],
-        'question_graph': question_graph
-    }
-    merged_results = select.merge_results (
-        mock_responses,
-        tranql,
-        question_graph,
-        root_order=None
-    )
-    assert ordered(merged_results) == ordered(expected_result)
 def test_ast_plan_strategy (requests_mock):
     set_mock(requests_mock, "workflow-5")
     print ("test_ast_plan_strategy ()")
@@ -1391,7 +1187,8 @@ def test_registry_disable():
         }
     }
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
-        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, create_new=True,  update_interval=1)
+        tranql_config = {}
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=False, create_new=True,  update_interval=1, tranql_config=tranql_config)
         schema = schema_factory.get_instance()
         assert len(schema.schema) == 0
 
@@ -1408,8 +1205,10 @@ def test_registry_enabled(requests_mock):
             }
         }
     }
+
     with patch('yaml.safe_load', lambda x: copy.deepcopy(mock_schema_yaml)):
-        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1, create_new=True)
+        tranql_config = {}
+        schema_factory = SchemaFactory('http://localhost:8099', use_registry=True, update_interval=1, create_new=True, tranql_config=tranql_config)
         schema = schema_factory.get_instance()
         assert len(schema.schema) > 1
 
@@ -1488,7 +1287,8 @@ def test_schema_should_not_change_once_initilalized():
                 backplane=backplane,
                 use_registry=True,
                 update_interval=update_interval,
-                create_new=True
+                create_new=True,
+                tranql_config={}
             )
             schema1 = schema_factory.get_instance()
             schema2 = schema_factory.get_instance()
@@ -1606,78 +1406,79 @@ def test_find_all_paths_branching_graph():
 
 def test_connect_graph_should_return_same_knowledge_map_for_single_response ():
     q_graph = {
-        'nodes': [
-            {'id': 'n1', 'type': 'tp1'},
-            {'id': 'n2', 'type': 'tp2'},
-        ],
-        'edges': [
-            {'id': 'e1', 'source_id': 'n1', 'target_id': 'n2'},
-        ]
+        'nodes': {
+            'n1': {'category': ['tp1']},
+            'n2': {'category': ['tp2']},
+        },
+        'edges': {
+            'e1': {'subject': 'n1', 'object': 'n2'},
+        }
     }
     k_graph = {
-        'nodes': [{
-            'id': 'some:curie',
-            'type': ['tp1'],
-            'name': 'first node'
-        },{
-            'id': 'some:curie2',
-            'type': ['tp2'],
-            'name': 'second node'
-        }],
-        'edges': [
-            {'id': 'e1-kg-id'},
-            {'id': 'e2-kg-id'}
-        ]
+        'nodes': {
+                "some:curie": {
+                    'category': ['tp1'],
+                    'name': 'first node'
+                },
+                "some:curie2": {
+                    'category': ['tp2'],
+                    'name': 'second node'
+                }
+        },
+        'edges': {
+            "e1-kg-id": {"source": "some:curie", "target": "some:curie2", "predicate": "pred:1"},
+            "e2-kg-id": {"source": "some:curie", "target": "some:curie2", "predicate": "pred:2"}
+        }
     }
     k_map = [
         {
             'node_bindings': {
-                # q_graph id : kg_graph id
-                'n1': 'some:curie',
-                'n2': 'some:curie2'
+                'n1': [{"id":'some:curie'}],
+                'n2': [{"id": 'some:curie2'}]
             },
             'edge_bindings': {
-                'e1': 'e1-kg-id'
+                'e1': [{"id": 'e1-kg-id'}]
             }
         }
     ]
     full_response = {
         'knowledge_graph': k_graph,
-        'question_graph': q_graph,
-        'knowledge_map': k_map
+        'query_graph': q_graph,
+        'results': k_map
     }
-    merged_k_map = connect_knowledge_maps([full_response],[])
+    merged_k_map = connect_knowledge_maps([full_response])
     assert len(merged_k_map) == len(k_map)
     assert merged_k_map[0]['node_bindings'] == k_map[0]['node_bindings']
     assert merged_k_map[0]['edge_bindings'] == k_map[0]['edge_bindings']
 
 def test_merge_two_responses_connected_one_after_the_other():
     q_G_1 = {
-        'nodes': [{'id': 'n0'}, {'id': 'n1'}],
-        'edges': [{'id': 'e1', 'source_id': 'n0', 'target_id': 'n1'}]
+        'nodes': {"n0": {'id': 'n0'}, "n1":{'id': 'n1'}},
+        'edges': {'e1': {'subject': 'n0', 'object': 'n1'}}
     }
     q_G_2 = {
-        'nodes': [{'id': 'n1'}, {'id': 'n2'}],
-        'edges': [{'id': 'e1-1', 'source_id': 'n1', 'target_id': 'n2'}]
+        'nodes': {"n1": {'id': 'n1'}, "n2":{'id': 'n2'}},
+        'edges': {"e1-1": {'id': 'e1-1', 'subject': 'n1', 'object': 'n2'}}
     }
     k_map_1 = [
         {
-            'node_bindings': {'n0': 'kg_id_of_n0', 'n1': 'kg_id_of_n1'},
-            'edge_bindings': {'e1': 'kg_id_of_e1'}}
+            'node_bindings': {'n0': [{"id":'kg_id_of_n0'}], 'n1': [{"id":'kg_id_of_n1'}]},
+            'edge_bindings': {'e1': [{"id": 'kg_id_of_e1'}]}
+        }
     ]
     k_map_2 = [
         {
-            'node_bindings': {'n1': 'kg_id_of_n1', 'n2': 'kg_id_of_n1'},
-            'edge_bindings': {'e1-1': 'kg_id_of_e1-1'}
+            'node_bindings': {'n1': [{"id": 'kg_id_of_n1'}], 'n2': [{"id": 'kg_id_of_n1'}]},
+            'edge_bindings': {'e1-1': [{"id":'kg_id_of_e1-1'}]}
         }
     ]
     response = connect_knowledge_maps([{
-        'question_graph': q_G_1,
-        'knowledge_map': k_map_1,
+        'query_graph': q_G_1,
+        'results': k_map_1,
     }, {
-        'question_graph': q_G_2,
-        'knowledge_map': k_map_2
-    }], [])
+        'query_graph': q_G_2,
+        'results': k_map_2
+    }])
     assert len(response) == 1
     merged_answer_nodes = response[0]['node_bindings']
     merged_answer_edges = response[0]['edge_bindings']
@@ -1691,32 +1492,32 @@ def test_merge_two_responses_connected_one_after_the_other():
 
 def test_connected_q_graph_disconnected_kg_map():
     q_G_1 = {
-        'nodes': [{'id': 'n0'}, {'id': 'n1'}],
-        'edges': [{'id': 'e1', 'source_id': 'n0', 'target_id': 'n1'}]
+        'nodes': {"n0":{'id': 'n0'}, 'n1':{'id': 'n1'}},
+        'edges': {'e1': {'id': 'e1', 'subject': 'n0', 'object': 'n1'}}
     }
     q_G_2 = {
-        'nodes': [{'id': 'n1'}, {'id': 'n2'}],
-        'edges': [{'id': 'e1-1', 'source_id': 'n1', 'target_id': 'n2'}]
+        'nodes': {'n1':{'id': 'n1'}, 'n1': {'id': 'n2'}},
+        'edges': {'e1-1': {'id': 'e1-1', 'subject': 'n1', 'object': 'n2'}}
     }
     k_map_1 = [
         {
-            'node_bindings': {'n0': 'kg_id_of_n0', 'n1': 'kg_id_of_n1'},
-            'edge_bindings': {'e1': 'kg_id_of_e1'}
+            'node_bindings': {'n0': [{'id': 'kg_id_of_n0'}], 'n1': [{'id':'kg_id_of_n1'}]},
+            'edge_bindings': {'e1': [{'id': 'kg_id_of_e1'}]}
         }
     ]
     k_map_2 = [
         {
-            'node_bindings': {'n1': 'HEREISWHEREDISCONNECTIONIS', 'n2': 'kg_id_of_n1'},
-            'edge_bindings': {'e1-1': 'kg_id_of_e1-1'}
+            'node_bindings': {'n1': [{'id': 'HEREISWHEREDISCONNECTIONIS'}], 'n2': [{'id': 'kg_id_of_n1'}]},
+            'edge_bindings': {'e1-1': [{'id': 'kg_id_of_e1-1'}]}
         }
     ]
     response = connect_knowledge_maps([{
-        'question_graph': q_G_1,
-        'knowledge_map': k_map_1,
+        'query_graph': q_G_1,
+        'results': k_map_1,
     }, {
-        'question_graph': q_G_2,
-        'knowledge_map': k_map_2
-    }], [])
+        'query_graph': q_G_2,
+        'results': k_map_2
+    }])
     assert len(response) == 2
     # each binding should have 2 nodes and single edge
     for answer in response:
@@ -1738,310 +1539,242 @@ def test_partials_disconnected_and_connected():
     p5: a2->b->f->g-d->e
     """
     q_g_1 = {
-        'nodes': [
-            {'id': 'A', 'type': 'A'},
-            {'id': 'B', 'type': 'B'},
-            {'id': 'C', 'type': 'C'},
-            {'id': 'D', 'type': 'D'},
-            {'id': 'E', 'type': 'E'}
-        ], 'edges': [
-            {'id': 'e-A-B', 'source_id': 'A', 'target_id':'B'},
-            {'id': 'e-B-C', 'source_id': 'B', 'target_id': 'C'},
-            {'id': 'e-C-D', 'source_id': 'C', 'target_id': 'D'},
-            {'id': 'e-D-E', 'source_id': 'D', 'target_id': 'E'}
-        ]
+        'nodes': {
+            'A': {'id': 'A', 'type': 'A'},
+            'B': {'id': 'B', 'type': 'B'},
+            'C': {'id': 'C', 'type': 'C'},
+            'D': {'id': 'D', 'type': 'D'},
+            'E': {'id': 'E', 'type': 'E'}
+        }, 'edges': {
+            'e-A-B': {'id': 'e-A-B', 'subject': 'A', 'object':'B'},
+            'e-B-C': {'id': 'e-B-C', 'subject': 'B', 'object': 'C'},
+            'e-C-D': {'id': 'e-C-D', 'subject': 'C', 'object': 'D'},
+            'e-D-E': {'id': 'e-D-E', 'subject': 'D', 'object': 'E'}
+        }
     }
     q_g_2 = {
-        'nodes': [
-            {'id': 'B', 'type': 'B'},
-            {'id': 'C', 'type': 'C'},
-            {'id': 'G', 'type': 'G'},
-            {'id': 'D', 'type': 'D'}
-        ],
-        'edges': [
-            {'id': 'e-B-C', 'source_id': 'B', 'target_id': 'C'},
-            {'id': 'e-C-G', 'source_id': 'C', 'target_id': 'G'},
-            {'id': 'e-G-D', 'source_id': 'G', 'target_id': 'D'}
-        ]
+        'nodes': {
+            'B': {'id': 'B', 'type': 'B'},
+            'C': {'id': 'C', 'type': 'C'},
+            'G': {'id': 'G', 'type': 'G'},
+            'D': {'id': 'D', 'type': 'D'}
+        },
+        'edges': {
+            'e-B-C': {'id': 'e-B-C', 'subject': 'B', 'object': 'C'},
+            'e-C-G': {'id': 'e-C-G', 'subject': 'C', 'object': 'G'},
+            'e-G-D': {'id': 'e-G-D', 'subject': 'G', 'object': 'D'}
+        }
     }
     q_g_3 = {
-        'nodes': [
-            {'id': 'A', 'type': 'A'},
-            {'id': 'B', 'type': 'B'}
-        ],
-        'edges': [
-            {'id': 'e-A-B', 'source_id': 'A', 'target_id': 'B'}
-        ]
+        'nodes':{
+            'A': {'id': 'A', 'type': 'A'},
+            'B': {'id': 'B', 'type': 'B'}
+        },
+        'edges': {
+            'e-A-B':{'id': 'e-A-B', 'subject': 'A', 'object': 'B'}
+        }
     }
     q_g_4 = {
-        'nodes': [
-            {'id': 'A', 'type': 'A'},
-            {'id': 'B', 'type': 'B'}
-        ],
-        'edges': [
-            {'id': 'e-A-B', 'source_id':'A', 'target_id': 'B'}
-        ]
+        'nodes': {
+            'A': {'id': 'A', 'type': 'A'},
+            'B': {'id': 'B', 'type': 'B'}
+        },
+        'edges': {
+            'e-A-B': {'id': 'e-A-B', 'subject':'A', 'object': 'B'}
+        }
     }
 
     # Lets make some graphs that look like the above ones
 
-    k_map_1 = [
-        {
-            'node_bindings': {
-                'A': 'a',
-                'B': 'b',
-                'C': 'c',
-                'D': 'd',
-                'E': 'e'
-            },
-            'edge_bindings': {
-                'e-A-B': 'e-a-b',
-                'e-B-C': 'e-b-c',
-                'e-C-D': 'e-c-d',
-                'e-D-E': 'e-d-e'
-            }
-        },
-    ]    # a - b - c - d -e
-    k_map_2 = [{
-        'node_bindings': {
-            'B': 'b',
-            'C': 'f',
-            'G': 'g',
-            'D': 'd'
-        },
-        'edge_bindings': {
-            'e-B-C': 'e-b-f',
-            'e-C-G': 'e-c-g',
-            'e-G-D': 'e-g-d'
-        }
-    }]  # b - f -  g - d
-    k_map_3 = [{
-        'node_bindings': {
-            'A': 'a1',
-            'B': 'b1'
-        },
-        'edge_bindings': {
-            'e-A-B': 'e-a1-b1'
-        }
-    }]
-    k_map_4 = [
-        {'node_bindings': {
-            'A': 'a2',
-            'B': 'b'
-        }, 'edge_bindings': {
-            'e-A-B': 'e-a2-b'
-        }
-        }
-    ]
+    k_map_1 = [{'node_bindings': {'A': [{'id': 'a'}],
+                                  'B': [{'id': 'b'}],
+                                  'C': [{'id': 'c'}],
+                                  'D': [{'id': 'd'}],
+                                  'E': [{'id': 'e'}]},
+                'edge_bindings': {'e-A-B': [{'id': 'e-a-b'}],
+                                  'e-B-C': [{'id': 'e-b-c'}],
+                                  'e-C-D': [{'id': 'e-c-d'}],
+                                  'e-D-E': [{'id': 'e-d-e'}]}}]  # a - b - c - d -e
+    k_map_2 = [{'node_bindings': {'B': [{'id': 'b'}],
+                                  'C': [{'id': 'f'}],
+                                  'G': [{'id': 'g'}],
+                                  'D': [{'id': 'd'}]},
+                'edge_bindings': {'e-B-C': [{'id': 'e-b-f'}],
+                                  'e-C-G': [{'id': 'e-c-g'}],
+                                  'e-G-D': [{'id': 'e-g-d'}]}}]  # b - f -  g - d
+    k_map_3 = [{'node_bindings': {'A': [{'id': 'a1'}], 'B': [{'id': 'b1'}]},
+                'edge_bindings': {'e-A-B': [{'id': 'e-a1-b1'}]}}]
+    k_map_4 = [{'node_bindings': {'A': [{'id': 'a2'}], 'B': [{'id': 'b'}]},
+                'edge_bindings': {'e-A-B': [{'id': 'e-a2-b'}]}}]
     responses = [
-        {'question_graph': q_g_1, 'knowledge_map': k_map_1},
-        {'question_graph': q_g_2, 'knowledge_map': k_map_2},
-        {'question_graph': q_g_3, 'knowledge_map': k_map_3},
-        {'question_graph': q_g_4, 'knowledge_map': k_map_4}
+        {'query_graph': q_g_1, 'results': k_map_1},
+        {'query_graph': q_g_2, 'results': k_map_2},
+        {'query_graph': q_g_3, 'results': k_map_3},
+        {'query_graph': q_g_4, 'results': k_map_4}
     ]
-    merged_paths = connect_knowledge_maps(responses, [])
+    merged_paths = connect_knowledge_maps(responses)
     assert len(merged_paths) == 5
     # check path a->b->c->d->e
-    p1 = {
-        'node_bindings': {
-        'A':['a'],
-        'B':['b'],
-        'C':['c'],
-        'D':['d'],
-        'E':['e']
-    }, 'edge_bindings':{
-         'e-A-B': 'e-a-b',
-         'e-B-C': 'e-b-c',
-         'e-C-D': 'e-c-d',
-         'e-D-E': 'e-d-e'
-        },
-        'score': 0
+    p1 = {'node_bindings': {'A': [{'id': 'a'}],
+                               'B': [{'id': 'b'}],
+                               'C': [{'id': 'c'}],
+                               'D': [{'id': 'd'}],
+                               'E': [{'id': 'e'}]},
+                              'edge_bindings': {'e-A-B': [{'id': 'e-a-b'}],
+                               'e-B-C': [{'id': 'e-b-c'}],
+                               'e-C-D': [{'id': 'e-c-d'}],
+                               'e-D-E': [{'id': 'e-d-e'}]},
+                                    'score': 0
     }
     assert p1 in merged_paths
-    p2 = {
-        'node_bindings': {
-        #   Query_graph_id , Knowledge_graph_id
-            'A': ['a'],
-            'B': ['b'],
-            'C': ['f'],
-            'G': ['g'],
-            'D': ['d'],
-            'E': ['e']
-        }, 'edge_bindings': {
-            'e-A-B': 'e-a-b',
-            'e-B-C': 'e-b-f',
-            'e-C-G': 'e-c-g',
-            'e-G-D': 'e-g-d',
-            'e-D-E': 'e-d-e'
-        },
-        'score': 0
-    }
+    p2 = {'node_bindings': {'A': [{'id': 'a'}],
+                            'B': [{'id': 'b'}],
+                            'C': [{'id': 'f'}],
+                            'G': [{'id': 'g'}],
+                            'D': [{'id': 'd'}],
+                            'E': [{'id': 'e'}]},
+          'edge_bindings': {'e-A-B': [{'id': 'e-a-b'}],
+                            'e-B-C': [{'id': 'e-b-f'}],
+                            'e-C-G': [{'id': 'e-c-g'}],
+                            'e-G-D': [{'id': 'e-g-d'}],
+                            'e-D-E': [{'id': 'e-d-e'}]},
+          'score': 0
+          }
     # check path p2: a:A->b:B->f:C->g:G->d:D->e:E
     assert p2 in merged_paths
     # Check for p3
     # p3: a1->b1
-    p3 = {
-        'node_bindings': {
-            'A': ['a1'],
-            'B': ['b1']
-        },
-        'edge_bindings': {
-            'e-A-B': 'e-a1-b1'
-        },
-        'score': 0
-    }
+    p3 = {'node_bindings': {'A': [{'id': 'a1'}], 'B': [{'id': 'b1'}]},
+          'edge_bindings': {'e-A-B': [{'id': 'e-a1-b1'}]},
+          'score': 0
+          }
     assert  p3 in merged_paths
 
     # check p4
     # p4: a2->b->c->d->e
-    p4 = {
-        'node_bindings': {
-            'A': ['a2'],
-            'B': ['b'],
-            'C': ['c'],
-            'D': ['d'],
-            'E': ['e']
-        },
-        'edge_bindings': {
-            'e-A-B': 'e-a2-b',
-            'e-B-C': 'e-b-c',
-            'e-C-D': 'e-c-d',
-            'e-D-E': 'e-d-e'
-        }, 'score': 0
-    }
+    p4 = {'node_bindings': {'A': [{'id': 'a2'}],
+                            'B': [{'id': 'b'}],
+                            'C': [{'id': 'c'}],
+                            'D': [{'id': 'd'}],
+                            'E': [{'id': 'e'}]},
+          'edge_bindings': {'e-A-B': [{'id': 'e-a2-b'}],
+                            'e-B-C': [{'id': 'e-b-c'}],
+                            'e-C-D': [{'id': 'e-c-d'}],
+                            'e-D-E': [{'id': 'e-d-e'}]}, 'score': 0
+        }
     assert  p4 in merged_paths
     # check p5
     # p5: a2->b->f->g - d->e
-    p5 = {
-        'node_bindings': {
-            'A': ['a2'],
-            'B': ['b'],
-            'C': ['f'],
-            'D': ['d'],
-            'E': ['e'],
-            'G': ['g']
-        }, 'edge_bindings': {
-            'e-A-B': 'e-a2-b',
-            'e-B-C': 'e-b-f',
-            'e-C-G': 'e-c-g',
-            'e-G-D': 'e-g-d',
-            'e-D-E': 'e-d-e'
-        }, 'score': 0
-    }
+    p5 = {'node_bindings': {'A': [{'id': 'a2'}],
+                            'B': [{'id': 'b'}],
+                            'C': [{'id': 'f'}],
+                            'D': [{'id': 'd'}],
+                            'E': [{'id': 'e'}],
+                            'G': [{'id': 'g'}]},
+          'edge_bindings': {'e-A-B': [{'id': 'e-a2-b'}],
+                            'e-B-C': [{'id': 'e-b-f'}],
+                            'e-C-G': [{'id': 'e-c-g'}],
+                            'e-G-D': [{'id': 'e-g-d'}],
+                            'e-D-E': [{'id': 'e-d-e'}]}, 'score': 0
+          }
     assert p5 in merged_paths
 
 
-def test_merge_preserves_edge_ids():
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_merge_preserves_edge_ids(GraphInterfaceMock):
     kg = {
-        'question_graph': {
-            'nodes': [
-                {'id': 'n0', 'type': 'type1', 'curie': 'CURIE:1'},
-                {'id': 'n1', 'type': 'type2'}
-            ],
-            'edges': [
-                {'id': 'e0', 'source_id': 'n0', 'target_id': 'n1'}
-            ]
-        },
-        'knowledge_graph': {
-            'nodes': [
-                {'id': 'CURIE:1', 'name': 'Node 1'},
-                {'id': 'curie:2', 'name': 'another node'},
-                {'id': 'curie:3', 'name': 'third node'}
-            ],
-            'edges': [
-                {'id': 'curie1:curie2', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:2'},
-                {'id': 'curie1:curie2Duplicate', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:2'},
-                {'id': 'curie1:curie3', 'type': 'related_to', 'source_id': 'CURIE:1', 'target_id': 'curie:3'}
-            ]
-        },
-        'knowledge_map': [
-            {
-                'node_bindings': {
-                    'n0': 'CURIE:1',
-                    'n1': 'curie:2'
-                }, 'edge_bindings': {
-                'e0': ['curie1:curie2']
-            }
-            }, {
-                'node_bindings': {
-                    'n0': 'CURIE:1',
-                    'n1': 'curie:2'
-                }, 'edge_bindings': {
-                    'e0': ['curie1:curie2Duplicate']
+        "message": {
+            'query_graph': {
+                'nodes': {
+                    "n0": {'id': 'n0', 'category': ['type1']},
+                    "n1": {'id': 'n1', 'category': ['type2']}
+                },
+                'edges': {
+                    "e0": {'id': 'e0', 'subject': 'n0', 'object': 'n1'}
                 }
-            }, {
-                'node_bindings': {
-                    'n0': 'CURIE:1',
-                    'n1': 'curie:3'
-                }, 'edge_bindings': {
-                    'e0': ['curie1:curie3']
+            },
+            'knowledge_graph': {
+                'nodes': {
+                    "CURIE:1": {'id': 'CURIE:1', 'name': 'Node 1'},
+                    "curie:2": {'id': 'curie:2', 'name': 'another node'},
+                    "curie:3": {'id': 'curie:3', 'name': 'third node'}
+                },
+                'edges': {
+                    "curie1:curie2": {'id': 'curie1:curie2', 'predicate': 'related_to', 'subject': 'CURIE:1',
+                                      'object': 'curie:2'},
+                    "curie1:curie2Duplicate": {'id': 'curie1:curie2Duplicate', 'predicate': 'related_to',
+                                               'subject': 'CURIE:1', 'object': 'curie:2'},
+                    "curie1:curie3": {'id': 'curie1:curie3', 'predicate': 'related_to', 'subject': 'CURIE:1',
+                                      'object': 'curie:3'}
                 }
-            }
-        ]
+            },
+            'results': [{'node_bindings': {'n0': [{'id': 'CURIE:1'}], 'n1': [{'id': 'curie:2'}]},
+                         'edge_bindings': {'e0': [{'id': 'curie1:curie2'}]}},
+                        {'node_bindings': {'n0': [{'id': 'CURIE:1'}], 'n1': [{'id': 'curie:2'}]},
+                         'edge_bindings': {'e0': [{'id': 'curie1:curie2Duplicate'}]}},
+                        {'node_bindings': {'n0': [{'id': 'CURIE:1'}], 'n1': [{'id': 'curie:3'}]},
+                         'edge_bindings': {'e0': [{'id': 'curie1:curie3'}]}}]
+        }
     }
     tranql = TranQL()
     responses = [kg]
     select_statement = SelectStatement(tranql)
-    result = select_statement.merge_results(
-        responses, tranql, responses[0]['question_graph'])
-    edges = result['knowledge_graph']['edges']
-    all_edge_ids = set(e["id"] for e in edges)
-    for answer_binding in result['knowledge_map']:
+    result = select_statement.merge_results(responses)
+    edges = result["message"]['knowledge_graph']['edges']
+    all_edge_ids = set(e for e in edges)
+    for answer_binding in result["message"]['results']:
         e_b = answer_binding['edge_bindings']
         edge_ids = reduce(lambda x, y : x + y, map(lambda x: e_b[x], e_b), [])
         for i in edge_ids:
-            assert i in all_edge_ids, print(edge_ids)
+            assert i['id'] in all_edge_ids, print(edge_ids)
 
-def test_merge_should_preserve_score():
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def xtest_merge_should_preserve_score(GraphInterfaceMock):
+    """Scores are now based on publication counts"""
     """
     Once  a knowledge response is merged
     :return:
     """
     query_graph = {
-        'nodes': [
-            {'id': 'A', 'type': 'A'},
-            {'id': 'B', 'type': 'B'}
-        ], 'edges': [
-            {'id': 'e-A-B', 'source_id': 'A', 'target_id':'B'}
-        ]
+        'nodes': {
+            'A': {'id': 'A', 'type': 'A'},
+            'B': {'id': 'B', 'type': 'B'}
+        }, 'edges': {
+            'e-A-B': {'id': 'e-A-B', 'subject': 'A', 'object':'B'}
+        }
     }
     knowledge_graph = {
-        'nodes': [
-            {'id': 'KG_ID_A', 'name': 'node A from kg'},
-            {'id': 'KG_ID_B', 'name': 'node B from kg'},
-            {'id': 'KG_ID_AA', 'name': 'node AA from kg'},
-            {'id': 'KG_ID_BB', 'name': 'node BB from kg'},
-                  ],
-        'edges': [
-            {'id': 'KG_ID_A_B', 'type': 'related_to', 'source_id': 'KG_ID_A', 'target_id': 'KG_ID_B'},
-            {'id': 'KG_ID_AA_BB', 'type': 'related_to', 'source_id': 'KG_ID_AA', 'target_id': 'KG_ID_BB'},
-        ]
+        'nodes': {
+            'KG_ID_A': {'id': 'KG_ID_A', 'name': 'node A from kg'},
+            'KG_ID_B': {'id': 'KG_ID_B', 'name': 'node B from kg'},
+            'KG_ID_AA': {'id': 'KG_ID_AA', 'name': 'node AA from kg'},
+            'KG_ID_BB': {'id': 'KG_ID_BB', 'name': 'node BB from kg'},
+        },
+        'edges': {
+            'KG_ID_A_B':{'id': 'KG_ID_A_B', 'predicate': 'related_to', 'subject': 'KG_ID_A', 'object': 'KG_ID_B'},
+            'KG_ID_AA_BB':{'id': 'KG_ID_AA_BB', 'predicate': 'related_to', 'subject': 'KG_ID_AA', 'object': 'KG_ID_BB'},
+        }
     }
     knowledge_map = [
-        {
-            'node_bindings': {'A': ['KG_ID_A'],'B': ['KG_ID_B']},
-            'edge_bindings': {'e-A-B': ['KG_ID_A_B']},
-            'score': 1
-        },
-        {
-            'node_bindings': {'A': ['KG_ID_AA'], 'B': ['KG_ID_BB']},
-            'edge_bindings': {'e-A-B': ['KG_ID_AA_BB']},
-            'score': 2
-        }
+        {'node_bindings': {'A': [{'id': 'KG_ID_A'}], 'B': [{'id': 'KG_ID_B'}]},
+         'edge_bindings': {'e-A-B': [{'id':'KG_ID_A_B'}]}, "score": 1},
+        {'node_bindings': {'A': [{'id': 'KG_ID_AA'}], 'B': [{'id': 'KG_ID_BB'}]},
+         'edge_bindings': {'e-A-B': [{'id': 'KG_ID_AA_BB'}]}, "score": 2}
     ]
     tranql = TranQL()
-    responses = [{
-        'question_graph': query_graph,
-        'knowledge_map': knowledge_map,
+    responses = [{"message": {
+        'query_graph': query_graph,
+        'results': knowledge_map,
         'knowledge_graph': knowledge_graph
-    }]
+    }}]
     select_statement = SelectStatement(tranql)
-    result = select_statement.merge_results(responses, tranql, query_graph, ['A','B'])
-    for answer in result['knowledge_map']:
+    result = select_statement.merge_results(responses)
+    for answer in result['message']['results']:
         assert 'score' in answer
         assert answer['score'] == 1 or answer['score'] == 2
 
-def test_merged_node_ids_should_be_updated_in_knowledge_map():
+def xtest_merged_node_ids_should_be_updated_in_knowledge_map():
+    "No longer needed we are not merging based on equvalent identifiers ids "
     tranql = TranQL()
     select_statement = SelectStatement(tranql)
     q_graph = {
@@ -2049,15 +1782,15 @@ def test_merged_node_ids_should_be_updated_in_knowledge_map():
         'edges': [{'id': 'e0', 'type':'related_to', 'source_id':'n0', 'target_id': 'n1'}]
     }
     kg_1 = {
-        'nodes': [
-            {'id': 'kg_id_1', 'equivalent_identifiers': ['kg_id_1', 'curie1'], 'name': 'kg 1 node'},
-            {'id': 'kg_id_2', 'equivalent_identifiers': ['kg_id_2', 'curie2'], 'name': 'kg 2 node'},
-            {'id': 'kg_id_3', 'equivalent_identifiers': ['kg_id_3', 'curie3'], 'name': 'kg 3 node'}
-        ],
-        'edges': [
-            {'id': 'e_kg_id_1', 'source_id': 'kg_id_1', 'target_id': 'kg_id_2', 'type': 'related_to'},
-            {'id': 'e_kg_id_2', 'source_id': 'kg_id_1', 'target_id': 'kg_id_3', 'type': 'related_to'}
-        ]
+        'nodes': {
+            'kg_id_1': {'id': 'kg_id_1', 'equivalent_identifiers': ['kg_id_1', 'curie1'], 'name': 'kg 1 node'},
+            'kg_id_2': {'id': 'kg_id_2', 'equivalent_identifiers': ['kg_id_2', 'curie2'], 'name': 'kg 2 node'},
+            'kg_id_3': {'id': 'kg_id_3', 'equivalent_identifiers': ['kg_id_3', 'curie3'], 'name': 'kg 3 node'}
+        },
+        'edges': {
+            'e_kg_id_1': {'id': 'e_kg_id_1', 'source_id': 'kg_id_1', 'target_id': 'kg_id_2', 'type': 'related_to'},
+            'e_kg_id_2': {'id': 'e_kg_id_2', 'source_id': 'kg_id_1', 'target_id': 'kg_id_3', 'type': 'related_to'}
+        }
     }
     kg_2 = {
         'nodes': [
@@ -2138,8 +1871,8 @@ def test_merged_node_ids_should_be_updated_in_knowledge_map():
     assert node_bindings_by_edge_kg_id['e_kg_id_2']['n0'] == ['kg_id_1']
     assert node_bindings_by_edge_kg_id['e_kg_id_2']['n1'] == ['kg_id_3']
 
-
-def test_redis_graph_cypher_options():
+@patch("PLATER.services.util.graph_adapter.GraphInterface._GraphInterface")
+def test_redis_graph_cypher_options(GraphInterfaceMock):
     """doc: |
       Roger is a knowledge graph built by aggregeting several kgx formatted knowledge graphs from several sources.
     url: "redis:"
@@ -2188,7 +1921,8 @@ def test_redis_graph_cypher_options():
             backplane=backplane,
             use_registry=False,
             update_interval=update_interval,
-            create_new=True
+            create_new=True,
+            tranql_config={}
         )
         tranql.schema = schema_factory.get_instance()
         with patch('PLATER.services.util.graph_adapter.GraphInterface.instance', graph_Inteface_mock(limit=20, skip=100, options_set=True)):

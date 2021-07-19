@@ -813,7 +813,7 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               return tree.filter((token) => stripLinebreaks(token));
             }
             else {
-              return tree.match(/\r\n|\r|\n/) === null;
+              return tree.toString().match(/\r\n|\r|\n/) === null;
             }
           }
 
@@ -941,9 +941,10 @@ SELECT population_of_individual_organisms->chemical_substance->gene->biological_
               ]);
               let previousConcept = concept(secondLastToken);
               // May be undefined if there is no next concept
-              let nextConcept = concept(lastStatementComplete[lastStatement.length]);
+              let has_no_next_concept = (lastStatementComplete.length - lastStatement.length) == 0;
+              let nextConcept = has_no_next_concept? undefined : concept(lastStatementComplete[lastStatement.length]) ;
               // See https://github.com/frostyfan109/tranql/issues/117 for why this approach doesn't work
-              nextConcept = undefined;
+
 
 
               const backwards = isBackwardsPredicate (currentPredicate);
