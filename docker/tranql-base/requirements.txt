@@ -103,7 +103,7 @@ twine==1.13.0
 update-checker==0.16
 urllib3==1.24.1
 virtualenv==16.6.0
-waitress==1.4.3
+waitress==2.1.1
 wcwidth==0.1.7
 webencodings==0.5.1
 websocket-client==0.56.0
