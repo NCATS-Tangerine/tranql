@@ -50,7 +50,7 @@ nbformat==4.4.0
 ndex2==2.0.1
 networkx==2.2
 notebook==5.7.4
-numpy==1.16.1
+numpy==1.22.0
 openapi==1.1.0
 pandas==0.24.1
 pandocfilters==1.4.2
